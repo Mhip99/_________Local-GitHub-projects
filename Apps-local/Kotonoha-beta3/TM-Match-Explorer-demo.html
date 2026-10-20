@@ -42,6 +42,7 @@
   --shadow:0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.35);
 }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 body{background:var(--ground);color:var(--ink);
   font-family:"IBM Plex Sans","Noto Sans JP",system-ui,sans-serif;
   line-height:1.55;-webkit-font-smoothing:antialiased;}
@@ -149,6 +150,17 @@ td.ja.isedited::after{content:"編集済";font-size:10px;color:var(--accent);mar
 .st-mt{color:var(--new);background:var(--new-wash);border:1px solid var(--new);}
 .st-tm{color:var(--muted);background:var(--surface-2);border:1px solid var(--hairline-strong);}
 .japlaceholder{color:var(--faint);font-style:italic;}
+/* インライン保護タグ（チップ） */
+.tag{display:inline-block;background:var(--accent-wash);color:var(--accent-ink);border:1px solid var(--accent);
+  border-radius:3px;padding:0 3px;margin:0 1px;font-family:"IBM Plex Mono",monospace;font-size:9px;font-weight:700;
+  line-height:1.4;min-width:11px;text-align:center;cursor:help;user-select:none;white-space:nowrap;vertical-align:middle;}
+.jaedit[contenteditable]{min-height:34px;white-space:pre-wrap;}
+.jaedit[contenteditable]:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent);}
+.palette{display:flex;gap:3px;flex-wrap:wrap;align-items:center;margin-bottom:5px;}
+.palette .plab{font-size:11px;color:var(--faint);}
+.taginsert{display:inline-block;background:var(--surface-2);color:var(--accent-ink);border:1px dashed var(--accent);
+  border-radius:3px;padding:0 4px;min-width:13px;text-align:center;font-family:"IBM Plex Mono",monospace;font-size:9.5px;font-weight:700;cursor:pointer;user-select:none;}
+.taginsert:hover{background:var(--accent);color:#fff;}
 /* confirm (TEP sign-off) */
 .confcol{width:56px;text-align:center;white-space:nowrap;}
 .confbox{width:17px;height:17px;cursor:pointer;accent-color:var(--reuse);}
@@ -160,10 +172,19 @@ td.ja.isconfirmed::after{content:"確定";font-size:10px;color:var(--reuse);marg
 .minibtn{background:var(--surface);border:1px solid var(--hairline-strong);color:var(--muted);border-radius:8px;padding:8px 12px;font:inherit;font-size:13px;cursor:pointer;}
 .minibtn:hover{border-color:var(--reuse);color:var(--ink);}
 /* layout: full-width segment table on top; below it history pane (left) + term pane (right) side by side */
-.panerow{display:flex;gap:16px;align-items:flex-start;margin-top:16px;}
-.histpane,.termpane{flex:1;min-width:0;background:var(--surface);border:1px solid var(--hairline);
-  border-radius:var(--radius);box-shadow:var(--shadow);padding:14px 16px;}
-.panehd{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin:0 0 10px;font-weight:600;}
+/* view tabs (翻訳 / サマリー) */
+.vtabs{display:flex;gap:6px;margin:4px 0 14px;border-bottom:1px solid var(--hairline);}
+.vtab{background:transparent;border:1px solid transparent;border-bottom:none;color:var(--muted);border-radius:8px 8px 0 0;padding:8px 18px;font:inherit;font-size:14px;font-weight:600;cursor:pointer;}
+.vtab[aria-pressed="true"]{background:var(--surface);border-color:var(--hairline);color:var(--ink);}
+/* fixed, resizable, scrollable work panes */
+.worklayout{display:flex;flex-direction:column;gap:12px;}
+.segpane{height:60vh;min-height:160px;overflow:auto;resize:vertical;border:1px solid var(--hairline);
+  border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow);}
+.segpane table{margin:0;}
+.panerow{display:flex;gap:16px;align-items:stretch;}
+.histpane,.termpane{flex:1;min-width:0;height:15vh;min-height:88px;overflow:auto;resize:both;
+  background:var(--surface);border:1px solid var(--hairline);border-radius:var(--radius);box-shadow:var(--shadow);padding:12px 14px;}
+.panehd{position:sticky;top:0;background:var(--surface);z-index:1;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin:0 0 10px;font-weight:600;padding-bottom:4px;}
 .termhint,.histhint{font-size:12.5px;color:var(--faint);}
 .histpane .histsrc{text-transform:none;letter-spacing:0;color:var(--muted);font-weight:500;margin-left:8px;
   font-family:"IBM Plex Mono","Noto Sans JP",monospace;font-size:12px;}
@@ -187,22 +208,57 @@ td.ja.isconfirmed::after{content:"確定";font-size:10px;color:var(--reuse);marg
 tbody tr.selected{background:var(--accent-wash);}
 tbody tr.selected td.idx{box-shadow:inset 3px 0 0 var(--accent);}
 @media(max-width:820px){.panerow{flex-direction:column;}}
+/* compact header / tabs / buttons（作業領域を広く取る） */
+.wrap{padding:14px 24px 36px;}
+header.top{margin-bottom:6px;gap:12px;align-items:center;}
+.brand .eyebrow{display:none;}
+.brand h1{font-size:20px;line-height:1.15;margin:0;}
+.brand p{font-size:12px;line-height:1.4;max-width:none;margin:2px 0 0;color:var(--muted);}
+.themebtn{padding:5px 9px;font-size:12px;}
+.filepill{padding:4px 10px;font-size:12px;}
+.vtabs{margin:6px 0 8px;}
+.vtab{padding:5px 13px;font-size:13px;}
+.controls{padding:7px 0;gap:8px;margin-bottom:4px;}
+.count{margin:6px 2px;}
+.seg button{padding:5px 10px;font-size:12px;}
+.chip{padding:4px 9px;font-size:12px;}
+.toggle{font-size:12px;}
+.minibtn{padding:5px 10px;font-size:12px;}
+.expbtn{padding:6px 12px;font-size:12px;}
+.search input{padding:7px 10px 7px 30px;font-size:13px;}
+.segpane{height:64vh;}
+/* タブ行にテーマ切替・アーティクル名を同居（タイトルは撤去） */
+.wrap{max-width:none;padding:10px clamp(16px,2.2vw,40px) 32px;}
+/* セグメント表を全幅・固定レイアウトにし、English と Japanese を広く確保 */
+#segpane table{table-layout:fixed;width:100%;min-width:720px;}
+#segpane col.c-idx{width:42px;} #segpane col.c-match{width:92px;}
+#segpane col.c-en{width:27%;} #segpane col.c-tm{width:19%;} #segpane col.c-ja{width:46%;} #segpane col.c-conf{width:54px;}
+#segpane td,#segpane th{overflow-wrap:anywhere;}
+.vtabs{display:flex;align-items:center;gap:8px;margin:0 0 8px;}
+.vtabs .filepill{margin-left:auto;}
+.vtabs .vtab{align-self:flex-end;}
+/* 検索行・ボタン類をさらにコンパクトに */
+.controls{padding:5px 0;gap:6px;margin-bottom:4px;}
+.search{min-width:150px;}
+.search input{padding:6px 10px 6px 30px;font-size:12.5px;}
+.seg button{padding:4px 9px;font-size:12px;}
+.chip{padding:3px 8px;font-size:11.5px;}
+.toggle{font-size:11.5px;gap:6px;}
+.minibtn{padding:4px 9px;font-size:11.5px;}
+.expbtn{padding:5px 11px;font-size:12px;}
+.themebtn,.filepill{padding:4px 9px;font-size:11.5px;}
+.count{margin:4px 2px;font-size:12px;}
+.segpane{height:66vh;}
 </style>
 
 <div class="wrap">
-  <header class="top">
-    <div class="brand">
-      <div class="eyebrow">Translation Memory &middot; Leverage</div>
-      <h1>TM Match Explorer</h1>
-      <p>セグメントごとの TM マッチ率を確認し、Pre-translation（TM 訳の流し込み＋新規は MT）を作業者が TEP（翻訳・編集・校正）して仕上げます。</p>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:10px;align-items:flex-end;">
-      <button class="themebtn" id="themebtn" type="button">◐ テーマ切替</button>
-      <span class="filepill"><span class="dot"></span>DomoStats Connector <span class="demoflag">DEMO</span></span>
-    </div>
-  </header>
-
-  <section class="summary">
+  <div class="vtabs" id="vtabs">
+    <button class="vtab" id="vt-work" data-v="work" aria-pressed="true" type="button">翻訳</button>
+    <button class="vtab" id="vt-summary" data-v="summary" aria-pressed="false" type="button">サマリー</button>
+    <span class="filepill"><span class="dot"></span>DomoStats Connector <span class="demoflag">DEMO</span></span>
+    <button class="themebtn" id="themebtn" type="button">◐ テーマ切替</button>
+  </div>
+  <section class="summary" id="view-summary" hidden>
     <div class="card tiles" id="tiles"></div>
     <div class="card panel">
       <h2>区分の内訳</h2>
@@ -212,6 +268,7 @@ tbody tr.selected td.idx{box-shadow:inset 3px 0 0 var(--accent);}
     </div>
   </section>
 
+  <div id="view-work">
   <div class="controls">
     <label class="search">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
@@ -235,15 +292,17 @@ tbody tr.selected td.idx{box-shadow:inset 3px 0 0 var(--accent);}
   </div>
 
   <div class="count" id="count"></div>
-  <div class="tablewrap">
+  <div class="worklayout">
+  <div class="segpane" id="segpane">
     <table>
+      <colgroup><col class="c-idx"><col class="c-match"><col class="c-en"><col class="c-tm"><col class="c-ja"><col class="c-conf"></colgroup>
       <thead><tr>
         <th>#</th><th>Match</th><th>English (source)</th><th>TM 訳（参考）</th><th>Japanese (Pre-translation)</th><th class="confcol">確定</th>
       </tr></thead>
       <tbody id="rows"></tbody>
     </table>
+    <div class="empty" id="empty" hidden>該当するセグメントはありません。</div>
   </div>
-  <div class="empty" id="empty" hidden>該当するセグメントはありません。</div>
   <div class="panerow">
     <div class="histpane" id="histpane">
       <h3 class="panehd">翻訳履歴<span class="histsrc" id="histsrc"></span></h3>
@@ -260,7 +319,9 @@ tbody tr.selected td.idx{box-shadow:inset 3px 0 0 var(--accent);}
       </div>
       <div id="termbody"><div class="termhint">行をクリックすると、その原文に含まれる用語がここに表示されます。原文の語を選択すると用語集に登録できます（サーバーモード時）。</div></div>
     </aside>
-  </div>
+  </div><!-- /panerow -->
+  </div><!-- /worklayout -->
+  </div><!-- /view-work -->
 
   <footer>
     Japanese（Pre-translation）列を編集して TEP（翻訳・編集・校正）し、仕上がった行の「確定」にチェック（編集不要な良い一致もそのまま確定可）してから「XLIFF 書き出し」します。<b>確定した行だけ</b>が Live_TM（Master／プロジェクト TM）への書き戻し対象です。TM 行は TM 訳、<span class="mono">MT</span> 行は AI 下訳。編集・確定はブラウザに自動保存されます（同一PC・同一ブラウザ）。確定行を編集すると確定は解除され、再確定が必要です。
@@ -291,6 +352,38 @@ const CATJA={Reused:"再利用",Modified:"修正",Added:"新規"};
 const esc=s=>s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 function diff(parts){return parts.map(([op,t])=>op==="eq"?esc(t):op==="add"?`<ins>${esc(t)}</ins>`:`<del>${esc(t)}</del>`).join("");}
 function plain(parts){return parts.map(([op,t])=>op==="del"?"":t).join("");}
+// ===== インライン保護タグ（プレースアブル）: {n} を編集不可・移動可のチップとして扱う =====
+function tagLabel(t){
+  if(!t)return "";
+  if(/^<br/i.test(t))return "↵";
+  const m=/^<\/?\s*([a-zA-Z0-9]+)/.exec(t);const name=m?m[1].toLowerCase():"tag";
+  const map={strong:"B",b:"B",em:"I",i:"I",span:"s",a:"a",u:"U",div:"d",code:"c",sup:"^",sub:"_",small:"s",mark:"m"};
+  return (/^<\//.test(t)?"/":"")+(map[name]||name);
+}
+function chipHTML(ph,tags){const t=(tags&&tags[ph])||("tag "+ph);
+  return '<span class="tag" data-ph="'+ph+'" contenteditable="false" title="'+esc(t)+'">'+esc(ph)+'</span>';}
+function withChips(htmlStr,tags){return String(htmlStr).replace(/\{(\d+)\}/g,(m,n)=>chipHTML(n,tags));}
+function paletteHTML(s){const ks=s.tags?Object.keys(s.tags):[];if(!ks.length)return "";
+  ks.sort((a,b)=>a-b);
+  return '<div class="palette"><span class="plab">タグ挿入:</span>'+ks.map(n=>'<span class="taginsert" data-ph="'+n+'" title="'+esc(s.tags[n])+'">'+esc(n)+'</span>').join("")+'</div>';}
+function serializeJa(node){let out="";node.childNodes.forEach(c=>{
+  if(c.nodeType===3){out+=c.nodeValue;}
+  else if(c.nodeType===1){
+    if(c.classList&&c.classList.contains("tag")){out+="{"+c.getAttribute("data-ph")+"}";}
+    else if(c.tagName==="BR"){out+="";}
+    else{out+=serializeJa(c);}
+  }});return out;}
+function makeChipEl(ph,tags){const d=document.createElement("div");d.innerHTML=chipHTML(String(ph),tags);return d.firstChild;}
+function saveJaField(field){const i=+field.getAttribute("data-i");const val=serializeJa(field);
+  if(val===plain(SEG[i].ja))delete edits[i];else edits[i]=val;
+  saveEdits();updateEditedCount();
+  if(i in confirms){delete confirms[i];saveConfirms();updateConfirmCount();}
+  const tr=field.closest("tr");if(tr){tr.classList.toggle("edited",i in edits);tr.classList.remove("confirmed");}}
+function insertChipAt(field,ph){const s=SEG[+field.getAttribute("data-i")];field.focus();
+  const sel=window.getSelection();const chip=makeChipEl(ph,s.tags);
+  if(sel&&sel.rangeCount&&field.contains(sel.anchorNode)){const r=sel.getRangeAt(0);r.deleteContents();r.insertNode(chip);r.setStartAfter(chip);r.collapse(true);sel.removeAllRanges();sel.addRange(r);}
+  else{field.appendChild(chip);}
+  saveJaField(field);}
 
 const state={cat:"all",bands:new Set(),q:"",editMode:false,editedOnly:false,confirmedOnly:false};
 const ART=((document.querySelector(".filepill")||{}).textContent||"export").replace("DEMO","").trim();
@@ -362,9 +455,9 @@ function render(){
     const edited=(idx in edits);
     const confirmed=(idx in confirms);
     const jaCur=edited?edits[idx]:plain(s.ja);
-    const jaView=edited?esc(jaCur):(plain(s.ja)?diff(s.ja):'<span class="japlaceholder">（MT 未挿入）</span>');
+    const jaView=edited?withChips(esc(jaCur),s.tags):(plain(s.ja)?withChips(diff(s.ja),s.tags):'<span class="japlaceholder">（MT 未挿入）</span>');
     const jaCell=state.editMode
-      ? `<td class="ja"><textarea class="jaedit" data-i="${idx}" rows="2">${esc(jaCur)}</textarea></td>`
+      ? `<td class="ja">${paletteHTML(s)}<div class="jaedit" contenteditable="true" data-i="${idx}">${withChips(esc(jaCur),s.tags)}</div></td>`
       : `<td class="ja${edited?' isedited':''}${confirmed?' isconfirmed':''}">${jaView}</td>`;
     const sttag=s.st==="mt"?'<span class="sttag st-mt">MT</span>':'<span class="sttag st-tm">TM</span>';
     const hasTgt=!!jaCur.trim();
@@ -372,8 +465,8 @@ function render(){
     return `<tr data-i="${idx}" class="${edited?'edited ':''}${confirmed?'confirmed':''}">
       <td class="idx">${idx+1}</td>
       <td class="matchcell"><span class="bandtag ${cls}">${s.b}</span><span class="pct">${s.pct}%</span><span class="cat">${CATJA[s.cat]}</span>${sttag}</td>
-      <td>${diff(s.en)}</td>
-      <td class="tm">${esc(s.tm)}</td>
+      <td>${withChips(diff(s.en),s.tags)}</td>
+      <td class="tm">${withChips(esc(s.tm),s.tags)}</td>
       ${jaCell}
       ${confCell}
     </tr>`;
@@ -408,16 +501,16 @@ document.getElementById("themebtn").addEventListener("click",()=>{
 document.getElementById("editmode").addEventListener("change",e=>{state.editMode=e.target.checked;document.body.classList.toggle("editing",state.editMode);render();});
 document.getElementById("editedonly").addEventListener("change",e=>{state.editedOnly=e.target.checked;render();});
 document.getElementById("confirmedonly").addEventListener("change",e=>{state.confirmedOnly=e.target.checked;render();});
+// 訳欄（contenteditable）の編集 → {n} 込みで保存
 document.getElementById("rows").addEventListener("input",e=>{
-  const ta=e.target.closest(".jaedit");if(!ta)return;
-  const i=+ta.dataset.i, orig=plain(SEG[i].ja);
-  if(ta.value===orig)delete edits[i];else edits[i]=ta.value;
-  saveEdits();updateEditedCount();
-  // editing a confirmed segment reverts it to draft (must be re-confirmed)
-  if(i in confirms){delete confirms[i];saveConfirms();updateConfirmCount();}
-  const tr=ta.closest("tr");
-  tr.classList.toggle("edited",i in edits);
-  tr.classList.remove("confirmed");
+  const field=e.target.closest(".jaedit");if(!field)return;
+  saveJaField(field);
+});
+// タグ挿入パレットのクリック → 対応する訳欄の caret 位置へチップ挿入
+document.getElementById("rows").addEventListener("click",e=>{
+  const ins=e.target.closest(".taginsert");if(!ins)return;
+  const td=ins.closest("td");const field=td&&td.querySelector(".jaedit");
+  if(field)insertChipAt(field, ins.getAttribute("data-ph"));
 });
 // confirm checkbox toggle (works in view and edit mode)
 document.getElementById("rows").addEventListener("change",e=>{
@@ -488,7 +581,7 @@ document.getElementById("rows").addEventListener("mouseup",e=>{
   }).catch(function(){b.disabled=false;});
 });})();
 document.getElementById("rows").addEventListener("click",e=>{
-  if(e.target.closest(".jaedit")||e.target.closest(".confbox"))return; // 編集/確定の操作はそのまま
+  if(e.target.closest(".jaedit")||e.target.closest(".confbox")||e.target.closest(".palette"))return; // 編集/確定/タグ挿入はそのまま
   const tr=e.target.closest("tr");if(!tr||!tr.dataset.i)return;
   document.querySelectorAll("#rows tr.selected").forEach(x=>x.classList.remove("selected"));
   tr.classList.add("selected");
@@ -531,6 +624,14 @@ function exportXliff(){
   download((ART||"export").replace(/[^\w.-]+/g,"_")+".xliff",xml,"application/xliff+xml");
 }
 document.getElementById("exportxliff").addEventListener("click",exportXliff);
+// 翻訳 / サマリー タブ切替
+function switchVTab(v){
+  document.getElementById("view-work").hidden=(v!=="work");
+  document.getElementById("view-summary").hidden=(v!=="summary");
+  document.getElementById("vt-work").setAttribute("aria-pressed",String(v==="work"));
+  document.getElementById("vt-summary").setAttribute("aria-pressed",String(v==="summary"));
+}
+document.querySelectorAll(".vtab").forEach(b=>b.addEventListener("click",()=>switchVTab(b.dataset.v)));
 updateEditedCount();updateConfirmCount();
 computeSummary();renderChips();render();
 </script>

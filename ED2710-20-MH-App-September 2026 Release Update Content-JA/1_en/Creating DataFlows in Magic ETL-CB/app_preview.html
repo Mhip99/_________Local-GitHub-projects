@@ -1,0 +1,118 @@
+
+      <html>
+        <head>
+          <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,300i,400,400i,600,700,700i" rel="stylesheet">
+          <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+          <link href="https://s3.amazonaws.com/domo-university/domoapps/version/1.2/assets/styles/main.css" rel="stylesheet" />
+          <script src="https://ajax.googleapis.com/ajax/libs/webfont/1.6.26/webfont.js"></script>
+          <script>
+            WebFont.load({
+              google: {
+                families: ['Open Sans:300,300i,400,400i,600,700,700i']
+              }
+            });
+          </script>
+          <style>
+            body,
+            button {
+              font-family: 'Open Sans';
+            }
+
+            .menu-container button,
+            .quiz-question-modal .answer-symbol-overlay,
+            .quiz-question-modal .question-paging-container .question-pager.active {
+              background-color: #99ccee;
+            }
+
+            .quiz-template-component .quiz-start-button,
+            .survey-link-template-component .survey-link-button {
+              background-color: #ff9922;
+              border-color: #ff9922;
+            }
+
+            .quiz-template-component .quiz-start-button:hover,
+            .survey-link-template-component .survey-link-button:hover {
+              color: #ff9922;
+            }
+
+            .menu-container button:active svg,
+            .menu-container button:hover svg {
+              color: #99ccee;
+              fill: #99ccee;
+            }
+
+            #progress svg path {
+              stroke: #99ccee;
+            }
+
+            .app-preview .circle:hover {
+              background-color: #99ccee;
+              border-color: #99ccee;
+            }
+
+            .survey-slider-template-component .range-slider-track .dragger:before {
+              border-top: 1.125em solid #ff9922;
+            }
+
+            .default-btn,
+            .mini-modal-button,
+            .mini-modal-button:hover,
+            .survey-slider-template-component .try-again-button,
+            .survey-slider-template-component .try-again-button:hover,
+            .quiz-question-modal .quiz-submit.active,
+            .quiz-question-modal .quiz-submit.active:hover,
+            .survey-slider-template-component .range-slider-track .dragger,
+            .survey-slider-template-component #survey-submit.active,
+            .survey-slider-template-component #survey-submit.active:hover {
+              background-color: #ff9922;
+            }
+          </style>
+        </head>
+        <body class="app-preview" ng-app="app_preview" ng-controller="MainController as mc">
+          <ng-view></ng-view>
+          <div id="previous" class="circle" ng-click="mc.previous()" ng-show="mc.index > 0">
+            <svg class="chevron chevron-left" viewBox="0 0 2048 2048"><path d="M1523 864q0 13-10 23l-466 466q-10 10-23 10t-23-10l-466-466q-10-10-10-23t10-23l50-50q10-10 23-10t23 10l393 393 393-393q10-10 23-10t23 10l50 50q10 10 10 23z"/></svg>
+          </div>
+          <div id="next" class="circle" ng-click="mc.next()" ng-show="mc.index < mc.pages.length-1">
+            <svg class="chevron chevron-right" viewBox="0 0 2048 2048"><path d="M1523 864q0 13-10 23l-466 466q-10 10-23 10t-23-10l-466-466q-10-10-10-23t10-23l50-50q10-10 23-10t23 10l393 393 393-393q10-10 23-10t23 10l50 50q10 10 10 23z"/></svg>
+          </div>
+          <div class="menu-container" id="menu-container">
+            <button ng-click="mc.toggleMenu()" ng-class="mc.menuToggled ? 'active' : ''">
+              <svg class="menu-toggle" viewBox="0 0 1792 1792"><path d="M1664 1344v128q0 26-19 45t-45 19h-1408q-26 0-45-19t-19-45v-128q0-26 19-45t45-19h1408q26 0 45 19t19 45zm0-512v128q0 26-19 45t-45 19h-1408q-26 0-45-19t-19-45v-128q0-26 19-45t45-19h1408q26 0 45 19t19 45zm0-512v128q0 26-19 45t-45 19h-1408q-26 0-45-19t-19-45v-128q0-26 19-45t45-19h1408q26 0 45 19t19 45z"/></svg>
+            </button>
+            <div class="pages-menu" ng-class="mc.menuToggled ? 'active' : ''">
+              <h4>{{ mc.appName }}</h4>
+              <ul>
+                <li ng-repeat="title in mc.pageTitles" ng-click="mc.goToIndex($index)">
+                  {{ title }}
+                </li>
+              </ul>
+            </div>
+          </div>
+          <div class="progress-tracker-container">
+            <div class="progress" id="progress"></div>
+            <div class="progress-background"></div>
+            <div class="progress-foreground">
+              <span class="progress-percent">
+                <span class="progress-percent-number" id="progress-percent-number">{{ mc.percentComplete | number:0 }}</span>%
+              </span>
+            </div>
+          </div>
+          <script>
+            var isLocal = true;
+            var newVersion = true;
+            var localAssets = false;
+          </script>
+          <script src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.5.7/angular.min.js"></script>
+          <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.25/angular-route.js"></script>
+          <script src="https://cdnjs.cloudflare.com/ajax/libs/textAngular/1.5.16/textAngular-sanitize.min.js"></script>
+          <script src="https://cdnjs.cloudflare.com/ajax/libs/progressbar.js/1.0.1/progressbar.min.js"></script>
+          <script src="https://s3.amazonaws.com/domo-university/domoapps/assets/vendor/domo.js"></script>
+          <script src="https://s3.amazonaws.com/domo-university/domoapps/assets/vendor/jquery.min.js"></script>
+          <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+          <script src="https://s3.amazonaws.com/domo-university/domoapps/assets/vendor/range-slider.min.js"></script>
+          <script src="https://s3.amazonaws.com/domo-university/domoapps/version/1.2/assets/js/controllers.js"></script>
+          <script src="https://s3.amazonaws.com/domo-university/domoapps/version/1.2/assets/js/mainController.js"></script>
+          <script src="https://s3.amazonaws.com/domo-university/domoapps/version/1.2/assets/js/config.js"></script>
+        </body>
+      </html>

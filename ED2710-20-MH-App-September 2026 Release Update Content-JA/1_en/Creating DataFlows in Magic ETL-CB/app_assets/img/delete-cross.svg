@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
+  <defs>
+    <style>
+      .a {
+        fill: #e4584f;
+      }
+
+      .b {
+        fill: none;
+        stroke: #fff;
+        stroke-miterlimit: 10;
+        stroke-width: 2px;
+      }
+    </style>
+  </defs>
+  <title>Asset 39</title>
+  <g>
+    <circle class="a" cx="8" cy="8" r="8"/>
+    <line class="b" x1="11.54" y1="4.46" x2="4.46" y2="11.54"/>
+    <line class="b" x1="11.54" y1="11.54" x2="4.46" y2="4.46"/>
+  </g>
+</svg>

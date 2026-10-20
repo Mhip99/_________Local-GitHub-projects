@@ -18,6 +18,10 @@ from collections import Counter
 
 import tm_index
 from tm_index import norm, h, XTAG
+try:
+    import json_io          # Domo アプリ コンテンツ JSON の抽出（.json ソース用）
+except Exception:
+    json_io = None
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 
@@ -278,16 +282,40 @@ articles = []          # manifest of processed articles
 gi = 0
 for si, sp in enumerate(srcs):
     print("\n[%d/%d] %s" % (si+1, len(srcs), os.path.basename(sp)), flush=True)
-    src, ftitle = read_segments(sp)
+    uids = None
+    if os.path.splitext(sp)[1].lower() == ".json":
+        if json_io is None:
+            print("  ERROR: json_io 未読込のため .json を処理できません", flush=True); sys.exit(1)
+        units = json_io.extract(sp)
+        src = [u["text"] for u in units]
+        uids = [u["uid"] for u in units]
+        try:
+            ftitle = (json.load(open(sp, encoding="utf-8-sig")).get("app_name", "")
+                      or os.path.splitext(os.path.basename(sp))[0])
+        except Exception:
+            ftitle = os.path.splitext(os.path.basename(sp))[0]
+    else:
+        src, ftitle = read_segments(sp)
     title = (args.title if (not batch and args.title) else "") or ftitle or os.path.splitext(os.path.basename(sp))[0]
     print("  source segs:", len(src), flush=True)
     rows, mt_todo = analyze(src)
+    if uids is not None:   # .json: 各 SEG 行に保護タグ（{n}→元タグ）を添付（編集画面のチップ用）
+        for i, u in enumerate(units):
+            if i < len(rows):
+                rows[i]["tags"] = u.get("tags", {})
     bc = Counter(r["b"] for r in rows)
     print("  bands:", dict(bc), "| MT(<=74%):", len(mt_todo), flush=True)
 
     outp = out_path_for(sp, title)
     open(outp, "w", encoding="utf-8", newline="\n").write(render(rows, title))
     print("  saved:", outp, flush=True)
+
+    # .json ソースは uid マップ（SEG index -> JSON内 uid）を出力 → 後で TEP 確定訳を JSON へ復元
+    if uids is not None:
+        json.dump({"json": os.path.abspath(sp), "uids": uids},
+                  open(outp + ".uidmap.json", "w", encoding="utf-8"),
+                  ensure_ascii=False, indent=1)
+        print("  uidmap:", outp + ".uidmap.json", flush=True)
 
     # Unique key per article: relative path under --out-dir (so same-named files in
     # different sub-folders don't collide); falls back to the bare stem otherwise.

@@ -225,8 +225,13 @@ ap.add_argument("cmd", choices=["add", "add-batch", "list", "get", "set-status",
                                  "create", "add-source", "set-main-tm", "add-sub-tm",
                                  "new-tm", "show", "srcs", "subs", "undo-source",
                                  "undo-sub-tm", "set-outdir", "set-assignee",
-                                 "set-product-tm", "run", "export", "idof", "serve"])
+                                 "set-product-tm", "run", "export", "idof", "serve",
+                                 "reinsert-json"])
 ap.add_argument("--store", default=DEFAULT_STORE)
+ap.add_argument("--xliff", default="", help="reinsert-json: TEP で書き出した XLIFF")
+ap.add_argument("--uidmap", default="", help="reinsert-json: tm_match_analysis が出した <html>.uidmap.json")
+ap.add_argument("--confirmed-only", dest="confirmed_only", action="store_true",
+                help="reinsert-json: 確定行(state=final/confirmed)のみ反映")
 ap.add_argument("--term-store", dest="term_store", default="", help="用語集 TSV（全体共通・既定は Live_TM\\_terms.tsv）")
 ap.add_argument("--html", default="")
 ap.add_argument("--title", default=None)
@@ -667,6 +672,49 @@ def glossary_run(source=None, source_dir="", html=None, xliff=None, xliff_dir=""
     if rc != 0:
         return {"ok": False, "error": "Glossary 作成に失敗しました (exit %d)" % rc, "rc": rc, "log": out_text}
     return {"ok": True, "out": out, "csv": out + ".csv", "json": out + ".json", "log": out_text}
+
+
+def reinsert_json(xliff_path, uidmap_path, out_path, json_path="", confirmed_only=False):
+    """TEP で書き出した XLIFF の訳を uidmap 経由で元 JSON に適用し、翻訳済み JSON を出力。
+    XLIFF trans-unit id(=セグメント index+1) → uid → json_io.apply。"""
+    import json_io, xml.etree.ElementTree as ET
+    if not (uidmap_path and os.path.exists(uidmap_path)):
+        return {"ok": False, "error": "uidmap が見つかりません: %s" % uidmap_path}
+    m = json.load(open(uidmap_path, encoding="utf-8-sig"))
+    uids = m.get("uids", [])
+    jpath = json_path or m.get("json", "")
+    if not (jpath and os.path.exists(jpath)):
+        return {"ok": False, "error": "元 JSON が見つかりません: %s" % jpath}
+    if not (xliff_path and os.path.exists(xliff_path)):
+        return {"ok": False, "error": "XLIFF が見つかりません: %s" % xliff_path}
+    strip = lambda t: t.split("}")[-1]
+    root = ET.parse(xliff_path).getroot()
+    trans = {}; applied = 0
+    for tu in root.iter():
+        if strip(tu.tag) != "trans-unit":
+            continue
+        tid = tu.attrib.get("id", "")
+        tgt = None; state = ""; note = ""
+        for ch in tu:
+            ct = strip(ch.tag)
+            if ct == "target":
+                tgt = "".join(ch.itertext()); state = ch.attrib.get("state", "")
+            elif ct == "note":
+                note = "".join(ch.itertext())
+        if tgt is None:
+            continue
+        if confirmed_only and not (state == "final" or "confirmed" in note.lower()):
+            continue
+        try:
+            idx = int(tid) - 1
+        except ValueError:
+            continue
+        if 0 <= idx < len(uids) and tgt.strip():
+            trans[uids[idx]] = tgt; applied += 1
+    if not trans:
+        return {"ok": False, "error": "XLIFF から適用できる訳がありません（確定行なし？）"}
+    res = json_io.apply(jpath, out_path, trans)
+    return {"ok": True, "out": out_path, "applied": applied, "filled": res.get("filled")}
 
 
 def read_cfg():
@@ -1524,6 +1572,14 @@ elif a.cmd == "export":
     if not res.get("ok"):
         print("ERROR:", res.get("error")); sys.exit(res.get("rc") or 1)
     print("DONE. 元形式の翻訳版を出力しました:", res.get("out_dir", ""))
+
+elif a.cmd == "reinsert-json":
+    out = a.out or (os.path.splitext(a.xliff)[0] + "_JA.json")
+    res = reinsert_json(a.xliff, a.uidmap, out, json_path=a.path, confirmed_only=a.confirmed_only)
+    if not res.get("ok"):
+        print("ERROR:", res.get("error")); sys.exit(1)
+    print("DONE. 翻訳済み JSON:", res["out"], "（適用 %d / filled %s）"
+          % (res["applied"], res.get("filled")))
 
 elif a.cmd == "dashboard":
     out = a.out or os.path.join(HERE, "_projects.html")
