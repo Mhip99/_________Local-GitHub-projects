@@ -1,0 +1,9 @@
+現在の File comparison フォルダー構成
+ファイル	役割
+File-Comparison.bat	ダブルクリック起動用バッチ（Run-FileComparison.ps1 を呼び出す）
+Run-FileComparison.ps1	実行時にモード（Fullset/Project）を対話選択するランチャー（推奨）
+Run-Fullset.ps1	Fullset 専用ランチャー（モード固定・選択不要）
+Run-Project.ps1	Project 専用ランチャー（モード固定・選択不要）
+file_compare_fullset.py	比較エンジン
+translatable_util.py	翻訳対象テキスト抽出モジュール
+ダブルクリックなら File-Comparison.bat、コマンドラインなら Run-FileComparison.ps1 を使います。モードを固定したいときは Run-Fullset.ps1 / Run-Project.ps1。

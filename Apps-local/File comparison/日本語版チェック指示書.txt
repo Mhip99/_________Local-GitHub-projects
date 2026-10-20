@@ -1,0 +1,86 @@
+日本語版ファイルのバージョンチェック
+最新フォルダの日本語版ファイルが英語版と同じバージョンか否かをチェック
+（英語版が新しくなったのに日本語版が古いバージョンのまま）
+
+ツール起動時に説明を表示したあと、実行するか否かを確認して下記１と２を実行する。
+
+1.Current版の英語版と日本語版のファイルをチェック
+以下のフォルダ内のファイルを比較して、日本度のバージョンが英語のバージョンと対応しているかをチェックしてレポートを作成する。
+英語版
+C:\Users\Masaaki.Hori\OneDrive - Domo Inc\_________GitHub-Main\domo-documentation-hub\s\article
+日本語版
+C:\Users\Masaaki.Hori\OneDrive - Domo Inc\_________GitHub-Main\domo-documentation-hub\ja\s\article
+
+日本語版のソースである英語版を探す。チェックする内容は以下の通り。
+-ファイル名が同じ
+日本語版とファイル名が同じ場合はそれが英語版ソースファイルの可能性が高い。
+-ファイル名が異なるが、元は同じ記事
+ファイル名が異なるケースは以下の2つが想定される。
+日本語版が公開された後、英語版のソースファイル名が変更された。
+英語版のソースファイル名が日本語版ソースファイル名では翻訳されている。
+
+-本文のtitleをチェック
+英語版はtitle: "Flex Map v2 | User Guide"
+（""の中がタイトル。）
+英語版タイトルと日本語版タイトルとを比較して類推。
+さらに英語版と日本語版の本文の内容を比較して類推。
+
+
+2.日本語版のみで英語版が存在しないファイルのチェック
+日本語版ファイルに対応する英語英語版ファイルが存在しない。
+
+比較するフォルダー
+Current JAとCurrent ENを比較（以下のパス）
+EN
+C:\Users\Masaaki.Hori\OneDrive - Domo Inc\_________GitHub-Main\domo-documentation-hub\s\article
+JA
+C:\Users\Masaaki.Hori\OneDrive - Domo Inc\_________GitHub-Main\domo-documentation-hub\ja\s\article
+
+Published Japanese versionとCurrent ENを比較（以下のパス）
+EN
+C:\Users\Masaaki.Hori\OneDrive - Domo Inc\_________GitHub-Main\domo-documentation-hub\s\article
+JA
+\ja\s\article
+（このサブフォルダーを探す）
+
+プロジェクトフォルダー
+C:\Users\Masaaki.Hori\OneDrive - Domo Inc\________GitHub-production\File comparison\JA_comp
+
+
+結果
+C:\Users\Masaaki.Hori\OneDrive - Domo Inc\________GitHub-production\File comparison\__Results\JA version
+ファイル名：JA_version-YYYYMMDD.xlsx
+YYYYMMDDは作成日
+
+シート名：Compare
+列名：
+EN File name
+JA File name
+EN Article title
+JA Article title
+Update
+Summary
+
+Target translated date
+Current date
+Note
+
+列のデータ
+EN File name：すべての英語版ファイル名
+JA File name：すべての日本語版ファイル名
+EN Article title：英語版タイトル
+JA Article title：日本語場タイトル
+Update：Idential, EN Updated, Not localized, Only Japanese
+Summary:Updateの詳細。英語版と日本語版の違いを簡潔に（タイトル、内容など）
+
+Target translated date：日本語版作成日
+Current date：英語版作成日
+Note：
+
+
+Idential：タイトルも内容も同じ
+EN Updated：英語版が日本語版翻訳後にアップデートされている
+Not localized：日本語版が存在しない
+Only Japanese：英語版が存在しない
+Not in C：Current版に存在しない。
+
