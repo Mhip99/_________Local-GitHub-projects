@@ -1,0 +1,37 @@
+{
+ "projects": [
+  {
+   "html": "C:\\Users\\Masaaki.Hori\\OneDrive - Domo Inc\\________GitHub-production\\CAT tool\\CAT\\TM-Match-Explorer-DomoStats Connector.html",
+   "title": "DomoStats Connector",
+   "source": "C:\\Users\\Masaaki.Hori\\OneDrive - Domo Inc\\________GitHub-production\\Analysis and Translation\\Sample\\ED2708-03-MH-KB-mdx-DomoStats Connector-JA\\1_en\\360043433813.mdx",
+   "segs": null,
+   "mt": 1090,
+   "status": "作業中",
+   "created": "2026-10-07 15:26",
+   "updated": "2026-10-07 15:26"
+  },
+  {
+   "id": "proj-20261007-164351",
+   "type": "project",
+   "name": "Test 001 - 1007",
+   "status": "未解析",
+   "sources": [],
+   "main_tm": "",
+   "sub_tms": [],
+   "created": "2026-10-07 16:43",
+   "updated": "2026-10-07 16:43"
+  },
+  {
+   "html": "C:\\Users\\Masaaki.Hori\\OneDrive - Domo Inc\\________GitHub-production\\CAT tool\\CAT\\TM-Match-Explorer-Changes in Account Configuration Requirements for Connectors.html",
+   "title": "Changes in Account Configuration Requirements for Connectors",
+   "source": "C:\\Users\\Masaaki.Hori\\OneDrive - Domo Inc\\________GitHub-production\\___Test Projects\\EN source\\000005214\\000005214.mdx",
+   "segs": null,
+   "mt": 0,
+   "status": "作業中",
+   "memo": "",
+   "due": "",
+   "created": "2026-10-08 16:16",
+   "updated": "2026-10-08 16:23"
+  }
+ ]
+}

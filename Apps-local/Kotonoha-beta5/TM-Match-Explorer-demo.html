@@ -1,0 +1,746 @@
+<title>TM Match Explorer</title>
+<meta name="description" content="Interactive viewer for TM match analysis.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ground:#F5F6F8; --surface:#FFFFFF; --surface-2:#FBFCFD;
+  --ink:#1B1F27; --muted:#5C6470; --faint:#8A929E;
+  --hairline:#E4E7EC; --hairline-strong:#D2D7DE;
+  --accent:#146C82; --accent-ink:#0E5566; --accent-wash:#E4F0F3;
+  --reuse:#2E9E6B; --reuse-wash:#E4F3EC;
+  --modify:#B77C1F; --modify-wash:#F6ECD8;
+  --new:#C0503E; --new-wash:#F6E4E0;
+  --add-ink:#1C7A4F; --add-bg:#E2F2E9;
+  --del-ink:#B24230; --del-bg:#F7E5E1;
+  --shadow:0 1px 2px rgba(20,30,45,.04), 0 4px 16px rgba(20,30,45,.05);
+  --radius:10px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --ground:#101319; --surface:#191D25; --surface-2:#1F242D;
+  --ink:#E9EBEF; --muted:#9BA3AF; --faint:#6E7783;
+  --hairline:#2A303A; --hairline-strong:#39414D;
+  --accent:#48AEC6; --accent-ink:#8FD3E2; --accent-wash:#173038;
+  --reuse:#4CB985; --reuse-wash:#15302479;
+  --modify:#D6A24A; --modify-wash:#33280f79;
+  --new:#DE6E5C; --new-wash:#33191479;
+  --add-ink:#6FD3A0; --add-bg:#123024;
+  --del-ink:#E88C7A; --del-bg:#331A16;
+  --shadow:0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.35);
+}}
+:root[data-theme="dark"]{
+  --ground:#101319; --surface:#191D25; --surface-2:#1F242D;
+  --ink:#E9EBEF; --muted:#9BA3AF; --faint:#6E7783;
+  --hairline:#2A303A; --hairline-strong:#39414D;
+  --accent:#48AEC6; --accent-ink:#8FD3E2; --accent-wash:#173038;
+  --reuse:#4CB985; --reuse-wash:#15302479;
+  --modify:#D6A24A; --modify-wash:#33280f79;
+  --new:#DE6E5C; --new-wash:#33191479;
+  --add-ink:#6FD3A0; --add-bg:#123024;
+  --del-ink:#E88C7A; --del-bg:#331A16;
+  --shadow:0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--ground);color:var(--ink);
+  font-family:"IBM Plex Sans","Noto Sans JP",system-ui,sans-serif;
+  line-height:1.55;-webkit-font-smoothing:antialiased;}
+.wrap{max-width:1140px;margin:0 auto;padding:32px 24px 72px;}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums;}
+
+/* header */
+header.top{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;flex-wrap:wrap;margin-bottom:28px;}
+.brand .eyebrow{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);font-weight:600;}
+.brand h1{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(28px,4vw,40px);
+  line-height:1.05;margin:.15em 0 .1em;text-wrap:balance;letter-spacing:-.01em;}
+.brand p{margin:0;color:var(--muted);font-size:14.5px;max-width:60ch;}
+.filepill{display:inline-flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--hairline);
+  border-radius:999px;padding:7px 13px;font-size:12.5px;color:var(--muted);box-shadow:var(--shadow);}
+.filepill .dot{width:7px;height:7px;border-radius:50%;background:var(--reuse);}
+.themebtn{background:var(--surface);border:1px solid var(--hairline);color:var(--muted);
+  border-radius:8px;padding:7px 11px;font:inherit;font-size:13px;cursor:pointer;}
+.themebtn:hover{border-color:var(--hairline-strong);color:var(--ink);}
+
+/* summary */
+.summary{display:grid;grid-template-columns:1.15fr 1fr;gap:16px;margin-bottom:22px;}
+@media(max-width:820px){.summary{grid-template-columns:1fr;}}
+.card{background:var(--surface);border:1px solid var(--hairline);border-radius:var(--radius);box-shadow:var(--shadow);}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);}
+.tile{padding:16px 16px 14px;border-right:1px solid var(--hairline);}
+.tile:last-child{border-right:none;}
+.tile .k{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);font-weight:600;}
+.tile .v{font-family:"IBM Plex Mono",monospace;font-weight:600;font-size:27px;line-height:1.15;margin-top:4px;font-variant-numeric:tabular-nums;}
+.tile .s{font-size:12px;color:var(--muted);}
+.tile.accent .v{color:var(--accent);} .tile.reuse .v{color:var(--reuse);} .tile.new .v{color:var(--new);}
+.panel{padding:16px 18px;}
+.panel h2{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin:0 0 12px;font-weight:600;}
+.stack{display:flex;height:20px;border-radius:6px;overflow:hidden;gap:2px;background:var(--surface);}
+.stack span{display:block;height:100%;}
+.stack .s-reuse{background:var(--reuse);} .stack .s-modify{background:var(--modify);} .stack .s-new{background:var(--new);}
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-size:12.5px;color:var(--muted);}
+.legend .li{display:flex;align-items:center;gap:6px;}
+.legend .sw{width:10px;height:10px;border-radius:3px;}
+.bands{margin-top:4px;display:flex;flex-direction:column;gap:7px;}
+.band{display:grid;grid-template-columns:74px 1fr 34px;align-items:center;gap:10px;font-size:12.5px;}
+.band .bar{height:8px;border-radius:4px;background:var(--accent);opacity:.85;min-width:2px;}
+.band .ct{text-align:right;color:var(--muted);}
+.band .nm{color:var(--muted);font-weight:500;}
+
+/* controls */
+.controls{position:sticky;top:0;z-index:5;background:var(--ground);
+  display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:12px 0 12px;margin-bottom:6px;border-bottom:1px solid var(--hairline);}
+.search{flex:1;min-width:190px;position:relative;}
+.search input{width:100%;padding:9px 12px 9px 32px;border:1px solid var(--hairline-strong);border-radius:8px;
+  background:var(--surface);color:var(--ink);font:inherit;font-size:14px;}
+.search input:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent);}
+.search svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--faint);}
+.seg{display:inline-flex;border:1px solid var(--hairline-strong);border-radius:8px;overflow:hidden;}
+.seg button{background:var(--surface);border:none;border-right:1px solid var(--hairline);color:var(--muted);
+  font:inherit;font-size:13px;padding:8px 12px;cursor:pointer;}
+.seg button:last-child{border-right:none;}
+.seg button[aria-pressed="true"]{background:var(--accent);color:#fff;}
+.chips{display:flex;gap:6px;flex-wrap:wrap;}
+.chip{background:var(--surface);border:1px solid var(--hairline-strong);border-radius:999px;
+  color:var(--muted);font:inherit;font-size:12.5px;padding:6px 11px;cursor:pointer;}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--ground);border-color:var(--ink);}
+.toggle{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);cursor:pointer;user-select:none;}
+.toggle input{appearance:none;width:34px;height:19px;border-radius:999px;background:var(--hairline-strong);position:relative;cursor:pointer;transition:background .15s;}
+.toggle input:checked{background:var(--accent);}
+.toggle input::after{content:"";position:absolute;top:2px;left:2px;width:15px;height:15px;border-radius:50%;background:#fff;transition:left .15s;}
+.toggle input:checked::after{left:17px;}
+
+/* table */
+.count{color:var(--muted);font-size:12.5px;margin:12px 2px;}
+.tablewrap{overflow-x:auto;border:1px solid var(--hairline);border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow);}
+table{border-collapse:collapse;width:100%;min-width:820px;}
+thead th{position:sticky;top:0;background:var(--surface-2);text-align:left;font-size:11px;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--faint);font-weight:600;padding:11px 14px;border-bottom:1px solid var(--hairline-strong);}
+tbody td{padding:12px 14px;border-bottom:1px solid var(--hairline);vertical-align:top;font-size:14px;}
+tbody tr:last-child td{border-bottom:none;}
+tbody tr:hover{background:var(--surface-2);}
+td.idx{color:var(--faint);font-family:"IBM Plex Mono",monospace;font-size:12.5px;width:38px;}
+td.ja{font-family:"Noto Sans JP","IBM Plex Sans",sans-serif;}
+td.tm{color:var(--muted);}
+.matchcell{white-space:nowrap;}
+.bandtag{display:inline-block;font-family:"IBM Plex Mono",monospace;font-size:11.5px;font-weight:600;
+  padding:2px 7px;border-radius:5px;border:1px solid transparent;}
+.b-reuse{color:var(--reuse);background:var(--reuse-wash);border-color:var(--reuse);}
+.b-modify{color:var(--modify);background:var(--modify-wash);border-color:var(--modify);}
+.b-new{color:var(--new);background:var(--new-wash);border-color:var(--new);}
+.pct{display:block;font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted);margin-top:5px;}
+.cat{display:block;font-size:11px;color:var(--faint);margin-top:2px;}
+ins{background:var(--add-bg);color:var(--add-ink);text-decoration:none;border-radius:3px;padding:0 2px;font-weight:500;}
+del{background:var(--del-bg);color:var(--del-ink);border-radius:3px;padding:0 2px;}
+body.hide-del del{display:none;}
+.empty{padding:40px;text-align:center;color:var(--muted);}
+footer{margin-top:26px;color:var(--faint);font-size:12px;text-align:center;}
+footer code{font-family:"IBM Plex Mono",monospace;color:var(--muted);}
+.demoflag{display:inline-block;background:var(--modify-wash);color:var(--modify);border:1px solid var(--modify);
+  font-size:11px;font-weight:600;padding:2px 8px;border-radius:5px;letter-spacing:.03em;}
+.expbtn{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 14px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;}
+.expbtn:hover{background:var(--accent-ink);}
+.editcount{font-size:12.5px;color:var(--accent);font-family:"IBM Plex Mono",monospace;font-weight:600;}
+.jaedit{width:100%;min-width:230px;font-family:"Noto Sans JP","IBM Plex Sans",sans-serif;font-size:14px;line-height:1.5;
+  border:1px solid var(--hairline-strong);border-radius:6px;padding:6px 8px;background:var(--surface-2);color:var(--ink);resize:vertical;}
+.jaedit:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent);}
+tr.edited td.idx{box-shadow:inset 3px 0 0 var(--accent);}
+td.ja.isedited::after{content:"編集済";font-size:10px;color:var(--accent);margin-left:6px;font-weight:600;vertical-align:top;}
+.sttag{display:inline-block;font-family:"IBM Plex Mono",monospace;font-size:10px;font-weight:600;padding:1px 5px;border-radius:4px;margin-top:5px;letter-spacing:.02em;}
+.st-mt{color:var(--new);background:var(--new-wash);border:1px solid var(--new);}
+.st-tm{color:var(--muted);background:var(--surface-2);border:1px solid var(--hairline-strong);}
+.japlaceholder{color:var(--faint);font-style:italic;}
+/* インライン保護タグ（チップ） */
+.tag{display:inline-block;background:var(--accent-wash);color:var(--accent-ink);border:1px solid var(--accent);
+  border-radius:3px;padding:0 3px;margin:0 1px;font-family:"IBM Plex Mono",monospace;font-size:9px;font-weight:700;
+  line-height:1.4;min-width:11px;text-align:center;cursor:help;user-select:none;white-space:nowrap;vertical-align:middle;}
+.jaedit[contenteditable]{min-height:34px;white-space:pre-wrap;}
+.jaedit[contenteditable]:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent);}
+.palette{display:flex;gap:3px;flex-wrap:wrap;align-items:center;margin-bottom:5px;}
+.palette .plab{font-size:11px;color:var(--faint);}
+.taginsert{display:inline-block;background:var(--surface-2);color:var(--accent-ink);border:1px dashed var(--accent);
+  border-radius:3px;padding:0 4px;min-width:13px;text-align:center;font-family:"IBM Plex Mono",monospace;font-size:9.5px;font-weight:700;cursor:pointer;user-select:none;}
+.taginsert:hover{background:var(--accent);color:#fff;}
+/* confirm (TEP sign-off) */
+.confcol{width:56px;text-align:center;white-space:nowrap;}
+.confbox{width:17px;height:17px;cursor:pointer;accent-color:var(--reuse);}
+.confbox:disabled{cursor:not-allowed;opacity:.4;}
+tr.confirmed{background:var(--reuse-wash);}
+tr.confirmed td.idx{box-shadow:inset 3px 0 0 var(--reuse);}
+td.ja.isconfirmed::after{content:"確定";font-size:10px;color:var(--reuse);margin-left:6px;font-weight:600;vertical-align:top;}
+.confcount{font-size:12.5px;color:var(--reuse);font-family:"IBM Plex Mono",monospace;font-weight:600;}
+.minibtn{background:var(--surface);border:1px solid var(--hairline-strong);color:var(--muted);border-radius:8px;padding:8px 12px;font:inherit;font-size:13px;cursor:pointer;}
+.minibtn:hover{border-color:var(--reuse);color:var(--ink);}
+/* layout: full-width segment table on top; below it history pane (left) + term pane (right) side by side */
+/* view tabs (翻訳 / サマリー) */
+.vtabs{display:flex;gap:6px;margin:4px 0 14px;border-bottom:1px solid var(--hairline);}
+.vtab{background:transparent;border:1px solid transparent;border-bottom:none;color:var(--muted);border-radius:8px 8px 0 0;padding:8px 18px;font:inherit;font-size:14px;font-weight:600;cursor:pointer;}
+.vtab[aria-pressed="true"]{background:var(--surface);border-color:var(--hairline);color:var(--ink);}
+/* fixed, resizable, scrollable work panes */
+.worklayout{display:flex;flex-direction:column;gap:12px;}
+.segpane{height:60vh;min-height:160px;overflow:auto;resize:vertical;border:1px solid var(--hairline);
+  border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow);}
+.segpane table{margin:0;}
+.panerow{display:flex;gap:16px;align-items:stretch;}
+.histpane,.termpane{flex:1;min-width:0;height:15vh;min-height:88px;overflow:auto;resize:both;
+  background:var(--surface);border:1px solid var(--hairline);border-radius:var(--radius);box-shadow:var(--shadow);padding:12px 14px;}
+.panehd{position:sticky;top:0;background:var(--surface);z-index:1;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin:0 0 10px;font-weight:600;padding-bottom:4px;}
+.termhint,.histhint{font-size:12.5px;color:var(--faint);}
+.histpane .histsrc{text-transform:none;letter-spacing:0;color:var(--muted);font-weight:500;margin-left:8px;
+  font-family:"IBM Plex Mono","Noto Sans JP",monospace;font-size:12px;}
+.histlist{display:flex;flex-direction:column;gap:8px;}
+.histitem{border:1px solid var(--hairline);border-radius:8px;padding:8px 10px;background:var(--surface-2);}
+.histitem.latest{border-color:var(--reuse);}
+.histitem .meta{font-size:11px;color:var(--faint);font-family:"IBM Plex Mono",monospace;margin-bottom:3px;}
+.histitem .meta .badge-latest{color:var(--reuse);font-weight:600;margin-left:6px;}
+.histitem .tgt{font-family:"Noto Sans JP","IBM Plex Sans",sans-serif;font-size:13.5px;color:var(--ink);white-space:pre-wrap;}
+#termadd{display:flex;flex-direction:column;gap:6px;border:1px solid var(--hairline);border-radius:8px;padding:10px;margin-bottom:10px;background:var(--surface-2);}
+#termadd input{padding:6px 8px;border:1px solid var(--hairline-strong);border-radius:6px;background:var(--surface);color:var(--ink);font:inherit;font-size:13px;}
+.termaddrow{display:flex;gap:6px;align-items:baseline;font-size:13px;}
+.termaddrow .k{color:var(--faint);font-size:11px;}
+.termsel{font-weight:600;color:var(--accent);word-break:break-word;}
+.termaddbtn{background:var(--accent);color:#fff;border:none;border-radius:7px;padding:7px 10px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;}
+.termlist{display:flex;flex-direction:column;gap:8px;}
+.termitem{border:1px solid var(--hairline);border-radius:8px;padding:8px 10px;background:var(--surface-2);}
+.termitem .s{font-weight:600;color:var(--ink);}
+.termitem .t{font-family:"Noto Sans JP","IBM Plex Sans",sans-serif;color:var(--ink);}
+.termitem .m{font-size:11px;color:var(--faint);margin-top:2px;}
+tbody tr.selected{background:var(--accent-wash);}
+tbody tr.selected td.idx{box-shadow:inset 3px 0 0 var(--accent);}
+@media(max-width:820px){.panerow{flex-direction:column;}}
+/* compact header / tabs / buttons（作業領域を広く取る） */
+.wrap{padding:14px 24px 36px;}
+header.top{margin-bottom:6px;gap:12px;align-items:center;}
+.brand .eyebrow{display:none;}
+.brand h1{font-size:20px;line-height:1.15;margin:0;}
+.brand p{font-size:12px;line-height:1.4;max-width:none;margin:2px 0 0;color:var(--muted);}
+.themebtn{padding:5px 9px;font-size:12px;}
+.filepill{padding:4px 10px;font-size:12px;}
+.vtabs{margin:6px 0 8px;}
+.vtab{padding:5px 13px;font-size:13px;}
+.controls{padding:7px 0;gap:8px;margin-bottom:4px;}
+.count{margin:6px 2px;}
+.seg button{padding:5px 10px;font-size:12px;}
+.chip{padding:4px 9px;font-size:12px;}
+.toggle{font-size:12px;}
+.minibtn{padding:5px 10px;font-size:12px;}
+.expbtn{padding:6px 12px;font-size:12px;}
+.search input{padding:7px 10px 7px 30px;font-size:13px;}
+.segpane{height:64vh;}
+/* タブ行にテーマ切替・アーティクル名を同居（タイトルは撤去） */
+.wrap{max-width:none;padding:10px clamp(16px,2.2vw,40px) 32px;}
+/* セグメント表を全幅・固定レイアウトにし、English と Japanese を広く確保 */
+#segpane table{table-layout:fixed;width:100%;min-width:720px;}
+#segpane col.c-idx{width:42px;} #segpane col.c-match{width:92px;}
+#segpane col.c-en{width:27%;} #segpane col.c-tm{width:19%;} #segpane col.c-ja{width:46%;} #segpane col.c-conf{width:54px;}
+#segpane td,#segpane th{overflow-wrap:anywhere;}
+.vtabs{display:flex;align-items:center;gap:8px;margin:0 0 8px;}
+.vtabs .filepill{margin-left:auto;}
+.vtabs .vtab{align-self:flex-end;}
+/* 検索行・ボタン類をさらにコンパクトに */
+.controls{padding:5px 0;gap:6px;margin-bottom:4px;}
+.search{min-width:150px;}
+.search input{padding:6px 10px 6px 30px;font-size:12.5px;}
+.seg button{padding:4px 9px;font-size:12px;}
+.chip{padding:3px 8px;font-size:11.5px;}
+.toggle{font-size:11.5px;gap:6px;}
+.minibtn{padding:4px 9px;font-size:11.5px;}
+.expbtn{padding:5px 11px;font-size:12px;}
+.themebtn,.filepill{padding:4px 9px;font-size:11.5px;}
+.count{margin:4px 2px;font-size:12px;}
+.segpane{height:66vh;}
+</style>
+
+<div class="wrap">
+  <div class="vtabs" id="vtabs">
+    <button class="vtab" id="vt-work" data-v="work" aria-pressed="true" type="button">翻訳</button>
+    <button class="vtab" id="vt-summary" data-v="summary" aria-pressed="false" type="button">サマリー</button>
+    <span class="filepill"><span class="dot"></span>DomoStats Connector <span class="demoflag">DEMO</span></span>
+    <button class="themebtn" id="themebtn" type="button">◐ テーマ切替</button>
+  </div>
+  <section class="summary" id="view-summary" hidden>
+    <div class="card tiles" id="tiles"></div>
+    <div class="card panel">
+      <h2>区分の内訳</h2>
+      <div class="stack" id="stack"></div>
+      <div class="legend" id="legend"></div>
+      <div class="bands" id="bands" style="margin-top:16px;"></div>
+    </div>
+    <div class="card panel" id="metacard">
+      <h2>ファイル / TM / プロジェクト情報</h2>
+      <div id="metabody" class="metabody"></div>
+    </div>
+  </section>
+
+  <div id="view-work">
+  <div class="controls">
+    <label class="search">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input id="q" type="search" placeholder="英文・訳文を検索…" aria-label="Search segments">
+    </label>
+    <div class="seg" id="catseg" role="group" aria-label="区分フィルター">
+      <button data-cat="all" aria-pressed="true">すべて</button>
+      <button data-cat="Reused" aria-pressed="false">再利用</button>
+      <button data-cat="Modified" aria-pressed="false">修正</button>
+      <button data-cat="Added" aria-pressed="false">新規</button>
+    </div>
+    <div class="chips" id="bandchips" role="group" aria-label="マッチ率バンド"></div>
+    <label class="toggle"><input type="checkbox" id="deltoggle" checked> 削除を表示</label>
+    <label class="toggle"><input type="checkbox" id="editmode"> 編集モード</label>
+    <label class="toggle"><input type="checkbox" id="editedonly"> 編集済みのみ</label>
+    <label class="toggle"><input type="checkbox" id="confirmedonly"> 確定済みのみ</label>
+    <button class="minibtn" id="confirmview" type="button">表示中を一括確定</button>
+    <span class="editcount" id="editcount"></span>
+    <span class="confcount" id="confcount"></span>
+    <button class="expbtn" id="exportxliff" type="button">XLIFF 書き出し</button>
+  </div>
+
+  <div class="count" id="count"></div>
+  <div class="worklayout">
+  <div class="segpane" id="segpane">
+    <table>
+      <colgroup><col class="c-idx"><col class="c-match"><col class="c-en"><col class="c-tm"><col class="c-ja"><col class="c-conf"></colgroup>
+      <thead><tr>
+        <th>#</th><th>Match</th><th>English (source)</th><th>TM 訳（参考）</th><th>Japanese (Pre-translation)</th><th class="confcol">確定</th>
+      </tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <div class="empty" id="empty" hidden>該当するセグメントはありません。</div>
+  </div>
+  <div class="panerow">
+    <div class="histpane" id="histpane">
+      <h3 class="panehd">翻訳履歴<span class="histsrc" id="histsrc"></span></h3>
+      <div id="histbody"><div class="histhint">セグメントの行をクリックすると、その原文の過去訳（更新日時付き・新しい順）がここに表示されます。</div></div>
+    </div>
+    <aside class="termpane" id="termpane">
+      <h3 class="panehd">用語<span class="histsrc" id="termsrc"></span></h3>
+      <div id="termadd" hidden>
+        <div class="hint">選択した語を用語集に登録:</div>
+        <div class="termaddrow"><span class="k">ソース</span><span class="termsel" id="termsel"></span></div>
+        <input id="termtgt" type="text" placeholder="ターゲット（訳語）">
+        <input id="termnote" type="text" placeholder="ノート（任意）">
+        <button class="termaddbtn" id="termaddbtn" type="button">＋ 用語集に追加</button>
+      </div>
+      <div id="termbody"><div class="termhint">行をクリックすると、その原文に含まれる用語がここに表示されます。原文の語を選択すると用語集に登録できます（サーバーモード時）。</div></div>
+    </aside>
+  </div><!-- /panerow -->
+  </div><!-- /worklayout -->
+  </div><!-- /view-work -->
+
+  <footer>
+    Japanese（Pre-translation）列を編集して TEP（翻訳・編集・校正）し、仕上がった行の「確定」にチェック（編集不要な良い一致もそのまま確定可）してから「XLIFF 書き出し」します。<b>確定した行だけ</b>が Live_TM（Master／プロジェクト TM）への書き戻し対象です。TM 行は TM 訳、<span class="mono">MT</span> 行は AI 下訳。編集・確定はブラウザに自動保存されます（同一PC・同一ブラウザ）。確定行を編集すると確定は解除され、再確定が必要です。
+  </footer>
+</div>
+
+<script>
+const SEG = [
+  {b:"ICE",cat:"Reused",pct:"100.0",st:"tm",en:[["eq","Refreshing Data"]],tm:"データを更新",ja:[["eq","データを更新"]],hist:[{ja:"データを更新",date:"20261010T090000Z"},{ja:"データの更新",date:"20260715T140000Z"},{ja:"データ更新中",date:"20260301T100000Z"}]},
+  {b:"100%",cat:"Reused",pct:"100.0",st:"tm",en:[["eq","Get the top five interests for authors."]],tm:"作者の興味のトップ5を取得します。",ja:[["eq","作者の興味のトップ5を取得します。"]]},
+  {b:"ICE",cat:"Reused",pct:"100.0",st:"tm",en:[["eq","You’re on to something."]],tm:"良い感じですね。",ja:[["eq","良い感じですね。"]]},
+  {b:"95-99%",cat:"Modified",pct:"97.2",st:"tm",en:[["del","Choose"],["add","Select"],["eq"," the card you want to resize."]],tm:"サイズ変更したいカードを選択します。",ja:[["eq","サイズ変更したいカードを選択します。"]]},
+  {b:"85-94%",cat:"Modified",pct:"88.5",st:"tm",en:[["eq","This connector uses "],["del","OAuth 1.0"],["add","OAuth 2.0"],["eq"," for authentication."]],tm:"このコネクターは認証に OAuth 1.0 を使用します。",ja:[["eq","このコネクターは認証に OAuth 1.0 を使用します。"]],hist:[{ja:"このコネクターは認証に OAuth 1.0 を使用します。",date:"20260820T110000Z"},{ja:"このコネクターは認証に OAuth 1.0 を利用します。",date:"20260410T093000Z"}]},
+  {b:"75-84%",cat:"Modified",pct:"79.4",st:"tm",en:[["eq","Enter your "],["del","API key"],["add","client ID and secret"],["eq"," to connect."]],tm:"接続するには API キーを入力します。",ja:[["eq","接続するには API キーを入力します。"]]},
+  {b:"<=74%",cat:"Added",pct:"61.0",st:"mt",en:[["add","Scheduling is now available for advanced connectors on a per-account basis."]],tm:"—",ja:[["eq","高度なコネクターでは、アカウント単位のスケジュール設定が利用可能になりました。"]]},
+  {b:"<=74%",cat:"Added",pct:"44.8",st:"mt",en:[["add","Boolean filters have been redesigned for clearer logic grouping."]],tm:"—",ja:[["eq","ブールフィルターは、論理グループをより明確にするために再設計されました。"]]},
+  {b:"100%",cat:"Reused",pct:"100.0",st:"tm",en:[["eq","Icon"]],tm:"アイコン",ja:[["eq","アイコン"]]},
+  {b:"100%",cat:"Reused",pct:"100.0",st:"tm",en:[["eq","Name"]],tm:"名前",ja:[["eq","名前"]]},
+  {b:"95-99%",cat:"Modified",pct:"96.0",st:"tm",en:[["eq","Get the top "],["del","five"],["add","ten"],["eq"," interests for authors."]],tm:"作者の興味のトップ5を取得します。",ja:[["eq","作者の興味のトップ5を取得します。"]]},
+  {b:"85-94%",cat:"Modified",pct:"90.3",st:"tm",en:[["eq","Hover over the card you’d like to "],["del","move"],["add","resize"],["eq","."]],tm:"移動したいカードの上にカーソルを合わせます。",ja:[["eq","移動したいカードの上にカーソルを合わせます。"]]},
+  {b:"ICE",cat:"Reused",pct:"100.0",st:"tm",en:[["eq","Below is a reference describing each size option:"]],tm:"以下は、各サイズオプションについて説明した参照表です。",ja:[["eq","以下は、各サイズオプションについて説明した参照表です。"]]},
+  {b:"<=74%",cat:"Added",pct:"58.2",st:"mt",en:[["add","Magic ETL tiles can now be disabled individually without deleting them."]],tm:"—",ja:[["eq","Magic ETL タイルは、削除せずに個別に無効化できるようになりました。"]]}
+];
+const META = {"source":{"name":"(デモ).json","path":"（デモのためパスなし）"},"output":{"name":"TM-Match-Explorer-(デモ).html","path":"（デモのためパスなし）"},"tms":[{"role":"メインTM","name":"Domo University","path":"（デモ）"},{"role":"Product TM","name":"Domo Product","path":"（デモ）"}],"project":{"name":"(デモプロジェクト)","detail":"これはテンプレート同梱のサンプル情報です。実データは生成された TEP.html に表示されます。"},"generated":"(デモ)"};  /*__META__*/
+const BANDS=["ICE","100%","95-99%","85-94%","75-84%","<=74%"];
+const CATOF={"ICE":"Reused","100%":"Reused","95-99%":"Modified","85-94%":"Modified","75-84%":"Modified","<=74%":"Added"};
+const CATCLS={Reused:"b-reuse",Modified:"b-modify",Added:"b-new"};
+const CATJA={Reused:"再利用",Modified:"修正",Added:"新規"};
+const esc=s=>s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+function diff(parts){return parts.map(([op,t])=>op==="eq"?esc(t):op==="add"?`<ins>${esc(t)}</ins>`:`<del>${esc(t)}</del>`).join("");}
+function plain(parts){return parts.map(([op,t])=>op==="del"?"":t).join("");}
+// ===== インライン保護タグ（プレースアブル）: {n} を編集不可・移動可のチップとして扱う =====
+function tagLabel(t){
+  if(!t)return "";
+  if(/^<br/i.test(t))return "↵";
+  const m=/^<\/?\s*([a-zA-Z0-9]+)/.exec(t);const name=m?m[1].toLowerCase():"tag";
+  const map={strong:"B",b:"B",em:"I",i:"I",span:"s",a:"a",u:"U",div:"d",code:"c",sup:"^",sub:"_",small:"s",mark:"m"};
+  return (/^<\//.test(t)?"/":"")+(map[name]||name);
+}
+function chipHTML(ph,tags){const t=(tags&&tags[ph])||("tag "+ph);
+  return '<span class="tag" data-ph="'+ph+'" contenteditable="false" title="'+esc(t)+'">'+esc(ph)+'</span>';}
+function withChips(htmlStr,tags){return String(htmlStr).replace(/\{(\d+)\}/g,(m,n)=>chipHTML(n,tags));}
+function paletteHTML(s){const ks=s.tags?Object.keys(s.tags):[];if(!ks.length)return "";
+  ks.sort((a,b)=>a-b);
+  return '<div class="palette"><span class="plab">タグ挿入:</span>'+ks.map(n=>'<span class="taginsert" data-ph="'+n+'" title="'+esc(s.tags[n])+'">'+esc(n)+'</span>').join("")+'</div>';}
+function serializeJa(node){let out="";node.childNodes.forEach(c=>{
+  if(c.nodeType===3){out+=c.nodeValue;}
+  else if(c.nodeType===1){
+    if(c.classList&&c.classList.contains("tag")){out+="{"+c.getAttribute("data-ph")+"}";}
+    else if(c.tagName==="BR"){out+="";}
+    else{out+=serializeJa(c);}
+  }});return out;}
+function makeChipEl(ph,tags){const d=document.createElement("div");d.innerHTML=chipHTML(String(ph),tags);return d.firstChild;}
+function saveJaField(field){const i=+field.getAttribute("data-i");const val=serializeJa(field);
+  if(val===plain(SEG[i].ja))delete edits[i];else edits[i]=val;
+  saveEdits();updateEditedCount();
+  if(i in confirms){delete confirms[i];saveConfirms();updateConfirmCount();}
+  const tr=field.closest("tr");if(tr){tr.classList.toggle("edited",i in edits);tr.classList.remove("confirmed");}}
+function insertChipAt(field,ph){const s=SEG[+field.getAttribute("data-i")];field.focus();
+  const sel=window.getSelection();const chip=makeChipEl(ph,s.tags);
+  if(sel&&sel.rangeCount&&field.contains(sel.anchorNode)){const r=sel.getRangeAt(0);r.deleteContents();r.insertNode(chip);r.setStartAfter(chip);r.collapse(true);sel.removeAllRanges();sel.addRange(r);}
+  else{field.appendChild(chip);}
+  saveJaField(field);}
+
+const state={cat:"all",bands:new Set(),q:"",editMode:false,editedOnly:false,confirmedOnly:false};
+const ART=((document.querySelector(".filepill")||{}).textContent||"export").replace("DEMO","").trim();
+const LSKEY="tmx-edits:"+ART;
+const LSKEY_C="tmx-confirms:"+ART;
+let edits={};
+try{edits=JSON.parse(localStorage.getItem(LSKEY)||"{}");}catch(e){edits={};}
+function saveEdits(){try{localStorage.setItem(LSKEY,JSON.stringify(edits));}catch(e){}}
+function editedCount(){return Object.keys(edits).length;}
+function updateEditedCount(){const el=document.getElementById("editcount");if(el)el.textContent=editedCount()?`編集 ${editedCount()} 件`:"";}
+// confirmed segments (TEP sign-off). Only confirmed rows are written back to Live_TM.
+let confirms={};
+try{confirms=JSON.parse(localStorage.getItem(LSKEY_C)||"{}");}catch(e){confirms={};}
+function saveConfirms(){try{localStorage.setItem(LSKEY_C,JSON.stringify(confirms));}catch(e){}}
+function confirmedCount(){return Object.keys(confirms).length;}
+function updateConfirmCount(){const el=document.getElementById("confcount");if(el)el.textContent=confirmedCount()?`確定 ${confirmedCount()} 件`:"";}
+function jaValue(i){return (i in edits)?edits[i]:plain(SEG[i].ja);}
+
+function computeSummary(){
+  const total=SEG.length;
+  const byCat={Reused:0,Modified:0,Added:0};
+  const byBand={};BANDS.forEach(b=>byBand[b]=0);
+  SEG.forEach(s=>{byCat[s.cat]++;byBand[s.b]++;});
+  const lev=byCat.Reused, reusable=byCat.Reused+byCat.Modified;
+  const tiles=[
+    {k:"Segments",v:total,s:"総セグメント数",cls:""},
+    {k:"Leverage",v:Math.round(lev/total*100)+"%",s:"ICE + 100%",cls:"accent"},
+    {k:"Reusable",v:Math.round(reusable/total*100)+"%",s:"≥75% の再利用可",cls:"reuse"},
+    {k:"MT",v:byCat.Added,s:"AI 下訳 (≤74%)",cls:"new"}
+  ];
+  document.getElementById("tiles").innerHTML=tiles.map(t=>
+    `<div class="tile ${t.cls}"><div class="k">${t.k}</div><div class="v">${t.v}</div><div class="s">${t.s}</div></div>`).join("");
+  const pct=c=>byCat[c]/total*100;
+  document.getElementById("stack").innerHTML=
+    `<span class="s-reuse" style="width:${pct("Reused")}%" title="再利用"></span>`+
+    `<span class="s-modify" style="width:${pct("Modified")}%" title="修正"></span>`+
+    `<span class="s-new" style="width:${pct("Added")}%" title="新規"></span>`;
+  document.getElementById("legend").innerHTML=[
+    ["--reuse","再利用",byCat.Reused],["--modify","修正",byCat.Modified],["--new","新規",byCat.Added]
+  ].map(([v,n,c])=>`<span class="li"><span class="sw" style="background:var(${v})"></span>${n} <span class="mono">${c}</span></span>`).join("");
+  const max=Math.max(...BANDS.map(b=>byBand[b]),1);
+  document.getElementById("bands").innerHTML=BANDS.map(b=>{
+    const c=CATCLS[CATOF[b]].replace("b-","--").replace("reuse","reuse").replace("modify","modify").replace("new","new");
+    return `<div class="band"><span class="nm mono">${b}</span><span class="bar" style="width:${byBand[b]/max*100}%;background:var(${c})"></span><span class="ct mono">${byBand[b]}</span></div>`;
+  }).join("");
+}
+
+function renderChips(){
+  document.getElementById("bandchips").innerHTML=BANDS.map(b=>
+    `<button class="chip" data-band="${b}" aria-pressed="false">${b}</button>`).join("");
+}
+
+function render(){
+  const rows=document.getElementById("rows");
+  const q=state.q.trim().toLowerCase();
+  const list=SEG.filter((s,idx)=>{
+    if(state.cat!=="all"&&s.cat!==state.cat)return false;
+    if(state.bands.size&&!state.bands.has(s.b))return false;
+    if(state.editedOnly&&!(idx in edits))return false;
+    if(state.confirmedOnly&&!(idx in confirms))return false;
+    if(q){const hay=(plain(s.en)+" "+s.tm+" "+plain(s.ja)).toLowerCase();if(!hay.includes(q))return false;}
+    return true;
+  });
+  document.getElementById("count").textContent=`${list.length} / ${SEG.length} セグメント`;
+  document.getElementById("empty").hidden=list.length>0;
+  rows.innerHTML=list.map(s=>{
+    const cls=CATCLS[s.cat];
+    const idx=SEG.indexOf(s);
+    const edited=(idx in edits);
+    const confirmed=(idx in confirms);
+    const jaCur=edited?edits[idx]:plain(s.ja);
+    const jaView=edited?withChips(esc(jaCur),s.tags):(plain(s.ja)?withChips(diff(s.ja),s.tags):'<span class="japlaceholder">（MT 未挿入）</span>');
+    const jaCell=state.editMode
+      ? `<td class="ja">${paletteHTML(s)}<div class="jaedit" contenteditable="true" data-i="${idx}">${withChips(esc(jaCur),s.tags)}</div></td>`
+      : `<td class="ja${edited?' isedited':''}${confirmed?' isconfirmed':''}">${jaView}</td>`;
+    const sttag=s.st==="mt"?'<span class="sttag st-mt">MT</span>':'<span class="sttag st-tm">TM</span>';
+    const hasTgt=!!jaCur.trim();
+    const confCell=`<td class="confcol"><input type="checkbox" class="confbox" data-i="${idx}" ${confirmed?'checked':''} ${hasTgt?'':'disabled'} title="${hasTgt?'TEP 確定（Live_TM へ書き戻し対象）':'訳文が空のため確定できません'}"></td>`;
+    return `<tr data-i="${idx}" class="${edited?'edited ':''}${confirmed?'confirmed':''}">
+      <td class="idx">${idx+1}</td>
+      <td class="matchcell"><span class="bandtag ${cls}">${s.b}</span><span class="pct">${s.pct}%</span><span class="cat">${CATJA[s.cat]}</span>${sttag}</td>
+      <td>${withChips(diff(s.en),s.tags)}</td>
+      <td class="tm">${withChips(esc(s.tm),s.tags)}</td>
+      ${jaCell}
+      ${confCell}
+    </tr>`;
+  }).join("");
+}
+
+// events
+document.getElementById("catseg").addEventListener("click",e=>{
+  const btn=e.target.closest("button");if(!btn)return;
+  state.cat=btn.dataset.cat;
+  [...e.currentTarget.children].forEach(b=>b.setAttribute("aria-pressed",b===btn));
+  render();
+});
+document.getElementById("bandchips").addEventListener("click",e=>{
+  const btn=e.target.closest("button");if(!btn)return;
+  const b=btn.dataset.band, on=btn.getAttribute("aria-pressed")==="true";
+  btn.setAttribute("aria-pressed",String(!on));
+  if(on)state.bands.delete(b);else state.bands.add(b);
+  render();
+});
+document.getElementById("q").addEventListener("input",e=>{state.q=e.target.value;render();});
+document.getElementById("deltoggle").addEventListener("change",e=>{
+  document.body.classList.toggle("hide-del",!e.target.checked);
+});
+document.getElementById("themebtn").addEventListener("click",()=>{
+  const cur=document.documentElement.getAttribute("data-theme");
+  const mql=window.matchMedia("(prefers-color-scheme: dark)").matches;
+  const isDark=cur?cur==="dark":mql;
+  document.documentElement.setAttribute("data-theme",isDark?"light":"dark");
+});
+
+document.getElementById("editmode").addEventListener("change",e=>{state.editMode=e.target.checked;document.body.classList.toggle("editing",state.editMode);render();});
+document.getElementById("editedonly").addEventListener("change",e=>{state.editedOnly=e.target.checked;render();});
+document.getElementById("confirmedonly").addEventListener("change",e=>{state.confirmedOnly=e.target.checked;render();});
+// 訳欄（contenteditable）の編集 → {n} 込みで保存
+document.getElementById("rows").addEventListener("input",e=>{
+  const field=e.target.closest(".jaedit");if(!field)return;
+  saveJaField(field);
+});
+// タグ挿入パレットのクリック → 対応する訳欄の caret 位置へチップ挿入
+document.getElementById("rows").addEventListener("click",e=>{
+  const ins=e.target.closest(".taginsert");if(!ins)return;
+  const td=ins.closest("td");const field=td&&td.querySelector(".jaedit");
+  if(field)insertChipAt(field, ins.getAttribute("data-ph"));
+});
+// confirm checkbox toggle (works in view and edit mode)
+document.getElementById("rows").addEventListener("change",e=>{
+  const cb=e.target.closest(".confbox");if(!cb)return;
+  const i=+cb.dataset.i;
+  if(cb.checked&&jaValue(i).trim())confirms[i]=1;else delete confirms[i];
+  saveConfirms();updateConfirmCount();
+  cb.closest("tr").classList.toggle("confirmed",i in confirms);
+});
+// ===== 翻訳履歴ペイン（行クリックで、その原文の過去訳＋更新日時を表示） =====
+function fmtDate(d){
+  if(!d)return "日時不明";
+  const m=/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})/.exec(d);
+  return m?`${m[1]}-${m[2]}-${m[3]} ${m[4]}:${m[5]}`:d;
+}
+function renderHistory(i){
+  const src=document.getElementById("histsrc");
+  const body=document.getElementById("histbody");
+  const s=SEG[i];
+  src.textContent=s?("“"+plain(s.en)+"”"):"";
+  const hist=(s&&s.hist)||[];
+  if(!hist.length){body.innerHTML='<div class="histhint">この原文の過去訳はまだありません（TEP 確定後に書き戻すと蓄積されます）。</div>';return;}
+  // 新しい順（analysis 側で降順済みだが念のため）
+  const sorted=hist.slice().sort((a,b)=>String(b.date||"").localeCompare(String(a.date||"")));
+  body.innerHTML='<div class="histlist">'+sorted.map((r,idx)=>
+    `<div class="histitem${idx===0?' latest':''}"><div class="meta">${fmtDate(r.date)}${idx===0?'<span class="badge-latest">最新</span>':''}</div><div class="tgt">${esc(r.ja||"")}</div></div>`
+  ).join("")+'</div>';
+}
+// ===== 用語ペイン（関連用語の表示＋選択語のライブ登録） =====
+const KTX=(window.__KT||{served:false,token:"",doc:"",project:""});
+let selRow=-1;
+function apiT(path,opts){opts=opts||{};opts.headers=Object.assign({"X-KT-Token":KTX.token,"Content-Type":"application/json"},opts.headers||{});return fetch(path,opts).then(r=>r.json());}
+function renderTerms(i){
+  selRow=i;
+  const src=document.getElementById("termsrc"),body=document.getElementById("termbody");
+  const seg=plain(SEG[i].en);
+  src.textContent=seg?('「'+(seg.length>40?seg.slice(0,40)+'…':seg)+'」'):"";
+  function draw(list){
+    if(!list||!list.length){body.innerHTML='<div class="termhint">この原文に該当する用語はありません。</div>';return;}
+    body.innerHTML='<div class="termlist">'+list.map(t=>{
+      const s=esc(t.source!=null?t.source:(t.en||""));
+      const tg=esc(t.target!=null?t.target:(t.ja||""));
+      const meta=[t.note,t.doc,t.project].filter(Boolean).map(esc).join(" ・ ");
+      return '<div class="termitem"><div class="s">'+s+'</div><div class="t">'+(tg||'<span class="histhint">（訳未登録）</span>')+'</div>'+(meta?'<div class="m">'+meta+'</div>':'')+'</div>';
+    }).join("")+'</div>';
+  }
+  if(KTX.served){apiT("/api/terms?seg="+encodeURIComponent(seg)).then(d=>draw((d&&d.rows)||[])).catch(()=>draw(SEG[i].glossary||[]));}
+  else {draw(SEG[i].glossary||[]);}
+}
+// 原文の語を選択 → 用語登録エリアを表示（サーバーモードのみ）
+document.getElementById("rows").addEventListener("mouseup",e=>{
+  if(!KTX.served)return;
+  const sel=(window.getSelection?window.getSelection().toString():"").trim();
+  if(sel&&sel.length<=80){
+    const tr=e.target.closest("tr");if(tr&&tr.dataset.i)selRow=+tr.dataset.i;
+    document.getElementById("termsel").textContent=sel;
+    const tgt=document.getElementById("termtgt");if(selRow>=0&&!tgt.value)tgt.value=jaValue(selRow)||"";
+    document.getElementById("termadd").hidden=false;
+  }
+});
+(function(){var b=document.getElementById("termaddbtn");if(!b)return;b.addEventListener("click",function(){
+  var source=document.getElementById("termsel").textContent.trim();if(!source)return;
+  var rec={source:source,target:document.getElementById("termtgt").value,note:document.getElementById("termnote").value,
+           example:(selRow>=0?plain(SEG[selRow].en):""),doc:(KTX.doc||ART),project:(KTX.project||"")};
+  b.disabled=true;apiT("/api/term-save",{method:"POST",body:JSON.stringify(rec)}).then(function(){
+    b.disabled=false;document.getElementById("termtgt").value="";document.getElementById("termnote").value="";
+    document.getElementById("termadd").hidden=true;if(selRow>=0)renderTerms(selRow);
+  }).catch(function(){b.disabled=false;});
+});})();
+document.getElementById("rows").addEventListener("click",e=>{
+  if(e.target.closest(".jaedit")||e.target.closest(".confbox")||e.target.closest(".palette"))return; // 編集/確定/タグ挿入はそのまま
+  const tr=e.target.closest("tr");if(!tr||!tr.dataset.i)return;
+  document.querySelectorAll("#rows tr.selected").forEach(x=>x.classList.remove("selected"));
+  tr.classList.add("selected");
+  renderHistory(+tr.dataset.i);
+  renderTerms(+tr.dataset.i);
+});
+// bulk-confirm every currently visible row that has a target
+document.getElementById("confirmview").addEventListener("click",()=>{
+  const q=state.q.trim().toLowerCase();let n=0;
+  SEG.forEach((s,idx)=>{
+    if(state.cat!=="all"&&s.cat!==state.cat)return;
+    if(state.bands.size&&!state.bands.has(s.b))return;
+    if(state.editedOnly&&!(idx in edits))return;
+    if(state.confirmedOnly&&!(idx in confirms))return;
+    if(q){const hay=(plain(s.en)+" "+s.tm+" "+plain(s.ja)).toLowerCase();if(!hay.includes(q))return;}
+    if(jaValue(idx).trim()&&!(idx in confirms)){confirms[idx]=1;n++;}
+  });
+  if(n){saveConfirms();updateConfirmCount();render();}
+});
+function xesc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+function download(name,text,mime){
+  const blob=new Blob([text],{type:(mime||"text/plain")+";charset=utf-8"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;
+  document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);
+}
+function exportXliff(){
+  const units=SEG.map((s,i)=>{
+    const src=plain(s.en),ed=(i in edits),conf=(i in confirms),tgt=ed?edits[i]:plain(s.ja);
+    let state,sq="";
+    if(conf){state="final";}
+    else if(ed){state="translated";}
+    else if(s.st==="mt"){state="needs-review-translation";sq="mt-suggestion";}
+    else if(s.b==="ICE"||s.b==="100%"){state="translated";sq="exact-match";}
+    else {state="needs-review-translation";sq="fuzzy-match";}
+    const sqattr=(!conf&&!ed&&sq)?` state-qualifier="${sq}"`:"";
+    const note=`TM match: ${s.b} ${s.pct}%`+(s.st==="mt"?" | MT":"")+(ed?" | edited":"")+(conf?" | confirmed":"");
+    return `      <trans-unit id="${i+1}" approved="${(conf||ed)?"yes":"no"}">\n        <source xml:lang="en-US">${xesc(src)}</source>\n        <target xml:lang="ja-JP" state="${state}"${sqattr}>${xesc(tgt)}</target>\n        <note>${xesc(note)}</note>\n      </trans-unit>`;
+  }).join("\n");
+  const xml=`<?xml version="1.0" encoding="UTF-8"?>\n<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">\n  <file original="${xesc(ART)}" source-language="en-US" target-language="ja-JP" datatype="plaintext">\n    <body>\n${units}\n    </body>\n  </file>\n</xliff>\n`;
+  download((ART||"export").replace(/[^\w.-]+/g,"_")+".xliff",xml,"application/xliff+xml");
+}
+document.getElementById("exportxliff").addEventListener("click",exportXliff);
+// 翻訳 / サマリー タブ切替
+function switchVTab(v){
+  document.getElementById("view-work").hidden=(v!=="work");
+  document.getElementById("view-summary").hidden=(v!=="summary");
+  document.getElementById("vt-work").setAttribute("aria-pressed",String(v==="work"));
+  document.getElementById("vt-summary").setAttribute("aria-pressed",String(v==="summary"));
+}
+document.querySelectorAll(".vtab").forEach(b=>b.addEventListener("click",()=>switchVTab(b.dataset.v)));
+/* ===== 編集ペイン右クリックメニュー: 元に戻す / 英語のまま / 履歴をコピー ===== */
+(function(){
+  var st=document.createElement("style");
+  st.textContent=".ctxmenu{position:fixed;z-index:9999;min-width:180px;max-width:340px;background:var(--panel,#fff);color:var(--fg,#111);border:1px solid var(--border,#ccc);border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,.22);padding:4px;font-size:13px;display:none}"+
+    ".ctxmenu .mi{padding:6px 10px;border-radius:6px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}"+
+    ".ctxmenu .mi:hover:not(.disabled):not(.hdr){background:var(--accent,#2563eb);color:#fff}"+
+    ".ctxmenu .mi.disabled{opacity:.45;cursor:default}"+
+    ".ctxmenu .mi.hdr{font-weight:600;cursor:default;opacity:.75;padding:4px 10px 2px}"+
+    ".ctxmenu .sep{height:1px;background:var(--border,#ddd);margin:4px 0}"+
+    ".ctxmenu .sub{max-height:240px;overflow:auto}"+
+    ".ctxmenu .sub .mi{white-space:normal}.ctxmenu .sub .mi small{opacity:.7}";
+  document.head.appendChild(st);
+  var menu=document.createElement("div");menu.className="ctxmenu";document.body.appendChild(menu);
+  var undo={}; // i -> [過去の値...]
+  function autoVal(i){return plain(SEG[i].ja);}
+  function curVal(i){return (i in edits)?edits[i]:autoVal(i);}
+  function pushUndo(i){var s=undo[i]||(undo[i]=[]);var v=curVal(i);if(s.length&&s[s.length-1]===v)return;s.push(v);if(s.length>50)s.shift();}
+  function applyVal(i,val){
+    if(val===autoVal(i))delete edits[i];else edits[i]=val;
+    saveEdits();updateEditedCount();
+    if(i in confirms){delete confirms[i];saveConfirms();updateConfirmCount();}
+    render();
+  }
+  function doUndo(i){var s=undo[i];if(!s||!s.length)return;applyVal(i,s.pop());}
+  function keepEnglish(i){pushUndo(i);applyVal(i,plain(SEG[i].en));}
+  function pasteHist(i,ja){pushUndo(i);applyVal(i,ja||"");}
+  var ctxHist=[];
+  function hide(){menu.style.display="none";menu.innerHTML="";}
+  function show(i,x,y){
+    ctxHist=((SEG[i]&&SEG[i].hist)||[]).slice().sort(function(a,b){return String(b.date||"").localeCompare(String(a.date||""));});
+    var canUndo=undo[i]&&undo[i].length>0,h="";
+    h+='<div class="mi'+(canUndo?'':' disabled')+'" data-act="undo">元に戻す'+(canUndo?' <small>('+undo[i].length+')</small>':'')+'</div>';
+    h+='<div class="mi" data-act="eng">英語のまま</div>';
+    h+='<div class="sep"></div><div class="mi hdr">履歴をコピー</div>';
+    if(ctxHist.length){
+      h+='<div class="sub">'+ctxHist.map(function(r,k){
+        var p=esc((r.ja||"").slice(0,40))+((r.ja||"").length>40?'…':'');
+        return '<div class="mi" data-act="hist" data-k="'+k+'"><small>'+fmtDate(r.date)+'</small><br>'+p+'</div>';
+      }).join("")+'</div>';
+    } else { h+='<div class="mi disabled">（履歴なし）</div>'; }
+    menu.innerHTML=h;menu.dataset.i=i;menu.style.display="block";
+    var w=menu.offsetWidth,ht=menu.offsetHeight;
+    if(x+w>innerWidth)x=Math.max(4,innerWidth-w-6);
+    if(y+ht>innerHeight)y=Math.max(4,innerHeight-ht-6);
+    menu.style.left=x+"px";menu.style.top=y+"px";
+  }
+  var rows=document.getElementById("rows");
+  rows.addEventListener("contextmenu",function(e){
+    var field=e.target.closest(".jaedit");if(!field)return;
+    e.preventDefault();show(+field.getAttribute("data-i"),e.clientX,e.clientY);
+  });
+  rows.addEventListener("focusin",function(e){var f=e.target.closest(".jaedit");if(f)pushUndo(+f.getAttribute("data-i"));});
+  menu.addEventListener("click",function(e){
+    var mi=e.target.closest(".mi");if(!mi||mi.classList.contains("disabled")||mi.classList.contains("hdr"))return;
+    var i=+menu.dataset.i,act=mi.getAttribute("data-act");
+    if(act==="undo")doUndo(i);
+    else if(act==="eng")keepEnglish(i);
+    else if(act==="hist"){var r=ctxHist[+mi.getAttribute("data-k")];if(r)pasteHist(i,r.ja||"");}
+    hide();e.stopPropagation();
+  });
+  document.addEventListener("click",hide);
+  document.addEventListener("keydown",function(e){if(e.key==="Escape")hide();});
+  window.addEventListener("scroll",hide,true);window.addEventListener("resize",hide);
+})();
+/* ===== サマリー: ファイル / TM / プロジェクト情報ペイン ===== */
+(function(){
+  var body=document.getElementById("metabody");if(!body)return;
+  var M=(typeof META!=="undefined")?META:null;
+  var st=document.createElement("style");
+  st.textContent=".metabody{font-size:13px;line-height:1.6}"+
+    ".metarow{display:grid;grid-template-columns:130px 1fr;gap:4px 14px;padding:6px 0;border-bottom:1px solid var(--hairline,#eee)}"+
+    ".metarow .k{color:var(--muted,#667);font-weight:600}.metarow .v{word-break:break-all}"+
+    ".metapath{font-family:ui-monospace,Consolas,monospace;font-size:12px;opacity:.9}"+
+    ".metatm{margin:3px 0}"+
+    ".metabtn{display:inline-block;margin:2px 0 2px 8px;padding:1px 8px;border:1px solid var(--hairline,#ccc);border-radius:6px;cursor:pointer;font-size:12px;white-space:nowrap}"+
+    ".metabtn:hover{background:var(--accent,#2563eb);color:#fff;border-color:transparent}";
+  document.head.appendChild(st);
+  function row(k,v){return '<div class="metarow"><div class="k">'+esc(k)+'</div><div class="v">'+v+'</div></div>';}
+  function folderOf(p){return String(p||"").replace(/[\\\/][^\\\/]*$/,"");}
+  function pathCell(p){ if(!p)return '<span class="metapath">(不明)</span>';
+    return '<span class="metapath">'+esc(p)+'</span>'+
+      '<span class="metabtn metaopen" data-path="'+esc(p)+'">📂 保存場所を開く</span>'+
+      '<span class="metabtn metacopy" data-path="'+esc(p)+'">⧉ パスをコピー</span>';}
+  function draw(){
+    if(!M){body.innerHTML='<div class="histhint">メタ情報がありません（デモ版、または旧バージョンで生成された可能性）。</div>';return;}
+    var h="";
+    h+=row("ソースファイル",(M.source&&M.source.name?('<b>'+esc(M.source.name)+'</b><br>'):'')+pathCell(M.source&&M.source.path));
+    if(M.output&&M.output.path)h+=row("出力ファイル",(M.output.name?('<b>'+esc(M.output.name)+'</b><br>'):'')+pathCell(M.output.path));
+    var tms=(M.tms||[]);
+    h+=row("使用TM",tms.length?tms.map(function(t){return '<div class="metatm">・<b>'+esc(t.role||"")+'</b>：'+esc(t.name||"")+(t.path?'<br><span class="metapath" style="margin-left:1em">'+esc(t.path)+'</span>':'')+'</div>';}).join(""):'<span class="histhint">（なし）</span>');
+    h+=row("プロジェクト",'<b>'+esc((M.project&&M.project.name)||"(なし)")+'</b>'+((M.project&&M.project.detail)?'<br>'+esc(M.project.detail).replace(/\n/g,"<br>"):""));
+    if(M.generated)h+=row("生成日時",esc(M.generated));
+    body.innerHTML=h;
+  }
+  draw();
+  body.addEventListener("click",function(e){
+    var o=e.target.closest(".metaopen"),c=e.target.closest(".metacopy");
+    if(c){var p=c.getAttribute("data-path");try{navigator.clipboard&&navigator.clipboard.writeText(p);}catch(_){}c.textContent="⧉ コピー済";setTimeout(function(){c.textContent="⧉ パスをコピー";},1200);return;}
+    if(o){var dir=folderOf(o.getAttribute("data-path"));var kt=(window.__KT||{});
+      if(kt.served){fetch("/api/open",{method:"POST",headers:{"Content-Type":"application/json","X-KT-Token":kt.token||""},body:JSON.stringify({path:dir})}).then(function(r){return r.json();}).then(function(d){if(!d||!d.ok){o.textContent="📂 開けません";setTimeout(function(){o.textContent="📂 保存場所を開く";},1500);}}).catch(function(){o.textContent="📂 開けません";setTimeout(function(){o.textContent="📂 保存場所を開く";},1500);});}
+      else{try{window.open("file:///"+dir.replace(/\\/g,"/").replace(/ /g,"%20"));}catch(_){}try{navigator.clipboard&&navigator.clipboard.writeText(dir);}catch(_){}o.textContent="⧉ パスをコピー済(file://)";setTimeout(function(){o.textContent="📂 保存場所を開く";},1800);}
+      return;}
+  });
+})();
+updateEditedCount();updateConfirmCount();
+computeSummary();renderChips();render();
+</script>
