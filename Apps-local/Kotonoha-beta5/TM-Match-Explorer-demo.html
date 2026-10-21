@@ -292,7 +292,8 @@ header.top{margin-bottom:6px;gap:12px;align-items:center;}
     <button class="minibtn" id="confirmview" type="button">表示中を一括確定</button>
     <span class="editcount" id="editcount"></span>
     <span class="confcount" id="confcount"></span>
-    <button class="expbtn" id="exportxliff" type="button">XLIFF 書き出し</button>
+    <button class="minibtn" id="savewip" type="button" title="編集・確定の途中内容を保存（サーバーモードはサーバーにも保存し、次回開いた時に自動復元）">途中保存</button><span class="savedat" id="savedat" style="font-size:12px;opacity:.7;margin-left:6px"></span>
+<button class="expbtn" id="exportxliff" type="button">XLIFF 書き出し</button>
   </div>
 
   <div class="count" id="count"></div>
@@ -396,13 +397,24 @@ const LSKEY="tmx-edits:"+ART;
 const LSKEY_C="tmx-confirms:"+ART;
 let edits={};
 try{edits=JSON.parse(localStorage.getItem(LSKEY)||"{}");}catch(e){edits={};}
-function saveEdits(){try{localStorage.setItem(LSKEY,JSON.stringify(edits));}catch(e){}}
+function saveEdits(){try{localStorage.setItem(LSKEY,JSON.stringify(edits));}catch(e){}scheduleAutoSave();}
 function editedCount(){return Object.keys(edits).length;}
 function updateEditedCount(){const el=document.getElementById("editcount");if(el)el.textContent=editedCount()?`編集 ${editedCount()} 件`:"";}
 // confirmed segments (TEP sign-off). Only confirmed rows are written back to Live_TM.
 let confirms={};
 try{confirms=JSON.parse(localStorage.getItem(LSKEY_C)||"{}");}catch(e){confirms={};}
-function saveConfirms(){try{localStorage.setItem(LSKEY_C,JSON.stringify(confirms));}catch(e){}}
+function saveConfirms(){try{localStorage.setItem(LSKEY_C,JSON.stringify(confirms));}catch(e){}scheduleAutoSave();}
+// 作業内容の自動保存（編集・確定のたびにデバウンスでサーバーへ保存。サーバーモードのみ）
+var _autoT=null;
+function scheduleAutoSave(){
+  if(!(window.__KT&&window.__KT.served))return;
+  if(_autoT)clearTimeout(_autoT);
+  _autoT=setTimeout(function(){_autoT=null;
+    apiT("/api/save-edits",{method:"POST",body:JSON.stringify({art:ART,edits:edits,confirms:confirms})})
+      .then(function(d){var t=document.getElementById("savedat");if(t)t.textContent=(d&&d.ok)?("自動保存 "+(d.savedAt||"")):"自動保存失敗（ローカルには保存済）";})
+      .catch(function(){});
+  },1500);
+}
 function confirmedCount(){return Object.keys(confirms).length;}
 function updateConfirmCount(){const el=document.getElementById("confcount");if(el)el.textContent=confirmedCount()?`確定 ${confirmedCount()} 件`:"";}
 function jaValue(i){return (i in edits)?edits[i]:plain(SEG[i].ja);}
@@ -629,6 +641,29 @@ function exportXliff(){
   download((ART||"export").replace(/[^\w.-]+/g,"_")+".xliff",xml,"application/xliff+xml");
 }
 document.getElementById("exportxliff").addEventListener("click",exportXliff);
+// ===== 途中保存（作業内容の保存・次回復元）: localStorage ＋ サーバーモードはサーバーへも保存 =====
+function _hm(){var d=new Date();function z(n){return (n<10?"0":"")+n;}return z(d.getHours())+":"+z(d.getMinutes());}
+function saveWIP(){
+  try{localStorage.setItem(LSKEY,JSON.stringify(edits));localStorage.setItem(LSKEY_C,JSON.stringify(confirms));}catch(e){}
+  var tag=document.getElementById("savedat");
+  if(KTX.served){
+    apiT("/api/save-edits",{method:"POST",body:JSON.stringify({art:ART,edits:edits,confirms:confirms})})
+      .then(function(d){if(tag)tag.textContent=(d&&d.ok)?("保存しました "+(d.savedAt||_hm())):"保存失敗（ローカルには保存済）";})
+      .catch(function(){if(tag)tag.textContent="保存（ローカルのみ）"+_hm();});
+  } else { if(tag)tag.textContent="保存（ローカル）"+_hm(); }
+}
+(function(){var b=document.getElementById("savewip");if(b)b.addEventListener("click",saveWIP);})();
+// Ctrl+S でも途中保存
+document.addEventListener("keydown",function(e){if((e.ctrlKey||e.metaKey)&&(e.key==="s"||e.key==="S")){e.preventDefault();saveWIP();}});
+// 開いた時にサーバー保存分を自動復元（サーバーモード）
+if(KTX.served){apiT("/api/load-edits?art="+encodeURIComponent(ART)).then(function(d){
+  if(d&&d.ok){var ch=false;
+    if(d.edits){Object.assign(edits,d.edits);ch=true;}
+    if(d.confirms){Object.assign(confirms,d.confirms);ch=true;}
+    var tag=document.getElementById("savedat");if(tag&&d.savedAt)tag.textContent="前回保存 "+d.savedAt;
+    if(ch){try{localStorage.setItem(LSKEY,JSON.stringify(edits));localStorage.setItem(LSKEY_C,JSON.stringify(confirms));}catch(e){}updateEditedCount();updateConfirmCount();render();}
+  }
+}).catch(function(){});}
 // 翻訳 / サマリー タブ切替
 function switchVTab(v){
   document.getElementById("view-work").hidden=(v!=="work");

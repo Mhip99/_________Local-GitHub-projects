@@ -32,6 +32,41 @@
    "due": "",
    "created": "2026-10-08 16:16",
    "updated": "2026-10-08 16:23"
+  },
+  {
+   "id": "proj-20261021-163537",
+   "type": "project",
+   "name": "ED2710-20-MH-App-September 2026 Release Update Content-JA",
+   "status": "作業中",
+   "sources": [
+    {
+     "kind": "file",
+     "path": "C:/Users/Masaaki.Hori/OneDrive - Domo Inc/_________Local-GitHub-projects/ED2710-20-MH-App-September 2026 Release Update Content-JA/2_For review/Creating DataFlows in Magic ETL.json"
+    }
+   ],
+   "main_tm": "C:/Users/Masaaki.Hori/OneDrive - Domo Inc/________GitHub-production/TM manaegment/TM/___Working/Kotonoha/Main/Main-TM.tmx",
+   "product_tm": "C:/Users/Masaaki.Hori/OneDrive - Domo Inc/________GitHub-production/TM manaegment/TM/___Working/XTM/20260902/Domo_Domo Product-en_US-ja_JP-2026-09-02.tmx",
+   "sub_tms": [
+    "C:/Users/Masaaki.Hori/OneDrive - Domo Inc/________GitHub-production/TM manaegment/TM/___Working/XTM/20260902/Domo_Domo University-en_US-ja_JP-2026-09-02.tmx"
+   ],
+   "created": "2026-10-21 16:35",
+   "updated": "2026-10-21 16:54",
+   "out_dir": "C:\\Users\\Masaaki.Hori\\OneDrive - Domo Inc\\_________Local-GitHub-projects\\Apps-local\\Kotonoha-out\\ED2710-20-MH-App-September 2026 Release Update Content-JA",
+   "combined": "C:\\Users\\Masaaki.Hori\\OneDrive - Domo Inc\\_________Local-GitHub-projects\\Apps-local\\Kotonoha-out\\ED2710-20-MH-App-September 2026 Release Update Content-JA\\combined.mt-todo.json",
+   "last_run": "2026-10-21 16:54"
+  },
+  {
+   "id": "proj-20261021-163710",
+   "html": "C:\\Users\\Masaaki.Hori\\OneDrive - Domo Inc\\_________Local-GitHub-projects\\Apps-local\\Kotonoha-out\\ED2710-20-MH-App-September 2026 Release Update Content-JA\\Creating DataFlows in Magic ETL.html",
+   "title": "Creating DataFlows in Magic ETL",
+   "source": "C:\\Users\\Masaaki.Hori\\OneDrive - Domo Inc\\_________Local-GitHub-projects\\ED2710-20-MH-App-September 2026 Release Update Content-JA\\2_For review\\Creating DataFlows in Magic ETL.json",
+   "segs": 280,
+   "mt": 58,
+   "status": "作業中",
+   "memo": "",
+   "due": "",
+   "created": "2026-10-21 16:37",
+   "updated": "2026-10-21 16:54"
   }
  ]
 }

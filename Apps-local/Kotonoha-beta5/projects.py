@@ -334,6 +334,25 @@ else:
 sys.stdout.write("\n".join(paths))
 '''
 
+# Native "Save As" dialog for creating a new .tmx. Prints the chosen path (or empty if cancelled).
+TK_SAVE_TMX = r'''
+import sys
+try:
+    import tkinter as tk
+    from tkinter import filedialog as fd
+except Exception:
+    sys.stderr.write("NOTK"); sys.exit(2)
+root = tk.Tk(); root.withdraw()
+try:
+    root.attributes("-topmost", True); root.update()
+except Exception:
+    pass
+res = fd.asksaveasfilename(title="新規メイン TM (.tmx) の保存先",
+                          defaultextension=".tmx",
+                          filetypes=[("TMX", "*.tmx"), ("All files", "*.*")])
+sys.stdout.write(res or "")
+'''
+
 
 def create_project_full(projects, name, sources=None, main_tm="", product_tm="", sub_tms=None):
     """Create a definition in one shot (used by the serve API). Caller saves."""
@@ -936,7 +955,6 @@ footer{color:var(--muted);font-size:12px;margin-top:18px}
 </style><style id="colhide"></style></head><body>
 <script>window.__KT=__KTCFG__;</script>
 <div class="wrap">
-<h1>Kotonoha プロジェクト一覧<span class="srvbadge">サーバーモード（作成・実行が有効）</span></h1>
 <style>
 .ptabs{display:flex;gap:4px;margin:10px 0 12px;border-bottom:2px solid var(--hairline)}
 .ptab{appearance:none;border:1px solid var(--hairline);border-bottom:none;background:var(--surface);color:inherit;padding:9px 18px;border-radius:10px 10px 0 0;font-weight:700;font-size:14px;cursor:pointer;margin-bottom:-2px}
@@ -950,6 +968,7 @@ footer{color:var(--muted);font-size:12px;margin-top:18px}
   <button class="ptab" id="ptab-btn-tep" data-ptab="tep" aria-pressed="false" type="button">TM Match Explorer</button>
 </div>
 <div id="ptab-proj">
+<h1>Kotonoha プロジェクト一覧<span class="srvbadge">サーバーモード（作成・実行が有効）</span></h1>
 <div class="sub">記事行は「開く」で TEP 作業を上の<b>「TM Match Explorer」タブ</b>内に表示（サーバーモード）。静的表示（file://）では別タブで開きます。定義行は「<b>実行</b>」で解析＋Pre-translation、「<b>出力</b>」で元形式の翻訳版を出力。各行の「<b>編集</b>」で状態・メモ・期日・削除。ツールバーの「<b>ツール ▾</b>」から MT注入・索引キャッシュ作成・TM書き戻し・UI Glossary を実行できます（<b>サーバーモード</b>時）。静的表示（file://）では「実行」はコマンドをコピーします。列ヘッダー右端をドラッグで<b>幅調整</b>、<b>列 ▾</b>で<b>表示/非表示</b>（ブラウザに保存）。</div>
 <div class="tabs" id="tabs" hidden>
   <button class="tab" id="tab-projects" data-view="projects" aria-pressed="true" type="button">プロジェクト</button>
@@ -1084,7 +1103,7 @@ function render(){
   document.getElementById("empty").hidden=list.length>0;
   document.getElementById("rows").innerHTML=list.map(p=>{
     let inner="";
-    if(p.uri){inner='<a class="open" href="'+esc(p.uri)+'" target="_blank" rel="noopener">開く</a>';}
+    if(p.uri){inner='<a class="open" href="'+esc(p.uri)+'" data-title="'+esc(p.title||p.name||"")+'" target="_blank" rel="noopener">開く</a>';}
     else if(p.pid){inner='<button class="run" type="button" data-pid="'+esc(p.pid)+'" data-cmd="'+esc(p.cmd)+'" data-n="'+p.n+'" title="'+(KT.served?'クリックで解析＋Pre-translation を実行':'クリックで実行コマンドをコピー ／ またはランチャー [P] で G → 番号 '+p.n)+'">実行</button>';
       if(KT.served){inner+='<button class="exp" type="button" data-pid="'+esc(p.pid)+'" title="TM を適用して元の形式で翻訳版を出力（解析→翻訳→TEP確定→書き戻しの後に実行）">出力</button>';}}
     if(KT.served&&p.id){inner+='<button class="edit" type="button" data-id="'+esc(p.id)+'" title="状態・メモ・期日・削除">編集</button>';}
@@ -1200,7 +1219,12 @@ function openCreate(){
     function draw(){const val=get();v.textContent=val||"（未選択）";v.classList.toggle("empty",!val);}
     choose.onclick=()=>pick("tmx",false).then(r=>{if(r&&r.available===false){openBrowser("tmx","",p=>{set(p);draw();});return;}if((r&&r.paths||[]).length){set(r.paths[0]);draw();}}).catch(err=>toast("選択エラー: "+err));
     clr.onclick=()=>{set("");draw();};draw();return f;}
-  bd.appendChild(pathField("メイン TM（.tmx・1つ・必須／マッチ用）","",()=>st.main_tm,x=>{st.main_tm=x;}));
+  function newTmxField(label,hint,get,set){const f=el("div","fld");f.appendChild(el("label",null,label));if(hint)f.appendChild(el("div","hint",hint));const row=el("div","row");const v=el("div","pathval");const choose=el("button","mini","選択");const mk=el("button","mini","＋ 新規作成");const clr=el("button","mini danger","クリア");row.appendChild(v);row.appendChild(choose);row.appendChild(mk);row.appendChild(clr);f.appendChild(row);
+    function draw(){const val=get();v.textContent=val||"（未選択）";v.classList.toggle("empty",!val);}
+    choose.onclick=()=>pick("tmx",false).then(r=>{if(r&&r.available===false){openBrowser("tmx","",p=>{set(p);draw();});return;}if((r&&r.paths||[]).length){set(r.paths[0]);draw();}}).catch(err=>toast("選択エラー: "+err));
+    mk.onclick=()=>{mk.disabled=true;api("/api/new-tmx",{method:"POST",body:JSON.stringify({})}).then(r=>{mk.disabled=false;if(!r||r.available===false){toast("新規作成はサーバーモードでのみ利用できます");return;}if(r.ok&&r.path){set(r.path);draw();toast("空のメイン TM を作成しました");}else if(!r.path){/*キャンセル*/}else{toast("作成失敗："+(r.error||"不明"));}}).catch(err=>{mk.disabled=false;toast("通信エラー: "+err);});};
+    clr.onclick=()=>{set("");draw();};draw();return f;}
+  bd.appendChild(newTmxField("メイン TM（.tmx・1つ・必須／マッチ用）","既存の .tmx を選択、または「＋ 新規作成」で空の TM を作成できます。",()=>st.main_tm,x=>{st.main_tm=x;}));
   bd.appendChild(pathField("Product TM（.tmx・任意／用語集ヒント）","UI 用語の一致＋AI 翻訳の用語集ヒントに使います。",()=>st.product_tm,x=>{st.product_tm=x;}));
   // サブ TM（複数）
   const fsub=el("div","fld");fsub.appendChild(el("label",null,"サブ TM（.tmx・任意・複数可／マッチ用）"));const subList=el("div");fsub.appendChild(subList);const addSub=el("button","mini","＋ サブ TM 追加");fsub.appendChild(addSub);bd.appendChild(fsub);
@@ -1208,7 +1232,7 @@ function openCreate(){
   addSub.onclick=()=>pick("tmx",true).then(r=>{if(r&&r.available===false){openBrowser("tmx","",p=>{st.sub_tms.push(p);drawSub();});return;}(r&&r.paths||[]).forEach(p=>st.sub_tms.push(p));drawSub();}).catch(err=>toast("選択エラー: "+err));drawSub();
   m.appendChild(bd);
   // フッター
-  const ft=el("div","ft");const run=el("button","primary","作成して実行");const mk=el("button","primary","作成のみ");const cancel=el("button","ghost","キャンセル");
+  const ft=el("div","ft");const run=el("button","primary","作成して実行");const mk=el("button","primary","保存");const cancel=el("button","ghost","キャンセル");
   ft.appendChild(run);ft.appendChild(mk);ft.appendChild(cancel);m.appendChild(ft);cancel.onclick=closeOvl;
   function validate(){if(!st.name.trim()){toast("プロジェクト名を入力してください");return false;}if(!st.sources.length){toast("ソースを1つ以上追加してください");return false;}if(!st.main_tm){toast("メイン TM を選択してください");return false;}return true;}
   function create(then){if(!validate())return;run.disabled=true;mk.disabled=true;
@@ -1417,35 +1441,50 @@ function switchView(v){
 document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>switchView(b.dataset.view)));
 
 // ===== 親タブ: プロジェクト / TM Match Explorer（下位構造は各タブ内に維持） =====
+var LS_TEP="kotonoha-tep-current";   // 直近に開いた記事 {url,title} を記憶
+function tepCurrent(){try{return JSON.parse(localStorage.getItem(LS_TEP)||"null");}catch(e){return null;}}
+function tepRemember(url,title){try{localStorage.setItem(LS_TEP,JSON.stringify({url:url,title:title||""}));}catch(e){}}
+function tepLoad(url,title){
+  var fr=document.getElementById("tepframe");if(!fr)return;
+  fr.src=url; fr.setAttribute("data-url",url); fr.setAttribute("data-title",title||"");
+  var hint=document.getElementById("tephint");if(hint)hint.textContent=(title?("「"+title+"」"):"ファイル")+" を表示中（解析・Pre-translation済み／作業内容は自動保存）";
+  var rl=document.getElementById("tepreload");if(rl){rl.hidden=false;rl.onclick=function(){fr.src=fr.src;};}
+  var nt=document.getElementById("tepnewtab");if(nt){nt.hidden=false;nt.href=url;}
+}
 function switchPTab(which){
   var pp=document.getElementById("ptab-proj"),pt=document.getElementById("ptab-tep");
-  if(pp)pp.hidden=(which!=="tep")?false:true;
+  if(pp)pp.hidden=(which==="tep");
   if(pt)pt.hidden=(which!=="tep");
   var bp=document.getElementById("ptab-btn-proj"),bt=document.getElementById("ptab-btn-tep");
   if(bp)bp.setAttribute("aria-pressed",String(which!=="tep"));
   if(bt)bt.setAttribute("aria-pressed",String(which==="tep"));
   if(which==="tep"&&KT.served){var fr=document.getElementById("tepframe");
-    if(fr&&!fr.getAttribute("src")){fr.src="/explorer";
-      var hint=document.getElementById("tephint");if(hint)hint.textContent="デモ表示中（翻訳／サマリーの2タブ＋下部2ペイン）。プロジェクト一覧の「開く」で実データのTEPに切り替わります。";
-      var rl=document.getElementById("tepreload");if(rl){rl.hidden=false;rl.onclick=function(){fr.src=fr.src;};}
-      var nt=document.getElementById("tepnewtab");if(nt){nt.hidden=false;nt.href="/explorer";}
+    if(fr&&!fr.getAttribute("src")){
+      var cur=tepCurrent();
+      if(cur&&cur.url){tepLoad(cur.url,cur.title);}
+      else{fr.src="/explorer";
+        var hint=document.getElementById("tephint");if(hint)hint.textContent="デモ表示中（翻訳／サマリーの2タブ＋下部2ペイン）。プロジェクト一覧の「開く」で解析・Pre-translation済みのファイルを表示します。";
+        var rl=document.getElementById("tepreload");if(rl){rl.hidden=false;rl.onclick=function(){fr.src=fr.src;};}
+        var nt=document.getElementById("tepnewtab");if(nt){nt.hidden=false;nt.href="/explorer";}
+      }
     }
   }
 }
 document.querySelectorAll(".ptab").forEach(b=>b.addEventListener("click",()=>switchPTab(b.dataset.ptab)));
-function openTEP(url){
+function openTEP(url,title){
   var fr=document.getElementById("tepframe");if(!fr||!url)return;
-  fr.src=url;
-  var hint=document.getElementById("tephint");if(hint)hint.textContent="TM Match Explorer を表示中（「プロジェクト」タブへ戻るには上のタブ）";
-  var rl=document.getElementById("tepreload");if(rl){rl.hidden=false;rl.onclick=function(){fr.src=fr.src;};}
-  var nt=document.getElementById("tepnewtab");if(nt){nt.hidden=false;nt.href=url;}
-  switchPTab("tep");
+  var curUrl=fr.getAttribute("data-url")||"";
+  if(curUrl&&curUrl!==url){
+    var curTitle=fr.getAttribute("data-title")||"現在のファイル";
+    if(!window.confirm("現在開いている「"+curTitle+"」を閉じて、「"+(title||"選択した記事")+"」を開きますか？（これまでの作業内容は自動保存されています）")){switchPTab("tep");return;}
+  }
+  tepLoad(url,title); tepRemember(url,title); switchPTab("tep");
 }
 // 記事行「開く」を同一画面内（iframe）で開く＝統合。file://（静的表示）は従来どおり別タブ。
 (function(){var rowsEl=document.getElementById("rows");if(!rowsEl)return;
   rowsEl.addEventListener("click",function(e){
     var a=e.target.closest("a.open");if(!a)return;
-    if(KT.served){e.preventDefault();openTEP(a.getAttribute("href"));}
+    if(KT.served){e.preventDefault();openTEP(a.getAttribute("href"),a.getAttribute("data-title")||"");}
   });
 })();
 
@@ -1746,6 +1785,30 @@ elif a.cmd == "serve":
         paths = [ln for ln in (r.stdout or "").splitlines() if ln.strip()]
         return {"available": True, "paths": paths}
 
+    def new_tmx_native():
+        """ネイティブ保存ダイアログで保存先を選び、空の TMX を新規作成して返す。"""
+        if not HAS_TK:
+            return {"available": False}
+        try:
+            r = subprocess.run([sys.executable, "-c", TK_SAVE_TMX],
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                               text=True, encoding="utf-8", errors="replace", timeout=600)
+        except Exception as e:
+            return {"available": True, "error": str(e)}
+        if r.returncode == 2:
+            return {"available": False}
+        path = (r.stdout or "").strip()
+        if not path:
+            return {"available": True, "path": ""}   # キャンセル
+        if not path.lower().endswith(".tmx"):
+            path += ".tmx"
+        try:
+            if not os.path.exists(path):
+                open(path, "w", encoding="utf-8", newline="\n").write(EMPTY_TMX)
+            return {"available": True, "ok": True, "path": path}
+        except Exception as e:
+            return {"available": True, "ok": False, "error": str(e)}
+
     def browse_roots():
         cfg = read_cfg(); seen = []; out = []
         def add(name, path):
@@ -1860,6 +1923,20 @@ elif a.cmd == "serve":
                     seg = q.get("seg", [""])[0]
                     terms = load_terms(TERMSTORE)
                     self._send(200, {"rows": (terms_for_segment(terms, seg) if seg else terms)}); return
+                if u.path == "/api/load-edits":
+                    q = urllib.parse.parse_qs(u.query)
+                    art = q.get("art", [""])[0] or "untitled"
+                    safe = ("".join(("_" if c in '\\/:*?"<>|' else c) for c in art)[:120]) or "untitled"
+                    fp = os.path.join(os.path.dirname(os.path.abspath(STORE)), "_wip", safe + ".json")
+                    if os.path.isfile(fp):
+                        try:
+                            rec = json.load(open(fp, encoding="utf-8"))
+                            self._send(200, {"ok": True, "edits": rec.get("edits", {}),
+                                             "confirms": rec.get("confirms", {}),
+                                             "savedAt": rec.get("savedAt", "")}); return
+                        except Exception as e:
+                            self._send(200, {"ok": False, "error": str(e)}); return
+                    self._send(200, {"ok": True, "edits": {}, "confirms": {}, "savedAt": ""}); return
             self._send(404, {"error": "not found"})
 
         def do_POST(self):
@@ -1874,6 +1951,24 @@ elif a.cmd == "serve":
             if u.path == "/api/pick":
                 self._send(200, pick_native(payload.get("kind", "source"),
                                             bool(payload.get("multiple")))); return
+            if u.path == "/api/new-tmx":
+                self._send(200, new_tmx_native()); return
+            if u.path == "/api/save-edits":
+                # TEP の作業途中保存（編集・確定）をサーバー側 _wip/<art>.json に保存
+                try:
+                    wipdir = os.path.join(os.path.dirname(os.path.abspath(STORE)), "_wip")
+                    os.makedirs(wipdir, exist_ok=True)
+                    art = payload.get("art", "") or "untitled"
+                    safe = ("".join(("_" if c in '\\/:*?"<>|' else c) for c in art)[:120]) or "untitled"
+                    rec = {"art": art, "edits": payload.get("edits", {}) or {},
+                           "confirms": payload.get("confirms", {}) or {},
+                           "savedAt": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+                    json.dump(rec, open(os.path.join(wipdir, safe + ".json"), "w", encoding="utf-8"),
+                              ensure_ascii=False, indent=1)
+                    self._send(200, {"ok": True, "savedAt": rec["savedAt"]})
+                except Exception as e:
+                    self._send(200, {"ok": False, "error": str(e)})
+                return
             if u.path == "/api/open":
                 # サマリーの「保存場所を開く」: 指定パス（ファイル/フォルダ）の保存先をエクスプローラーで開く
                 tgt = payload.get("path", "") or ""

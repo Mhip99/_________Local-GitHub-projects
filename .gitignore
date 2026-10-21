@@ -2,3 +2,9 @@
 
 __pycache__/
 *.pyc
+
+# TEP 作業途中保存（一時データ）
+_wip/
+
+# 生成物（解析/Pre-translation 出力・再実行で再生成可）
+Kotonoha-out/
