@@ -551,13 +551,56 @@ def remove_project(projects, store, pid, delete_file=False):
 
 
 # ===== 補助スクリプト呼び出し（export_project と同じ subprocess 方式。capture で stdout を返す） =====
-def _run_script(cmd, capture=False):
+def _run_script(cmd, capture=False, cwd=None):
     import subprocess
     if capture:
         r = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                           text=True, encoding="utf-8", errors="replace")
+                           text=True, encoding="utf-8", errors="replace", cwd=cwd)
         return r.returncode, (r.stdout or "")
-    return subprocess.call(cmd), ""
+    return subprocess.call(cmd, cwd=cwd), ""
+
+
+# ===== ハブ統合: 別ツール（File Comparison / JA Version Check）を subprocess で実行 =====
+FILECOMPARE_SCRIPT = os.path.join(HERE, "..", "File comparison", "EN_comp", "Beta1", "file_compare_fullset.py")
+VERSIONCHECK_SCRIPT = os.path.join(HERE, "..", "File comparison", "JA_comp", "ja_version_check.py")
+
+def filecompare_run(target="", current="", results="", label="", translatable_only=False, capture=True):
+    """EN ファイル比較（file_compare_fullset.py）。Target 翻訳済みフォルダー vs Current。"""
+    script = os.path.abspath(FILECOMPARE_SCRIPT)
+    if not os.path.exists(script):
+        return {"ok": False, "error": "file_compare_fullset.py が見つかりません: %s" % script}
+    cmd = [sys.executable, script]
+    if target:
+        cmd.append(target)
+    if current:
+        cmd += ["--current", current]
+    if results:
+        cmd += ["--results", results]
+    if label:
+        cmd += ["--label", label]
+    if translatable_only:
+        cmd.append("--translatable-only")
+    rc, out = _run_script(cmd, capture=True, cwd=os.path.dirname(script))
+    return {"ok": rc == 0, "log": out, "reveal": (results or ""), "error": ("" if rc == 0 else "exit %d" % rc)}
+
+def versioncheck_run(en="", ja="", published="", results="", no_tm=False, capture=True):
+    """JA バージョンチェック（ja_version_check.py）。EN/JA フォルダーを比較。"""
+    script = os.path.abspath(VERSIONCHECK_SCRIPT)
+    if not os.path.exists(script):
+        return {"ok": False, "error": "ja_version_check.py が見つかりません: %s" % script}
+    cmd = [sys.executable, script]
+    if en:
+        cmd += ["--en", en]
+    if ja:
+        cmd += ["--ja", ja]
+    if published:
+        cmd += ["--published", published]
+    if results:
+        cmd += ["--results", results]
+    if no_tm:
+        cmd.append("--no-tm")
+    rc, out = _run_script(cmd, capture=True, cwd=os.path.dirname(script))
+    return {"ok": rc == 0, "log": out, "reveal": (results or ""), "error": ("" if rc == 0 else "exit %d" % rc)}
 
 
 def inject_mt_run(mode="single", html="", mt="", combined_todo="", combined_mt="", capture=False):
@@ -1245,9 +1288,35 @@ function openGlossary(){
   sh.ft.appendChild(cancel);sh.ft.appendChild(run);sh.m.appendChild(sh.ft);overlay(sh.m);
 }
 
+function openFileCompare(){
+  const st={target:"",current:"",results:"",label:"",translatable_only:false};
+  const sh=modalShell("ファイル比較 (EN: Current vs Target)");
+  sh.bd.appendChild(el("div","hint","翻訳済みの英語ソース集合(Target)と現行(Current)を比較し、Excelレポートを出力します。Target 以外は既定値で可。"));
+  sh.bd.appendChild(pathFieldK("Target（翻訳済みENフォルダー・必須）","",'dir',()=>st.target,x=>{st.target=x;}));
+  sh.bd.appendChild(pathFieldK("Current（現行フォルダー・任意）","未指定なら既定",'dir',()=>st.current,x=>{st.current=x;}));
+  sh.bd.appendChild(pathFieldK("出力フォルダー（任意）","未指定なら既定の Results",'dir',()=>st.results,x=>{st.results=x;}));
+  sh.bd.appendChild(textField("ラベル（任意）","ファイル名の接尾辞",st.label,v=>{st.label=v;},"Fullset / Project"));
+  const fr=el("div","fld");const lab=el("label","toggle2");const cb=el("input");cb.type="checkbox";cb.onchange=()=>{st.translatable_only=cb.checked;};lab.appendChild(cb);lab.appendChild(document.createTextNode(" 翻訳対象テキストのみで比較する"));fr.appendChild(lab);sh.bd.appendChild(fr);
+  const run=el("button","primary","比較を実行");const cancel=el("button","ghost","キャンセル");cancel.onclick=closeOvl;
+  run.onclick=()=>{if(!st.target){toast("Target フォルダーを選択してください");return;}busy(run,true,"比較中…");api("/api/filecompare",{method:"POST",body:JSON.stringify(st)}).then(r=>{busy(run,false);if(r&&r.ok){toast("比較が完了しました");showLog("ファイル比較 結果",r.log,r.reveal);}else{toast("失敗："+((r&&r.error)||"不明"));showLog("ファイル比較 ログ",(r&&r.log)||((r&&r.error)||""),r&&r.reveal);}}).catch(err=>{busy(run,false);toast("通信エラー: "+err);});};
+  sh.ft.appendChild(cancel);sh.ft.appendChild(run);sh.m.appendChild(sh.ft);overlay(sh.m);
+}
+function openVersionCheck(){
+  const st={en:"",ja:"",published:"",results:"",no_tm:false};
+  const sh=modalShell("JA バージョンチェック");
+  sh.bd.appendChild(el("div","hint","日本語版が英語版と同じバージョンかを判定し、Excelレポートを出力します。各フォルダー未指定なら既定値を使用。"));
+  sh.bd.appendChild(pathFieldK("英語版フォルダー EN（任意）","",'dir',()=>st.en,x=>{st.en=x;}));
+  sh.bd.appendChild(pathFieldK("日本語版フォルダー JA（任意）","",'dir',()=>st.ja,x=>{st.ja=x;}));
+  sh.bd.appendChild(pathFieldK("Published JA（任意）","",'dir',()=>st.published,x=>{st.published=x;}));
+  sh.bd.appendChild(pathFieldK("出力フォルダー（任意）","",'dir',()=>st.results,x=>{st.results=x;}));
+  const fr=el("div","fld");const lab=el("label","toggle2");const cb=el("input");cb.type="checkbox";cb.onchange=()=>{st.no_tm=cb.checked;};lab.appendChild(cb);lab.appendChild(document.createTextNode(" TM参照を使わない"));fr.appendChild(lab);sh.bd.appendChild(fr);
+  const run=el("button","primary","チェックを実行");const cancel=el("button","ghost","キャンセル");cancel.onclick=closeOvl;
+  run.onclick=()=>{busy(run,true,"チェック中…");api("/api/versioncheck",{method:"POST",body:JSON.stringify(st)}).then(r=>{busy(run,false);if(r&&r.ok){toast("チェックが完了しました");showLog("JA バージョンチェック 結果",r.log,r.reveal);}else{toast("失敗："+((r&&r.error)||"不明"));showLog("JA バージョンチェック ログ",(r&&r.log)||((r&&r.error)||""),r&&r.reveal);}}).catch(err=>{busy(run,false);toast("通信エラー: "+err);});};
+  sh.ft.appendChild(cancel);sh.ft.appendChild(run);sh.m.appendChild(sh.ft);overlay(sh.m);
+}
 const toolsPanel=document.getElementById("toolspanel");
 if(toolsPanel){
-  [["MT を HTML に注入",openInject],["索引キャッシュを事前作成",openPrebuild],["TEP 結果を TM に書き戻す",openWriteback],["UI Glossary を作成",openGlossary]].forEach(t=>{const b=el("button",null,t[0]);b.onclick=()=>{toolsPanel.hidden=true;t[1]();};toolsPanel.appendChild(b);});
+  [["MT を HTML に注入",openInject],["索引キャッシュを事前作成",openPrebuild],["TEP 結果を TM に書き戻す",openWriteback],["UI Glossary を作成",openGlossary],["ファイル比較 (EN)",openFileCompare],["JA バージョンチェック",openVersionCheck]].forEach(t=>{const b=el("button",null,t[0]);b.onclick=()=>{toolsPanel.hidden=true;t[1]();};toolsPanel.appendChild(b);});
   document.getElementById("toolsbtn").addEventListener("click",()=>{toolsPanel.hidden=!toolsPanel.hidden;});
   document.addEventListener("click",e=>{if(!e.target.closest("#toolswrap"))toolsPanel.hidden=true;});
 }
@@ -1751,6 +1820,20 @@ elif a.cmd == "serve":
                 except Exception as e:
                     self._send(200, {"ok": False, "error": str(e)})
                 return
+            if u.path == "/api/filecompare":
+                self._send(200, filecompare_run(target=payload.get("target", ""),
+                                                current=payload.get("current", ""),
+                                                results=payload.get("results", ""),
+                                                label=payload.get("label", ""),
+                                                translatable_only=bool(payload.get("translatable_only")),
+                                                capture=True)); return
+            if u.path == "/api/versioncheck":
+                self._send(200, versioncheck_run(en=payload.get("en", ""),
+                                                 ja=payload.get("ja", ""),
+                                                 published=payload.get("published", ""),
+                                                 results=payload.get("results", ""),
+                                                 no_tm=bool(payload.get("no_tm")),
+                                                 capture=True)); return
             if u.path == "/api/create":
                 projs = load(STORE)
                 pid = create_project_full(projs, payload.get("name", ""),
