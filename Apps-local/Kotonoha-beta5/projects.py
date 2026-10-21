@@ -937,7 +937,20 @@ footer{color:var(--muted);font-size:12px;margin-top:18px}
 <script>window.__KT=__KTCFG__;</script>
 <div class="wrap">
 <h1>Kotonoha プロジェクト一覧<span class="srvbadge">サーバーモード（作成・実行が有効）</span></h1>
-<div class="sub">記事行は「開く」で TEP 作業を<b>別タブ</b>で再開。定義行は「<b>実行</b>」で解析＋Pre-translation、「<b>出力</b>」で元形式の翻訳版を出力。各行の「<b>編集</b>」で状態・メモ・期日・削除。ツールバーの「<b>ツール ▾</b>」から MT注入・索引キャッシュ作成・TM書き戻し・UI Glossary を実行できます（<b>サーバーモード</b>時）。静的表示（file://）では「実行」はコマンドをコピーします。列ヘッダー右端をドラッグで<b>幅調整</b>、<b>列 ▾</b>で<b>表示/非表示</b>（ブラウザに保存）。</div>
+<style>
+.ptabs{display:flex;gap:4px;margin:10px 0 12px;border-bottom:2px solid var(--hairline)}
+.ptab{appearance:none;border:1px solid var(--hairline);border-bottom:none;background:var(--surface);color:inherit;padding:9px 18px;border-radius:10px 10px 0 0;font-weight:700;font-size:14px;cursor:pointer;margin-bottom:-2px}
+.ptab[aria-pressed="true"]{background:var(--accent,#2563eb);color:#fff;border-color:transparent}
+.tepbar{display:flex;align-items:center;gap:10px;margin:2px 0 8px}
+.tepbar .tephint{color:var(--muted);font-size:13px}
+#tepframe{display:block;width:100%;height:calc(100vh - 170px);min-height:420px;border:1px solid var(--hairline);border-radius:8px;background:var(--surface)}
+</style>
+<div class="ptabs" id="ptabs">
+  <button class="ptab" id="ptab-btn-proj" data-ptab="proj" aria-pressed="true" type="button">プロジェクト</button>
+  <button class="ptab" id="ptab-btn-tep" data-ptab="tep" aria-pressed="false" type="button">TM Match Explorer</button>
+</div>
+<div id="ptab-proj">
+<div class="sub">記事行は「開く」で TEP 作業を上の<b>「TM Match Explorer」タブ</b>内に表示（サーバーモード）。静的表示（file://）では別タブで開きます。定義行は「<b>実行</b>」で解析＋Pre-translation、「<b>出力</b>」で元形式の翻訳版を出力。各行の「<b>編集</b>」で状態・メモ・期日・削除。ツールバーの「<b>ツール ▾</b>」から MT注入・索引キャッシュ作成・TM書き戻し・UI Glossary を実行できます（<b>サーバーモード</b>時）。静的表示（file://）では「実行」はコマンドをコピーします。列ヘッダー右端をドラッグで<b>幅調整</b>、<b>列 ▾</b>で<b>表示/非表示</b>（ブラウザに保存）。</div>
 <div class="tabs" id="tabs" hidden>
   <button class="tab" id="tab-projects" data-view="projects" aria-pressed="true" type="button">プロジェクト</button>
   <button class="tab" id="tab-terms" data-view="terms" aria-pressed="false" type="button">用語管理</button>
@@ -976,6 +989,15 @@ footer{color:var(--muted);font-size:12px;margin-top:18px}
   <tbody id="trows"></tbody></table></div>
   <div class="empty" id="tempty" hidden>用語がありません。「＋ 用語を追加」または「用語を抽出…」で登録してください。</div>
 </div><!-- /view-terms -->
+</div><!-- /ptab-proj -->
+<div id="ptab-tep" hidden>
+  <div class="tepbar">
+    <span class="tephint" id="tephint">「プロジェクト」タブで記事行の「開く」を押すと、ここに TM Match Explorer（翻訳・サマリー）が表示されます。</span>
+    <button class="btn" id="tepreload" type="button" hidden>再読み込み</button>
+    <a class="btn" id="tepnewtab" href="#" target="_blank" rel="noopener" hidden>別タブで開く</a>
+  </div>
+  <iframe id="tepframe" title="TM Match Explorer"></iframe>
+</div>
 <footer>台帳: _projects.json ／ 用語集: _terms.tsv（全プロジェクト共通）／ この一覧は <code>projects.py dashboard</code> で生成。開き直すと最新になります。</footer>
 </div>
 <script>
@@ -1394,6 +1416,39 @@ function switchView(v){
 }
 document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>switchView(b.dataset.view)));
 
+// ===== 親タブ: プロジェクト / TM Match Explorer（下位構造は各タブ内に維持） =====
+function switchPTab(which){
+  var pp=document.getElementById("ptab-proj"),pt=document.getElementById("ptab-tep");
+  if(pp)pp.hidden=(which!=="tep")?false:true;
+  if(pt)pt.hidden=(which!=="tep");
+  var bp=document.getElementById("ptab-btn-proj"),bt=document.getElementById("ptab-btn-tep");
+  if(bp)bp.setAttribute("aria-pressed",String(which!=="tep"));
+  if(bt)bt.setAttribute("aria-pressed",String(which==="tep"));
+  if(which==="tep"&&KT.served){var fr=document.getElementById("tepframe");
+    if(fr&&!fr.getAttribute("src")){fr.src="/explorer";
+      var hint=document.getElementById("tephint");if(hint)hint.textContent="デモ表示中（翻訳／サマリーの2タブ＋下部2ペイン）。プロジェクト一覧の「開く」で実データのTEPに切り替わります。";
+      var rl=document.getElementById("tepreload");if(rl){rl.hidden=false;rl.onclick=function(){fr.src=fr.src;};}
+      var nt=document.getElementById("tepnewtab");if(nt){nt.hidden=false;nt.href="/explorer";}
+    }
+  }
+}
+document.querySelectorAll(".ptab").forEach(b=>b.addEventListener("click",()=>switchPTab(b.dataset.ptab)));
+function openTEP(url){
+  var fr=document.getElementById("tepframe");if(!fr||!url)return;
+  fr.src=url;
+  var hint=document.getElementById("tephint");if(hint)hint.textContent="TM Match Explorer を表示中（「プロジェクト」タブへ戻るには上のタブ）";
+  var rl=document.getElementById("tepreload");if(rl){rl.hidden=false;rl.onclick=function(){fr.src=fr.src;};}
+  var nt=document.getElementById("tepnewtab");if(nt){nt.hidden=false;nt.href=url;}
+  switchPTab("tep");
+}
+// 記事行「開く」を同一画面内（iframe）で開く＝統合。file://（静的表示）は従来どおり別タブ。
+(function(){var rowsEl=document.getElementById("rows");if(!rowsEl)return;
+  rowsEl.addEventListener("click",function(e){
+    var a=e.target.closest("a.open");if(!a)return;
+    if(KT.served){e.preventDefault();openTEP(a.getAttribute("href"));}
+  });
+})();
+
 if(KT.served){document.body.classList.add("served");var _tw=document.getElementById("toolswrap");if(_tw)_tw.hidden=false;var _tabs=document.getElementById("tabs");if(_tabs)_tabs.hidden=false;refresh();}
 </script></body></html>"""
     return (tpl.replace("__DATA__", data).replace("__COLS__", colmeta)
@@ -1780,6 +1835,18 @@ elif a.cmd == "serve":
             if u.path == "/article":
                 q = urllib.parse.parse_qs(u.query)
                 self._serve_article(q.get("id", [""])[0]); return
+            if u.path == "/explorer":
+                # TM Match Explorer 親タブの既定表示: タブ付きTEP（翻訳/サマリー＋2ペイン, デモデータ）
+                tpl = TEMPLATE or os.path.join(HERE, "TM-Match-Explorer-demo.html")
+                try:
+                    content = open(tpl, encoding="utf-8").read()
+                except Exception as e:
+                    self._send(404, {"error": str(e)}); return
+                kt = {"served": True, "token": TOKEN, "doc": "(デモ)", "project": ""}
+                self._send(200, "<script>window.__KT=%s;</script>%s"
+                           % (json.dumps(kt, ensure_ascii=False), content),
+                           "text/html; charset=utf-8")
+                return
             if u.path.startswith("/api/"):
                 if not self._auth():
                     self._send(403, {"error": "forbidden"}); return
