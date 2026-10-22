@@ -1,0 +1,28 @@
+今日の作業（昨日の続き）
+対象プロジェクト: ED2710-20-MH-App-September 2026 Release Update Content-JA
+記事: Creating DataFlows in Magic ETL（280セグメント／TM流し込み222・MT対象58）
+
+手順
+
+「プロジェクト」タブ → 記事行「Creating DataFlows in Magic ETL」の「開く」→ TM Match Explorer タブで翻訳（編集は自動保存、途中保存/Ctrl+Sも可）。
+MT対象58行（「（MT 未挿入）」の行）を埋める:
+Kotonoha-out\…\combined.mt-todo.json（または ….mt-todo.json）をAI翻訳 → 「ツール ▾ → MT を HTML に注入」。
+確認・編集・確定 → 「XLIFF 書き出し」→ JSONソースなので reinsert-json で元JSONへ復元。
+状態: Gitクリーン（最新 290f144）、WIPはまだ無し（翻訳はこれから）。
+
+どう進めますか？
+
+(A) MT対象58行の翻訳を私が実施（mt-todo.json を訳して注入用の mt-done を用意／注入まで）
+(B) まず私が記事を「開く」状態にして、翻訳レイアウトや自動保存の動作を一緒に確認
+(C) 別の作業（指示をどうぞ）
+
+
+「MT注入」という表現は使わない。今後は「MTを反映」という表現を使ってください。ドキュメントやUI上の表現も修正してください。
+「MT を HTML に注入」も「MTをHTMLに反映」と表現。
+半角英数文字の前後に半角スペースは不要。
+
+TM Match Explorerというタブ名は不要。タブにはその代わりにプロジェクト名を表示。
+
+
+作業の流れは、プロジェクト新規作成＞実行で解析、Pre-translationを実行し、結果を現TM Match Explorerタブに表示。現TM Match Explorerタブの表示は今後はプロジェクト名にする。複数のプロジェクトを実行した場合は、複数のプロジェクト名タブを表示、プロジェクト名タブが増えたときはプロジェクト名を折り返してタブのサイズを適宜リサイズ。タブの高さは2行分まで拡張可。
+プロジェクト名タブが一つもないときに限り、TM Match Explorerタブを表示。

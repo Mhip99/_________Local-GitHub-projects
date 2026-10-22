@@ -180,7 +180,8 @@ def export_terms(rows, out_path, fmt="tsv"):
         return {"ok": False, "error": "unknown format: %s" % fmt}
     return {"ok": True, "out": out_path, "count": len(rows)}
 
-def upsert(projects, html, title=None, source=None, segs=None, mt=None, project=None):
+def upsert(projects, html, title=None, source=None, segs=None, mt=None, project=None,
+           main_tm=None, product_tm=None, sub_tms=None, sources=None, out_dir=None, name=None):
     key = ncase(html)
     for p in projects:
         if ncase(p.get("html", "")) == key:
@@ -189,14 +190,26 @@ def upsert(projects, html, title=None, source=None, segs=None, mt=None, project=
             if segs is not None:   p["segs"] = segs
             if mt is not None:     p["mt"] = mt
             if project is not None: p["project"] = project
+            # 各記事を“それ自身で実行/出力できる”独立プロジェクトにするためのレシピ
+            if name is not None:        p["name"] = name
+            if main_tm is not None:     p["main_tm"] = main_tm
+            if product_tm is not None:  p["product_tm"] = product_tm
+            if sub_tms is not None:     p["sub_tms"] = list(sub_tms)
+            if sources is not None:     p["sources"] = sources
+            if out_dir is not None:     p["out_dir"] = out_dir
             p["updated"] = now()
             return False
     projects.append({
         "id": make_id(projects),
         "html": html,
         "title": title or os.path.splitext(os.path.basename(html))[0],
+        "name": name or title or "",
         "project": project or "",
         "source": source or "", "segs": segs, "mt": mt,
+        "main_tm": main_tm or "", "product_tm": product_tm or "",
+        "sub_tms": list(sub_tms) if sub_tms else [],
+        "sources": sources or ([{"kind": "file", "path": source}] if source else []),
+        "out_dir": out_dir or "",
         "status": "作業中", "memo": "", "due": "",
         "created": now(), "updated": now(),
     })
@@ -407,8 +420,8 @@ def run_project(projects, store, pid, out_path="", engine="", template="",
     and the serve API. Returns a result dict; registers produced articles and saves."""
     import subprocess
     p = find_by_id(projects, pid)
-    if not p or p.get("type") != "project":
-        return {"ok": False, "error": "project definition not found: %s" % pid}
+    if not p or not (p.get("main_tm") and p.get("sources")):
+        return {"ok": False, "error": "実行可能なプロジェクト（ソース＋メインTM）が見つかりません: %s" % pid}
     srcs = p.get("sources", [])
     main_tm = p.get("main_tm", "")
     if not srcs:
@@ -479,9 +492,22 @@ def run_project(projects, store, pid, out_path="", engine="", template="",
                 continue
             upsert(projects, htmlp, title=art.get("title"), source=art.get("source"),
                    segs=art.get("segs"), mt=art.get("mt"),
-                   project=(p.get("name") or p.get("id")))
+                   project=(p.get("name") or p.get("id")),
+                   name=art.get("title"),
+                   main_tm=p.get("main_tm", ""), product_tm=p.get("product_tm", ""),
+                   sub_tms=p.get("sub_tms", []),
+                   sources=([{"kind": "file", "path": art.get("source")}] if art.get("source") else []),
+                   out_dir=out_dir)
             if art.get("title"):
                 produced.append(art.get("title"))
+            # 再生成しても保存済みMT訳があれば自動で再反映（「実行」でMT反映が消えないように）
+            md = htmlp + ".mt-done.jsonl"
+            if os.path.isfile(htmlp) and os.path.isfile(md):
+                try:
+                    inject_mt_run(mode="single", html=htmlp, mt=md, capture=True)
+                    log("  MT再反映: %s" % os.path.basename(md))
+                except Exception as _e:
+                    log("  WARN: MT再反映に失敗: %s" % _e)
             reg += 1
     if p.get("status") in (None, "", "未解析"):
         p["status"] = "作業中"
@@ -501,8 +527,8 @@ def export_project(projects, store, pid, out_path="", cache_dir="",
     `export` CLI command and the serve API."""
     import subprocess
     p = find_by_id(projects, pid)
-    if not p or p.get("type") != "project":
-        return {"ok": False, "error": "project definition not found: %s" % pid}
+    if not p or not (p.get("main_tm") and p.get("sources")):
+        return {"ok": False, "error": "実行可能なプロジェクト（ソース＋メインTM）が見つかりません: %s" % pid}
     main_tm = p.get("main_tm", "")
     if not main_tm or not os.path.exists(main_tm):
         return {"ok": False, "error": "main TM not found: %s" % (main_tm or "(未設定)")}
@@ -825,6 +851,7 @@ def build_rows(projects, served=False):
     rows = []
     for i, p in enumerate(ordered(projects), 1):
         is_def = p.get("type") == "project"
+        runnable = bool(p.get("main_tm") and p.get("sources"))   # 定義でも記事でも、レシピがあれば実行/出力可
         if is_def:
             src = "ソース %d 件 ／ メインTM %s ／ Product %s ／ サブTM %d 件" % (
                 len(p.get("sources", [])),
@@ -842,8 +869,8 @@ def build_rows(projects, served=False):
             "uri": (("/article?id=" + row_id(p)) if (served and p.get("html"))
                     else (file_uri(p.get("html", "")) if p.get("html") else "")),
             "id": row_id(p),
-            "pid": (p.get("id", "") if is_def else ""),
-            "cmd": (run_cmd(p.get("id", "")) if is_def else ""),
+            "pid": (p.get("id", "") if runnable else ""),
+            "cmd": (run_cmd(p.get("id", "")) if runnable else ""),
         })
     return rows
 
@@ -1103,9 +1130,9 @@ function render(){
   document.getElementById("empty").hidden=list.length>0;
   document.getElementById("rows").innerHTML=list.map(p=>{
     let inner="";
-    if(p.uri){inner='<a class="open" href="'+esc(p.uri)+'" data-title="'+esc(p.project||p.title||p.name||"")+'" target="_blank" rel="noopener">開く</a>';}
-    else if(p.pid){inner='<button class="run" type="button" data-pid="'+esc(p.pid)+'" data-cmd="'+esc(p.cmd)+'" data-n="'+p.n+'" title="'+(KT.served?'クリックで解析＋Pre-translation を実行':'クリックで実行コマンドをコピー ／ またはランチャー [P] で G → 番号 '+p.n)+'">実行</button>';
-      if(KT.served){inner+='<button class="exp" type="button" data-pid="'+esc(p.pid)+'" title="TM を適用して元の形式で翻訳版を出力（解析→翻訳→TEP確定→書き戻しの後に実行）">出力</button>';}}
+    if(p.pid){inner='<button class="run" type="button" data-pid="'+esc(p.pid)+'" data-cmd="'+esc(p.cmd)+'" data-n="'+p.n+'" title="'+(KT.served?'クリックで解析＋Pre-translation を実行（結果はプロジェクト名タブに表示）':'クリックで実行コマンドをコピー ／ またはランチャー [P] で G → 番号 '+p.n)+'">実行</button>';
+      if(KT.served){inner+='<button class="exp" type="button" data-pid="'+esc(p.pid)+'" title="TM を適用して元の形式で翻訳版を出力（.json/.docx/.xlsx 等。TEP確定→TM書き戻しの後に実行）">出力</button>';}}
+    else if(p.uri){inner='<a class="open" href="'+esc(p.uri)+'" data-title="'+esc(p.project||p.title||p.name||"")+'" target="_blank" rel="noopener">開く</a>';}
     if(KT.served&&p.id){inner+='<button class="edit" type="button" data-id="'+esc(p.id)+'" title="状態・メモ・期日・削除">編集</button>';}
     return "<tr>"+COLS.map(c=>cell(p,c.id)).join("")+'<td class="act">'+inner+'</td></tr>';
   }).join("");

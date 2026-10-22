@@ -26,7 +26,7 @@ ap.add_argument("--combined-mt", dest="combined_mt", default="",
                 help="batch mode: combined mt-done keyed by global id gi")
 args = ap.parse_args()
 
-SEG_RE = r"const SEG = (\[[\s\S]*?\]);\s*\nconst BANDS"
+SEG_RE = r"const SEG = (\[[\s\S]*?\]);\s*\nconst (?:META|BANDS)"
 
 
 def _load_records(path):
