@@ -259,16 +259,22 @@ header.top{margin-bottom:6px;gap:12px;align-items:center;}
     <button class="themebtn" id="themebtn" type="button">◐ テーマ切替</button>
   </div>
   <section class="summary" id="view-summary" hidden>
-    <div class="card tiles" id="tiles"></div>
-    <div class="card panel">
-      <h2>区分の内訳</h2>
-      <div class="stack" id="stack"></div>
-      <div class="legend" id="legend"></div>
-      <div class="bands" id="bands" style="margin-top:16px;"></div>
-    </div>
-    <div class="card panel" id="metacard">
-      <h2>ファイル / TM / プロジェクト情報</h2>
-      <div id="metabody" class="metabody"></div>
+    <div class="sumgrid">
+      <div class="sumL">
+        <div class="card panel" id="metacard">
+          <h2>ファイル / TM / プロジェクト情報</h2>
+          <div id="metabody" class="metabody"></div>
+        </div>
+        <div class="card panel">
+          <h2>区分の内訳</h2>
+          <div class="stack" id="stack"></div>
+          <div class="legend" id="legend"></div>
+          <div class="bands" id="bands" style="margin-top:16px;"></div>
+        </div>
+      </div>
+      <div class="sumR">
+        <div class="card tiles" id="tiles"></div>
+      </div>
     </div>
   </section>
 
@@ -472,7 +478,7 @@ function render(){
     const edited=(idx in edits);
     const confirmed=(idx in confirms);
     const jaCur=edited?edits[idx]:plain(s.ja);
-    const jaView=edited?withChips(esc(jaCur),s.tags):(plain(s.ja)?withChips(diff(s.ja),s.tags):'<span class="japlaceholder">（MT 未挿入）</span>');
+    const jaView=edited?withChips(esc(jaCur),s.tags):(plain(s.ja)?withChips(diff(s.ja),s.tags):'<span class="japlaceholder">（MT未反映）</span>');
     const jaCell=state.editMode
       ? `<td class="ja">${paletteHTML(s)}<div class="jaedit" contenteditable="true" data-i="${idx}">${withChips(esc(jaCur),s.tags)}</div></td>`
       : `<td class="ja${edited?' isedited':''}${confirmed?' isconfirmed':''}">${jaView}</td>`;
@@ -741,7 +747,10 @@ document.querySelectorAll(".vtab").forEach(b=>b.addEventListener("click",()=>swi
   var body=document.getElementById("metabody");if(!body)return;
   var M=(typeof META!=="undefined")?META:null;
   var st=document.createElement("style");
-  st.textContent=".metabody{font-size:13px;line-height:1.6}"+
+  st.textContent=".sumgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}"+
+    ".sumL{display:flex;flex-direction:column;gap:16px;min-width:0}.sumR{min-width:0}"+
+    "@media(max-width:860px){.sumgrid{grid-template-columns:1fr}}"+
+    ".metabody{font-size:13px;line-height:1.6}"+
     ".metarow{display:grid;grid-template-columns:130px 1fr;gap:4px 14px;padding:6px 0;border-bottom:1px solid var(--hairline,#eee)}"+
     ".metarow .k{color:var(--muted,#667);font-weight:600}.metarow .v{word-break:break-all}"+
     ".metapath{font-family:ui-monospace,Consolas,monospace;font-size:12px;opacity:.9}"+

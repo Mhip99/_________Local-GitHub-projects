@@ -11,7 +11,7 @@ beta1 の TM Match Explorer に、高速化①②③・TEP 書き戻し・パス
 
 > 場所: `OneDrive - Domo Inc\________GitHub-production\CAT tool\CAT\Kotonoha-beta3\`
 >
-> Rev 3.00 の主な追加点：**[D] サーバーモード**でブラウザだけから作成・実行・出力・状態/メモ/期日/削除・MT注入・索引作成・TM書き戻し・UI Glossary が行える（**全機能GUI化**）。**元の形式で翻訳版を出力**（往復・現状 .txt）。**TM が過去訳を上書きせず更新日時付きで蓄積**し、編集画面に**翻訳履歴ペイン**を表示。
+> Rev 3.00 の主な追加点：**[D] サーバーモード**でブラウザだけから作成・実行・出力・状態/メモ/期日/削除・MTを反映・索引作成・TM書き戻し・UI Glossary が行える（**全機能GUI化**）。**元の形式で翻訳版を出力**（往復・現状 .txt）。**TM が過去訳を上書きせず更新日時付きで蓄積**し、編集画面に**翻訳履歴ペイン**を表示。
 
 ---
 
@@ -31,7 +31,7 @@ beta1 の TM Match Explorer に、高速化①②③・TEP 書き戻し・パス
 
 | 日付 | 仕様変更内容 |
 |---|---|
-| 2026-09-09 | 初版。納品訳の使用を廃止して **Pre-translation 化**（TM 訳の流し込み＋新規は MT）。新規（≤74%）は全件 MT。**3パス構成**：`tm_match_analysis.py`（解析＋Pre-translation）→ Claude 翻訳 → `inject_mt.py`（MT 注入）。ブラウザで TEP → XLIFF 書き出し。 |
+| 2026-09-09 | 初版。納品訳の使用を廃止して **Pre-translation 化**（TM 訳の流し込み＋新規は MT）。新規（≤74%）は全件 MT。**3パス構成**：`tm_match_analysis.py`（解析＋Pre-translation）→ Claude 翻訳 → `inject_mt.py`（MT 反映）。ブラウザで TEP → XLIFF 書き出し。 |
 
 #### beta2 — 高速化＋TM 書き戻し（`Kotonoha-beta2\`）
 
@@ -47,7 +47,7 @@ beta1 の TM Match Explorer に、高速化①②③・TEP 書き戻し・パス
 | 2026-10-07 | **全操作で入力の実在チェック**、**キャンセルは一つ前の入力に戻る**仕様。**過去のプロジェクト** `[P]`（`projects.py`・台帳 `_projects.json`・ダッシュボード `_projects.html`）と**プロジェクト作成ウィザード** `[C]` を新設。 |
 | 2026-10-08 | **保存した定義で解析＋Pre-translation を実行**する連携を実装（`run_project`／CLI `run --id`）。`[C]`＝**作成＋実行**に、`[P]→G`＝保存した定義の実行に。旧 **[1]/[2] を [C]/[P] に一本化**。採番を一覧表示と統一（`idof --index`）。 |
 | 2026-10-09 | **ダッシュボード定義行に「実行」ボタン**（静的 file:// 版はコマンドをコピー）。**[D] サーバーモード**（`projects.py serve`・127.0.0.1 限定＋トークン認証）を新設し、ブラウザから**作成・実行**、ファイル指定は **Windows ネイティブダイアログ**。**元の形式で翻訳版を出力**（多フォーマット往復・Phase 1＝.txt／`doc_io.py`・`doc_export.py`／CLI `export`・`[P]→X`・ダッシュボード「出力」）。 |
-| 2026-10-14 | **全機能のブラウザGUI化**：サーバーモードのダッシュボードで、各行の「**編集**」（状態／メモ／期日／削除）とツールバー「**ツール ▾**」から **MT注入・索引キャッシュ作成・TM書き戻し（dry-run＋自動バックアップ）・UI Glossary** を実行可能に。**翻訳履歴（TM蓄積型）**：TEP 書き戻しが過去訳を**上書きせず版として蓄積**（同一原文に複数 TU・更新日時付き）、索引は**最新版を採用**（newest-wins）。**編集画面に翻訳履歴ペイン**を追加（表＝全幅、下に 履歴ペイン｜用語ペイン）。 |
+| 2026-10-14 | **全機能のブラウザGUI化**：サーバーモードのダッシュボードで、各行の「**編集**」（状態／メモ／期日／削除）とツールバー「**ツール ▾**」から **MTを反映・索引キャッシュ作成・TM書き戻し（dry-run＋自動バックアップ）・UI Glossary** を実行可能に。**翻訳履歴（TM蓄積型）**：TEP 書き戻しが過去訳を**上書きせず版として蓄積**（同一原文に複数 TU・更新日時付き）、索引は**最新版を採用**（newest-wins）。**編集画面に翻訳履歴ペイン**を追加（表＝全幅、下に 履歴ペイン｜用語ペイン）。 |
 
 #### RTM — 正式版（予定）
 
@@ -78,7 +78,7 @@ beta1 の TM Match Explorer に、高速化①②③・TEP 書き戻し・パス
 | `TM-Match-Explorer.bat` | 起動ランチャー（メニュー式）。 |
 | `tm_index.py` | **①** 索引の構築＋pickleキャッシュ。過去訳の版履歴（`exact_hist`）も保持。 |
 | `tm_match_analysis.py` | **Pass 1**：解析＋Pre-translation。②バッチ・③combined 対応。各セグメントに翻訳履歴 `hist` を付与。 |
-| `inject_mt.py` | **Pass 3**：MT注入。単一＋③batch（combined）。 |
+| `inject_mt.py` | **Pass 3**：MTを反映。単一＋③batch（combined）。 |
 | `tm_writeback.py` | **Pass 4**：TEP確定行（XLIFF）を Live_TM へ書き戻し。**蓄積型**（過去訳を残す）。 |
 | `ui_glossary.py` | **[9]**：作業内容から UI 用語を抽出し用語集（CSV＋JSON）を作成。 |
 | `projects.py` | **[C]/[P]/[D]**：プロジェクト台帳の管理・ダッシュボード生成・**サーバーモード（`serve`）**。 |
@@ -113,8 +113,8 @@ beta1 の TM Match Explorer に、高速化①②③・TEP 書き戻し・パス
 | **[C]** | **プロジェクト作成＋実行**（単一記事・フォルダー）。名前・ソース・TM を登録し、そのまま解析＋Pre-translation まで実行できます。→ §4a |
 | **[P]** | **過去のプロジェクト**（一覧ダッシュボードを別タブ表示・作業再開・状態管理・保存した定義の実行 G・元形式で出力 X）。→ §4a |
 | **[D]** | **ダッシュボードを開く（サーバーモード）**：ローカルサーバーを起動し、ブラウザから作成・実行・出力・編集・各ツールを操作。→ §4b |
-| **[3]** | MT注入（単一）。 |
-| **[4]** | MT一括注入（③・combined）。 |
+| **[3]** | MTを反映（単一）。 |
+| **[4]** | MT一括反映（③・combined）。 |
 | **[5]** | 索引キャッシュを事前作成（初回のみ・数分）。 |
 | **[6]** | テンプレートをプレビュー。 |
 | **[7]** | TEP確定行を TM へ書き戻し（確定行のみ・dry-run確認あり・**蓄積型**）。→ §7a |
@@ -172,7 +172,7 @@ beta1 の TM Match Explorer に、高速化①②③・TEP 書き戻し・パス
 - **各定義行**：「**実行**」（解析＋Pre-translation・ワンクリック）／「**出力**」（元形式で翻訳版・§4c）。
 - **各行の「編集」**：状態（セレクト）・メモ・期日の変更、**削除**（2段階確認）。
 - **ツールバー「ツール ▾」**：
-  - **MT を HTML に注入**（単一＝HTML＋mt-done／一括＝combined）。
+  - **MTをHTMLに反映**（単一＝HTML＋mt-done／一括＝combined）。
   - **索引キャッシュを事前作成**（University＋Product を指定。数分かかる場合あり）。
   - **TEP 結果を TM に書き戻す**：まず **dry-run** でプレビュー → 確認 → 本実行。**本実行の直前に書込先 TMX を日付きバックアップ**（`<名前>.bak_YYYYMMDD-HHMMSS.tmx`）。
   - **UI Glossary を作成**（§7b）。完了後「出力フォルダを開く」。
@@ -240,7 +240,7 @@ python tm_match_analysis.py --source "…\<記事>.mdx" --tmx "…\University-�
 | `--combined-todo` | 全記事の `<=74%` を統合した mt-todo（③） |
 | `--no-cache` / `--rebuild-cache` | キャッシュを使わない／既存を無視して再構築 |
 
-### Pass 3 — MT注入
+### Pass 3 — MTを反映
 ```powershell
 python inject_mt.py --html "…\<記事>.html" --mt "…\<記事>.html.mt-done.jsonl"
 # 一括(③): --combined-todo "…\combined.mt-todo.json" --combined-mt "…\combined.mt-done.jsonl"
@@ -261,7 +261,7 @@ python inject_mt.py --html "…\<記事>.html" --mt "…\<記事>.html.mt-done.j
 ```
 - `gi` … 全記事横断の**グローバル通し番号**。`art`＋`i` … どの記事の何行目か。
 
-**`combined.mt-done.jsonl`**（Claude が作成／③一括注入の入力。1行1レコード）
+**`combined.mt-done.jsonl`**（Claude が作成／③一括反映の入力。1行1レコード）
 ```
 {"gi":0,"ja":"この記事では、DomoStats コネクターについて…"}
 ```

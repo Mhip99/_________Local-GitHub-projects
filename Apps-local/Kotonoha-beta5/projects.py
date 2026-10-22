@@ -180,7 +180,7 @@ def export_terms(rows, out_path, fmt="tsv"):
         return {"ok": False, "error": "unknown format: %s" % fmt}
     return {"ok": True, "out": out_path, "count": len(rows)}
 
-def upsert(projects, html, title=None, source=None, segs=None, mt=None):
+def upsert(projects, html, title=None, source=None, segs=None, mt=None, project=None):
     key = ncase(html)
     for p in projects:
         if ncase(p.get("html", "")) == key:
@@ -188,12 +188,14 @@ def upsert(projects, html, title=None, source=None, segs=None, mt=None):
             if source is not None: p["source"] = source
             if segs is not None:   p["segs"] = segs
             if mt is not None:     p["mt"] = mt
+            if project is not None: p["project"] = project
             p["updated"] = now()
             return False
     projects.append({
         "id": make_id(projects),
         "html": html,
         "title": title or os.path.splitext(os.path.basename(html))[0],
+        "project": project or "",
         "source": source or "", "segs": segs, "mt": mt,
         "status": "作業中", "memo": "", "due": "",
         "created": now(), "updated": now(),
@@ -468,6 +470,7 @@ def run_project(projects, store, pid, out_path="", engine="", template="",
 
     # Register each produced article; advance the definition's status + remember outputs.
     reg = 0
+    produced = []   # 生成記事のタイトル（ダッシュボードでタブ自動表示に使用）
     if os.path.exists(combined):
         data = json.load(open(combined, encoding="utf-8-sig"))
         for art in data.get("articles", []):
@@ -475,7 +478,10 @@ def run_project(projects, store, pid, out_path="", engine="", template="",
             if not htmlp:
                 continue
             upsert(projects, htmlp, title=art.get("title"), source=art.get("source"),
-                   segs=art.get("segs"), mt=art.get("mt"))
+                   segs=art.get("segs"), mt=art.get("mt"),
+                   project=(p.get("name") or p.get("id")))
+            if art.get("title"):
+                produced.append(art.get("title"))
             reg += 1
     if p.get("status") in (None, "", "未解析"):
         p["status"] = "作業中"
@@ -483,7 +489,8 @@ def run_project(projects, store, pid, out_path="", engine="", template="",
     p["last_run"] = now(); p["updated"] = now()
     save(store, projects)
     return {"ok": True, "out_dir": out_dir, "combined": combined,
-            "registered": reg, "log": out_text}
+            "registered": reg, "produced": produced,
+            "project": (p.get("name") or p.get("id")), "log": out_text}
 
 
 def export_project(projects, store, pid, out_path="", cache_dir="",
@@ -623,7 +630,7 @@ def versioncheck_run(en="", ja="", published="", results="", no_tm=False, captur
 
 
 def inject_mt_run(mode="single", html="", mt="", combined_todo="", combined_mt="", capture=False):
-    """MT を HTML に注入（inject_mt.py）。mode='single'（html+mt）/ 'batch'（combined-todo+combined-mt）。"""
+    """MTをHTMLに反映（inject_mt.py）。mode='single'（html+mt）/ 'batch'（combined-todo+combined-mt）。"""
     script = os.path.join(HERE, "inject_mt.py")
     if mode == "batch":
         if not (combined_todo and os.path.exists(combined_todo)):
@@ -639,7 +646,7 @@ def inject_mt_run(mode="single", html="", mt="", combined_todo="", combined_mt="
         cmd = [sys.executable, script, "--html", html, "--mt", mt]
     rc, out = _run_script(cmd, capture)
     if rc != 0:
-        return {"ok": False, "error": "MT 注入に失敗しました (exit %d)" % rc, "rc": rc, "log": out}
+        return {"ok": False, "error": "MTの反映に失敗しました (exit %d)" % rc, "rc": rc, "log": out}
     return {"ok": True, "log": out}
 
 
@@ -828,6 +835,7 @@ def build_rows(projects, served=False):
             src = p.get("source", "")
         rows.append({
             "n": i, "title": (p.get("title") or p.get("name") or ""), "status": p.get("status", ""),
+            "project": p.get("project", ""),
             "segs": p.get("segs"), "mt": p.get("mt"), "memo": p.get("memo", ""),
             "due": p.get("due", ""), "updated": p.get("updated", ""),
             "source": src,
@@ -956,20 +964,19 @@ footer{color:var(--muted);font-size:12px;margin-top:18px}
 <script>window.__KT=__KTCFG__;</script>
 <div class="wrap">
 <style>
-.ptabs{display:flex;gap:4px;margin:10px 0 12px;border-bottom:2px solid var(--hairline)}
-.ptab{appearance:none;border:1px solid var(--hairline);border-bottom:none;background:var(--surface);color:inherit;padding:9px 18px;border-radius:10px 10px 0 0;font-weight:700;font-size:14px;cursor:pointer;margin-bottom:-2px}
+.ptabs{display:flex;flex-wrap:wrap;gap:4px;margin:10px 0 12px;border-bottom:2px solid var(--hairline);align-items:flex-end}
+.ptab{appearance:none;border:1px solid var(--hairline);border-bottom:none;background:var(--surface);color:inherit;padding:7px 12px;border-radius:10px 10px 0 0;font-weight:700;font-size:13px;cursor:pointer;margin-bottom:-2px;max-width:240px;line-height:1.25;max-height:2.9em;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word;text-align:left}
 .ptab[aria-pressed="true"]{background:var(--accent,#2563eb);color:#fff;border-color:transparent}
+.ptab .x{margin-left:8px;opacity:.65;font-weight:400;cursor:pointer}
+.ptab .x:hover{opacity:1}
 .tepbar{display:flex;align-items:center;gap:10px;margin:2px 0 8px}
 .tepbar .tephint{color:var(--muted);font-size:13px}
-#tepframe{display:block;width:100%;height:calc(100vh - 170px);min-height:420px;border:1px solid var(--hairline);border-radius:8px;background:var(--surface)}
+.tepframe{display:block;width:100%;height:calc(100vh - 190px);min-height:420px;border:1px solid var(--hairline);border-radius:8px;background:var(--surface)}
 </style>
-<div class="ptabs" id="ptabs">
-  <button class="ptab" id="ptab-btn-proj" data-ptab="proj" aria-pressed="true" type="button">プロジェクト</button>
-  <button class="ptab" id="ptab-btn-tep" data-ptab="tep" aria-pressed="false" type="button">TM Match Explorer</button>
-</div>
+<div class="ptabs" id="ptabs"></div>
 <div id="ptab-proj">
 <h1>Kotonoha プロジェクト一覧<span class="srvbadge">サーバーモード（作成・実行が有効）</span></h1>
-<div class="sub">記事行は「開く」で TEP 作業を上の<b>「TM Match Explorer」タブ</b>内に表示（サーバーモード）。静的表示（file://）では別タブで開きます。定義行は「<b>実行</b>」で解析＋Pre-translation、「<b>出力</b>」で元形式の翻訳版を出力。各行の「<b>編集</b>」で状態・メモ・期日・削除。ツールバーの「<b>ツール ▾</b>」から MT注入・索引キャッシュ作成・TM書き戻し・UI Glossary を実行できます（<b>サーバーモード</b>時）。静的表示（file://）では「実行」はコマンドをコピーします。列ヘッダー右端をドラッグで<b>幅調整</b>、<b>列 ▾</b>で<b>表示/非表示</b>（ブラウザに保存）。</div>
+<div class="sub">記事行の「<b>開く</b>」や定義行の「<b>実行</b>」で、その記事を上の<b>プロジェクト名タブ</b>に表示します（サーバーモード）。定義行は「<b>実行</b>」で解析＋Pre-translation、「<b>出力</b>」で元形式の翻訳版を出力。各行の「<b>編集</b>」で状態・メモ・期日・削除。ツールバーの「<b>ツール▾</b>」からMTを反映・索引キャッシュ作成・TM書き戻し・UI Glossary・ファイル比較・JAバージョンチェックを実行できます（サーバーモード時）。静的表示（file://）では別タブで開き、「実行」はコマンドをコピーします。列ヘッダー右端をドラッグで幅調整、列▾で表示/非表示（ブラウザに保存）。</div>
 <div class="tabs" id="tabs" hidden>
   <button class="tab" id="tab-projects" data-view="projects" aria-pressed="true" type="button">プロジェクト</button>
   <button class="tab" id="tab-terms" data-view="terms" aria-pressed="false" type="button">用語管理</button>
@@ -1009,14 +1016,7 @@ footer{color:var(--muted);font-size:12px;margin-top:18px}
   <div class="empty" id="tempty" hidden>用語がありません。「＋ 用語を追加」または「用語を抽出…」で登録してください。</div>
 </div><!-- /view-terms -->
 </div><!-- /ptab-proj -->
-<div id="ptab-tep" hidden>
-  <div class="tepbar">
-    <span class="tephint" id="tephint">「プロジェクト」タブで記事行の「開く」を押すと、ここに TM Match Explorer（翻訳・サマリー）が表示されます。</span>
-    <button class="btn" id="tepreload" type="button" hidden>再読み込み</button>
-    <a class="btn" id="tepnewtab" href="#" target="_blank" rel="noopener" hidden>別タブで開く</a>
-  </div>
-  <iframe id="tepframe" title="TM Match Explorer"></iframe>
-</div>
+<div id="tepviews"></div>
 <footer>台帳: _projects.json ／ 用語集: _terms.tsv（全プロジェクト共通）／ この一覧は <code>projects.py dashboard</code> で生成。開き直すと最新になります。</footer>
 </div>
 <script>
@@ -1103,7 +1103,7 @@ function render(){
   document.getElementById("empty").hidden=list.length>0;
   document.getElementById("rows").innerHTML=list.map(p=>{
     let inner="";
-    if(p.uri){inner='<a class="open" href="'+esc(p.uri)+'" data-title="'+esc(p.title||p.name||"")+'" target="_blank" rel="noopener">開く</a>';}
+    if(p.uri){inner='<a class="open" href="'+esc(p.uri)+'" data-title="'+esc(p.project||p.title||p.name||"")+'" target="_blank" rel="noopener">開く</a>';}
     else if(p.pid){inner='<button class="run" type="button" data-pid="'+esc(p.pid)+'" data-cmd="'+esc(p.cmd)+'" data-n="'+p.n+'" title="'+(KT.served?'クリックで解析＋Pre-translation を実行':'クリックで実行コマンドをコピー ／ またはランチャー [P] で G → 番号 '+p.n)+'">実行</button>';
       if(KT.served){inner+='<button class="exp" type="button" data-pid="'+esc(p.pid)+'" title="TM を適用して元の形式で翻訳版を出力（解析→翻訳→TEP確定→書き戻しの後に実行）">出力</button>';}}
     if(KT.served&&p.id){inner+='<button class="edit" type="button" data-id="'+esc(p.id)+'" title="状態・メモ・期日・削除">編集</button>';}
@@ -1134,7 +1134,7 @@ document.getElementById("rows").addEventListener("click",e=>{
     api("/api/run",{method:"POST",body:JSON.stringify({id:pid})}).then(r=>{
       b.disabled=false;b.textContent=old;
       toast(r&&r.ok?("実行完了："+(r.registered||0)+" 記事を登録しました"):("実行失敗："+((r&&r.error)||"不明なエラー")));
-      refresh();
+      refresh().then(function(){if(r&&r.ok&&r.produced)openProduced(r.project,r.produced);});
     }).catch(err=>{b.disabled=false;b.textContent=old;toast("通信エラー: "+err);});
     return;
   }
@@ -1238,7 +1238,7 @@ function openCreate(){
   function create(then){if(!validate())return;run.disabled=true;mk.disabled=true;
     api("/api/create",{method:"POST",body:JSON.stringify(st)}).then(r=>{
       if(!r||!r.id){run.disabled=false;mk.disabled=false;toast("作成失敗："+((r&&r.error)||"不明"));return;}
-      if(then==="run"){toast("作成しました。実行中…");api("/api/run",{method:"POST",body:JSON.stringify({id:r.id})}).then(rr=>{closeOvl();toast(rr&&rr.ok?("実行完了："+(rr.registered||0)+" 記事を登録しました"):("作成済／実行失敗："+((rr&&rr.error)||"不明")));refresh();}).catch(err=>{closeOvl();toast("作成済／実行の通信エラー: "+err);refresh();});}
+      if(then==="run"){toast("作成しました。実行中…");api("/api/run",{method:"POST",body:JSON.stringify({id:r.id})}).then(rr=>{closeOvl();toast(rr&&rr.ok?("実行完了："+(rr.registered||0)+" 記事を登録しました"):("作成済／実行失敗："+((rr&&rr.error)||"不明")));refresh().then(function(){if(rr&&rr.ok&&rr.produced)openProduced(rr.project,rr.produced);});}).catch(err=>{closeOvl();toast("作成済／実行の通信エラー: "+err);refresh();});}
       else{closeOvl();toast("プロジェクトを作成しました（定義として保存）");refresh();}
     }).catch(err=>{run.disabled=false;mk.disabled=false;toast("通信エラー: "+err);});}
   run.onclick=()=>create("run");mk.onclick=()=>create("mk");
@@ -1278,7 +1278,7 @@ function openEdit(p){
 
 function openInject(){
   const st={mode:"single",html:"",mt:"",combined_todo:"",combined_mt:""};
-  const sh=modalShell("MT を HTML に注入");
+  const sh=modalShell("MTをHTMLに反映");
   sh.bd.appendChild(el("div","hint","翻訳済み mt-done は Claude 等で作成した成果物を指定します。単一＝1記事HTML＋mt-done、一括＝combined.mt-todo.json＋combined.mt-done.jsonl。"));
   const fm=el("div","fld");fm.appendChild(el("label",null,"モード"));const sel=el("select");[["single","単一（HTML＋mt-done）"],["batch","一括（combined）"]].forEach(o=>{const op=el("option",null,o[1]);op.value=o[0];sel.appendChild(op);});fm.appendChild(sel);sh.bd.appendChild(fm);
   const single=el("div");const batch=el("div");batch.hidden=true;
@@ -1288,8 +1288,8 @@ function openInject(){
   batch.appendChild(pathFieldK("combined.mt-done.jsonl","",'json',()=>st.combined_mt,x=>{st.combined_mt=x;}));
   sh.bd.appendChild(single);sh.bd.appendChild(batch);
   sel.onchange=()=>{st.mode=sel.value;single.hidden=(st.mode!=="single");batch.hidden=(st.mode!=="batch");};
-  const run=el("button","primary","注入");const cancel=el("button","ghost","キャンセル");cancel.onclick=closeOvl;
-  run.onclick=()=>{busy(run,true,"注入中…");api("/api/inject",{method:"POST",body:JSON.stringify(st)}).then(r=>{busy(run,false);if(r&&r.ok){toast("注入しました");showLog("MT 注入結果",r.log);}else{toast("注入失敗："+((r&&r.error)||"不明"));if(r&&r.log)showLog("MT 注入ログ",r.log);}}).catch(err=>{busy(run,false);toast("通信エラー: "+err);});};
+  const run=el("button","primary","反映");const cancel=el("button","ghost","キャンセル");cancel.onclick=closeOvl;
+  run.onclick=()=>{busy(run,true,"反映中…");api("/api/inject",{method:"POST",body:JSON.stringify(st)}).then(r=>{busy(run,false);if(r&&r.ok){toast("反映しました");showLog("MT反映結果",r.log);}else{toast("反映失敗："+((r&&r.error)||"不明"));if(r&&r.log)showLog("MT反映ログ",r.log);}}).catch(err=>{busy(run,false);toast("通信エラー: "+err);});};
   sh.ft.appendChild(cancel);sh.ft.appendChild(run);sh.m.appendChild(sh.ft);overlay(sh.m);
 }
 
@@ -1362,7 +1362,7 @@ function openVersionCheck(){
 }
 const toolsPanel=document.getElementById("toolspanel");
 if(toolsPanel){
-  [["MT を HTML に注入",openInject],["索引キャッシュを事前作成",openPrebuild],["TEP 結果を TM に書き戻す",openWriteback],["UI Glossary を作成",openGlossary],["ファイル比較 (EN)",openFileCompare],["JA バージョンチェック",openVersionCheck]].forEach(t=>{const b=el("button",null,t[0]);b.onclick=()=>{toolsPanel.hidden=true;t[1]();};toolsPanel.appendChild(b);});
+  [["MTをHTMLに反映",openInject],["索引キャッシュを事前作成",openPrebuild],["TEP 結果を TM に書き戻す",openWriteback],["UI Glossary を作成",openGlossary],["ファイル比較 (EN)",openFileCompare],["JA バージョンチェック",openVersionCheck]].forEach(t=>{const b=el("button",null,t[0]);b.onclick=()=>{toolsPanel.hidden=true;t[1]();};toolsPanel.appendChild(b);});
   document.getElementById("toolsbtn").addEventListener("click",()=>{toolsPanel.hidden=!toolsPanel.hidden;});
   document.addEventListener("click",e=>{if(!e.target.closest("#toolswrap"))toolsPanel.hidden=true;});
 }
@@ -1441,51 +1441,96 @@ function switchView(v){
 document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>switchView(b.dataset.view)));
 
 // ===== 親タブ: プロジェクト / TM Match Explorer（下位構造は各タブ内に維持） =====
-var LS_TEP="kotonoha-tep-current";   // 直近に開いた記事 {url,title} を記憶
-function tepCurrent(){try{return JSON.parse(localStorage.getItem(LS_TEP)||"null");}catch(e){return null;}}
-function tepRemember(url,title){try{localStorage.setItem(LS_TEP,JSON.stringify({url:url,title:title||""}));}catch(e){}}
-function tepLoad(url,title){
-  var fr=document.getElementById("tepframe");if(!fr)return;
-  fr.src=url; fr.setAttribute("data-url",url); fr.setAttribute("data-title",title||"");
-  var hint=document.getElementById("tephint");if(hint)hint.textContent=(title?("「"+title+"」"):"ファイル")+" を表示中（解析・Pre-translation済み／作業内容は自動保存）";
-  var rl=document.getElementById("tepreload");if(rl){rl.hidden=false;rl.onclick=function(){fr.src=fr.src;};}
-  var nt=document.getElementById("tepnewtab");if(nt){nt.hidden=false;nt.href=url;}
-}
-function switchPTab(which){
-  var pp=document.getElementById("ptab-proj"),pt=document.getElementById("ptab-tep");
-  if(pp)pp.hidden=(which==="tep");
-  if(pt)pt.hidden=(which!=="tep");
-  var bp=document.getElementById("ptab-btn-proj"),bt=document.getElementById("ptab-btn-tep");
-  if(bp)bp.setAttribute("aria-pressed",String(which!=="tep"));
-  if(bt)bt.setAttribute("aria-pressed",String(which==="tep"));
-  if(which==="tep"&&KT.served){var fr=document.getElementById("tepframe");
-    if(fr&&!fr.getAttribute("src")){
-      var cur=tepCurrent();
-      if(cur&&cur.url){tepLoad(cur.url,cur.title);}
-      else{fr.src="/explorer";
-        var hint=document.getElementById("tephint");if(hint)hint.textContent="デモ表示中（翻訳／サマリーの2タブ＋下部2ペイン）。プロジェクト一覧の「開く」で解析・Pre-translation済みのファイルを表示します。";
-        var rl=document.getElementById("tepreload");if(rl){rl.hidden=false;rl.onclick=function(){fr.src=fr.src;};}
-        var nt=document.getElementById("tepnewtab");if(nt){nt.hidden=false;nt.href="/explorer";}
-      }
-    }
+// ===== 親タブ: プロジェクト ＋ 開いた記事ごとのプロジェクト名タブ（複数可） =====
+var LS_TEP="kotonoha-tep-tabs";    // [{id,url,title}]
+var LS_ACT="kotonoha-ptab-active"; // "proj" | "tep:<id>" | "demo"
+function tepTabs(){try{return JSON.parse(localStorage.getItem(LS_TEP)||"[]")||[];}catch(e){return[];}}
+function tepTabsSave(a){try{localStorage.setItem(LS_TEP,JSON.stringify(a));}catch(e){}}
+function ptabActive(){try{return localStorage.getItem(LS_ACT)||"proj";}catch(e){return "proj";}}
+function ptabActiveSave(v){try{localStorage.setItem(LS_ACT,v);}catch(e){}}
+function renderPTabs(){
+  var bar=document.getElementById("ptabs");if(!bar)return;
+  var act=ptabActive();
+  var html='<button class="ptab" data-ptab="proj" type="button" aria-pressed="'+(act==="proj")+'">プロジェクト</button>';
+  var tabs=KT.served?tepTabs():[];
+  if(tabs.length){
+    tabs.forEach(function(t){var w="tep:"+t.id;
+      html+='<button class="ptab" data-ptab="'+esc(w)+'" type="button" aria-pressed="'+(act===w)+'" title="'+esc(t.title)+'">'+esc(t.title||"(無題)")+'<span class="x" data-close="'+esc(t.id)+'" title="閉じる">×</span></button>';});
+  } else if(KT.served){
+    html+='<button class="ptab" data-ptab="demo" type="button" aria-pressed="'+(act==="demo")+'">TM Match Explorer</button>';
   }
+  bar.innerHTML=html;
 }
-document.querySelectorAll(".ptab").forEach(b=>b.addEventListener("click",()=>switchPTab(b.dataset.ptab)));
-function openTEP(url,title){
-  var fr=document.getElementById("tepframe");if(!fr||!url)return;
-  var curUrl=fr.getAttribute("data-url")||"";
-  if(curUrl&&curUrl!==url){
-    var curTitle=fr.getAttribute("data-title")||"現在のファイル";
-    if(!window.confirm("現在開いている「"+curTitle+"」を閉じて、「"+(title||"選択した記事")+"」を開きますか？（これまでの作業内容は自動保存されています）")){switchPTab("tep");return;}
-  }
-  tepLoad(url,title); tepRemember(url,title); switchPTab("tep");
+function viewIdFor(which){ if(which==="demo")return "tepview-__demo__"; if(which.indexOf("tep:")===0)return "tepview-"+which.slice(4); return ""; }
+function ensureView(id,url){
+  var box=document.getElementById("tepviews");if(!box||document.getElementById("tepview-"+id))return;
+  var v=document.createElement("div");v.id="tepview-"+id;v.className="tepview";v.hidden=true;
+  v.innerHTML='<div class="tepbar"><span class="tephint">解析・Pre-translation済み／作業内容は自動保存</span><button class="btn rl" type="button">再読み込み</button><a class="btn nt" target="_blank" rel="noopener">別タブで開く</a></div><iframe class="tepframe"></iframe>';
+  box.appendChild(v);
+  var fr=v.querySelector("iframe");fr.src=url;
+  v.querySelector(".rl").onclick=function(){fr.src=fr.src;};
+  v.querySelector(".nt").href=url;
 }
-// 記事行「開く」を同一画面内（iframe）で開く＝統合。file://（静的表示）は従来どおり別タブ。
+function ensureDemo(){
+  var box=document.getElementById("tepviews");if(!box||document.getElementById("tepview-__demo__"))return;
+  var v=document.createElement("div");v.id="tepview-__demo__";v.className="tepview";v.hidden=true;
+  v.innerHTML='<div class="tepbar"><span class="tephint">デモ表示（翻訳／サマリーの2タブ＋下部2ペイン）。プロジェクトを「実行」または記事を「開く」とプロジェクト名タブに表示します。</span></div><iframe class="tepframe" src="/explorer"></iframe>';
+  box.appendChild(v);
+}
+function showPTab(which){
+  ptabActiveSave(which);
+  var proj=document.getElementById("ptab-proj");if(proj)proj.hidden=(which!=="proj");
+  if(which==="demo")ensureDemo();
+  var box=document.getElementById("tepviews");var tvid=viewIdFor(which);
+  if(box)Array.prototype.forEach.call(box.children,function(v){v.hidden=(v.id!==tvid);});
+  renderPTabs();
+}
+function openTEP(id,url,title){
+  if(!KT.served)return;
+  var tabs=tepTabs(),i=-1;
+  tabs.forEach(function(t,k){if(t.id===id)i=k;});
+  if(i<0){tabs.push({id:id,url:url,title:title||id});}
+  else{tabs[i].url=url; if(title)tabs[i].title=title;}
+  tepTabsSave(tabs);
+  var ex=document.getElementById("tepview-"+id);
+  if(ex){var fr=ex.querySelector("iframe"); if(fr)fr.src=url;}  // 既存ビューは最新内容に再読込（再実行後に反映）
+  else{ensureView(id,url);}
+  showPTab("tep:"+id);
+}
+function closeTEP(id){
+  var tabs=tepTabs().filter(function(t){return t.id!==id;});tepTabsSave(tabs);
+  var v=document.getElementById("tepview-"+id);if(v)v.remove();
+  if(ptabActive()==="tep:"+id){showPTab(tabs.length?("tep:"+tabs[tabs.length-1].id):"demo");}
+  else{renderPTabs();}
+}
+document.getElementById("ptabs").addEventListener("click",function(e){
+  var x=e.target.closest(".x");if(x){e.stopPropagation();closeTEP(x.getAttribute("data-close"));return;}
+  var b=e.target.closest(".ptab");if(!b)return;showPTab(b.getAttribute("data-ptab"));
+});
+// 記事「開く」→ プロジェクト名タブで表示（サーバーモード）。file:// は従来どおり別タブ。
 (function(){var rowsEl=document.getElementById("rows");if(!rowsEl)return;
   rowsEl.addEventListener("click",function(e){
     var a=e.target.closest("a.open");if(!a)return;
-    if(KT.served){e.preventDefault();openTEP(a.getAttribute("href"),a.getAttribute("data-title")||"");}
+    if(KT.served){e.preventDefault();var href=a.getAttribute("href");var m=href.match(/[?&]id=([^&]+)/);var id=m?decodeURIComponent(m[1]):href;openTEP(id,href,a.getAttribute("data-title")||"");}
   });
+})();
+// 実行で生成された記事をプロジェクト名タブで自動表示（P から title 照合）
+function openProduced(projName,titles){
+  if(!KT.served||!titles||!titles.length)return;
+  titles.forEach(function(ti){
+    var row=P.find(function(x){return (x.title||x.name)===ti && x.uri;});
+    if(row){var m=row.uri.match(/[?&]id=([^&]+)/);var id=m?decodeURIComponent(m[1]):row.uri;
+      var label=(titles.length>1)?((projName||"")+" ／ "+ti):(projName||ti);
+      openTEP(id,row.uri,label);}
+  });
+}
+// 初期化: タブ復元＆アクティブ表示
+(function(){ renderPTabs();
+  var tabs=KT.served?tepTabs():[]; tabs.forEach(function(t){ensureView(t.id,t.url);});
+  var act=ptabActive();
+  if(act.indexOf("tep:")===0 && !tabs.some(function(t){return "tep:"+t.id===act;}))act="proj";
+  if(act==="demo"&&!KT.served)act="proj";
+  showPTab(act);
 })();
 
 if(KT.served){document.body.classList.add("served");var _tw=document.getElementById("toolswrap");if(_tw)_tw.hidden=false;var _tabs=document.getElementById("tabs");if(_tabs)_tabs.hidden=false;refresh();}
@@ -1854,6 +1899,62 @@ elif a.cmd == "serve":
             parent = ""
         return {"dir": d, "parent": parent, "dirs": dirs, "files": files, "roots": browse_roots()}
 
+    def _reskin_article(content, p):
+        """任意の（古い）TEP HTML を最新テンプレートに貼り替えて返す（SEGデータは流用）。
+        これにより、過去に古いテンプレートで生成した記事も常に最新UIで表示できる。失敗時は None。"""
+        import re as _re
+        def _bal(s, j):
+            depth = 0; k = j; instr = False; esc = False; q = ''
+            while k < len(s):
+                c = s[k]
+                if instr:
+                    if esc: esc = False
+                    elif c == '\\': esc = True
+                    elif c == q: instr = False
+                else:
+                    if c == '"' or c == "'": instr = True; q = c
+                    elif c == '[': depth += 1
+                    elif c == ']':
+                        depth -= 1
+                        if depth == 0: return k
+                k += 1
+            return -1
+        def _seg_span(s):
+            i = s.find("const SEG = [")
+            if i < 0: return (None, -1, -1)
+            j = s.find("[", i); e = _bal(s, j)
+            if e < 0: return (None, -1, -1)
+            return (s[j:e + 1], i, e)
+        try:
+            seg, _si, _se = _seg_span(content)
+            if not seg:
+                return None
+            tpl_path = TEMPLATE or os.path.join(HERE, "TM-Match-Explorer-demo.html")
+            tpl = open(tpl_path, encoding="utf-8").read()
+            tseg, ti, te = _seg_span(tpl)
+            if tseg is None:
+                return None
+            semi = tpl.find(";", te)
+            if semi < 0:
+                return None
+            out = tpl[:ti] + "const SEG = " + seg + tpl[semi:]
+            title = (p.get("title") or p.get("name") or "") if p else ""
+            out = out.replace('DomoStats Connector <span class="demoflag">DEMO</span>', _html.escape(title))
+            mm = _re.search(r"const META = ([\s\S]*?);\s*/\*__META__\*/", content)
+            if mm:
+                meta_js = mm.group(1)
+            else:
+                pp = p or {}
+                meta = {"source": {"name": os.path.basename(pp.get("source", "")), "path": pp.get("source", "")},
+                        "output": {"name": os.path.basename(pp.get("html", "")), "path": pp.get("html", "")},
+                        "tms": [], "project": {"name": pp.get("project", ""), "detail": ""}, "generated": ""}
+                meta_js = json.dumps(meta, ensure_ascii=False)
+            out = _re.sub(r"const META = [\s\S]*?;\s*/\*__META__\*/",
+                          lambda m: "const META = " + meta_js + ";  /*__META__*/", out, count=1)
+            return out
+        except Exception:
+            return None
+
     class Handler(http.server.BaseHTTPRequestHandler):
         def log_message(self, *args):
             pass  # quiet
@@ -1883,6 +1984,9 @@ elif a.cmd == "serve":
                 content = open(hp, encoding="utf-8").read()
             except Exception as e:
                 self._send(404, {"error": str(e)}); return
+            rk = _reskin_article(content, p)   # 最新テンプレートへ貼り替え（SEG流用）。失敗時は元を使用
+            if rk:
+                content = rk
             kt = {"served": True, "token": TOKEN,
                   "doc": p.get("title", ""), "project": p.get("project", "")}
             self._send(200, "<script>window.__KT=%s;</script>%s"

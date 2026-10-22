@@ -49,9 +49,89 @@ def _txt_apply(path, out_path, trans):
     open(out_path, "w", encoding="utf-8", newline="").write(nl.join(lines))
 
 
+# ---------- Domo アプリ コンテンツ (.json)  [json_io に委譲] ----------
+def _json_extract(path):
+    import json_io
+    return json_io.extract(path)
+
+def _json_apply(path, out_path, trans):
+    import json_io
+    os.makedirs(os.path.dirname(os.path.abspath(out_path)), exist_ok=True)
+    return json_io.apply(path, out_path, trans)
+
+
+# ---------- Word (.docx)  [python-docx] ----------
+def _docx_iter(doc):
+    """(uid, paragraph) を安定順に列挙（本文→表セル）。extract/apply で同一順＝uid 一致。"""
+    for i, p in enumerate(doc.paragraphs):
+        yield ("p%d" % i, p)
+    for ti, tbl in enumerate(doc.tables):
+        for ri, row in enumerate(tbl.rows):
+            for ci, cell in enumerate(row.cells):
+                for pi, p in enumerate(cell.paragraphs):
+                    yield ("t%d_%d_%d_%d" % (ti, ri, ci, pi), p)
+
+def _docx_set(p, text):
+    if p.runs:
+        p.runs[0].text = text
+        for r in p.runs[1:]:
+            r.text = ""
+    else:
+        p.text = text
+
+def _docx_extract(path):
+    import docx
+    doc = docx.Document(path)
+    out = []
+    for uid, p in _docx_iter(doc):
+        t = (p.text or "").strip()
+        if t:
+            out.append({"uid": uid, "text": t})
+    return out
+
+def _docx_apply(path, out_path, trans):
+    import docx
+    doc = docx.Document(path)
+    for uid, p in _docx_iter(doc):
+        if uid in trans and (p.text or "").strip():
+            _docx_set(p, trans[uid])
+    os.makedirs(os.path.dirname(os.path.abspath(out_path)), exist_ok=True)
+    doc.save(out_path)
+
+
+# ---------- Excel (.xlsx)  [openpyxl] ----------
+def _xlsx_extract(path):
+    import openpyxl
+    wb = openpyxl.load_workbook(path, data_only=False)
+    out = []
+    for ws in wb.worksheets:
+        for row in ws.iter_rows():
+            for cell in row:
+                v = cell.value
+                if isinstance(v, str) and v.strip() and not v.lstrip().startswith("="):
+                    out.append({"uid": "%s!%s" % (ws.title, cell.coordinate), "text": v.strip()})
+    return out
+
+def _xlsx_apply(path, out_path, trans):
+    import openpyxl
+    wb = openpyxl.load_workbook(path, data_only=False)
+    for ws in wb.worksheets:
+        for row in ws.iter_rows():
+            for cell in row:
+                v = cell.value
+                uid = "%s!%s" % (ws.title, cell.coordinate)
+                if uid in trans and isinstance(v, str) and v.strip() and not v.lstrip().startswith("="):
+                    cell.value = trans[uid]
+    os.makedirs(os.path.dirname(os.path.abspath(out_path)), exist_ok=True)
+    wb.save(out_path)
+
+
 # ---------- registry ----------
 REGISTRY = {
-    ".txt": {"extract": _txt_extract, "apply": _txt_apply, "label": "text"},
+    ".txt":  {"extract": _txt_extract,  "apply": _txt_apply,  "label": "text"},
+    ".json": {"extract": _json_extract, "apply": _json_apply, "label": "Domo app JSON"},
+    ".docx": {"extract": _docx_extract, "apply": _docx_apply, "label": "Word"},
+    ".xlsx": {"extract": _xlsx_extract, "apply": _xlsx_apply, "label": "Excel"},
 }
 
 

@@ -1,0 +1,37 @@
+サマリータブのUIを変更
+左上の数値データペインを右上に
+区分の内訳ペインは左上の数値データペインの下に。
+ファイル / TM / プロジェクト情報ペインを左上に表示
+
+
+Creating DataFlows in Magic ETL
+
+
+行の種類と役割
+① ED2710-20-MH-App… = プロジェクト定義行（type:"project"）
+「何を・どのTMで翻訳するか」のレシピ（ソース＋メイン/サブ/Product TM）。だから操作は:
+
+実行 … 解析＋Pre-translation を走らせる（＝記事TEPを生成）
+出力 … TMを適用して元形式（JSON/DOCX/XLSX等）の翻訳版を出力
+編集 … 状態・メモ・期日の変更／削除
+② Creating DataFlows in Magic ETL = 生成された記事行（html/uri を持つ成果物）
+①の「実行」で生み出されたTEP（翻訳作業ファイル）。だから操作は:
+
+開く … そのTEPをプロジェクト名タブで開いて翻訳作業
+編集 … 状態・メモ等
+
+
+プロジェクトED2710-20-MH-App-September 2026 Release Update Content-JAを実行したらタブ名はED2710-20-MH-App-September 2026 Release Update Content-JAにならないとおかしい。なぜ、別のプロジェクト名のタブになりますか？
+
+
+html/uriってなに？
+
+
+以下を変更
+出力 … TMを適用して元形式（JSON/DOCX/XLSX等）の翻訳版を出力
+
+出力はプロジェクトに読み込まれたソースファイルを出力形式を選択してファイルに出力：元のファイル形式、Xliff、Xlsx（セグメント番号、英語とターゲット言語の対訳）から選択。
+ソースとターゲットはPre-translation（MTを含む）、TEP中のテキストなど、その時点での状態で出力。
+
+
+
