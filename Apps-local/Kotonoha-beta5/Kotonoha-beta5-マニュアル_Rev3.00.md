@@ -31,7 +31,7 @@ beta1 の TM Match Explorer に、高速化①②③・TEP 書き戻し・パス
 
 | 日付 | 仕様変更内容 |
 |---|---|
-| 2026-09-09 | 初版。納品訳の使用を廃止して **Pre-translation 化**（TM 訳の流し込み＋新規は MT）。新規（≤74%）は全件 MT。**3パス構成**：`tm_match_analysis.py`（解析＋Pre-translation）→ Claude 翻訳 → `inject_mt.py`（MT 反映）。ブラウザで TEP → XLIFF 書き出し。 |
+| 2026-09-09 | 初版。納品訳の使用を廃止して **Pre-translation 化**（TM訳の適用＋新規は MT）。新規（≤74%）は全件 MT。**3パス構成**：`tm_match_analysis.py`（解析＋Pre-translation）→ Claude 翻訳 → `inject_mt.py`（MT 反映）。ブラウザで TEP → XLIFF 書き出し。 |
 
 #### beta2 — 高速化＋TM 書き戻し（`Kotonoha-beta2\`）
 
@@ -271,7 +271,7 @@ python inject_mt.py --html "…\<記事>.html" --mt "…\<記事>.html.mt-done.j
 
 ## 7. マッチ区分・UI・XLIFF 出力
 
-マッチ区分は **beta1 と同一**（ICE / 100% / 95-99 / 85-94 / 75-84% はTM流し込み、`<=74%` は MT）。ブラウザ UI（サマリー・フィルター・編集モード・localStorage 自動保存・XLIFF 1.2 書き出し）も基本は beta1 と同じ。
+マッチ区分は **beta1 と同一**（ICE / 100% / 95-99 / 85-94 / 75-84% はTM訳の適用、`<=74%` は MT）。ブラウザ UI（サマリー・フィルター・編集モード・localStorage 自動保存・XLIFF 1.2 書き出し）も基本は beta1 と同じ。
 
 **「確定（Confirm）」**（beta2〜）：各行の確定チェックボックス、「表示中を一括確定」、「確定済みのみ」フィルター。確定は `localStorage` に自動保存。確定行を**編集すると確定は自動解除**。XLIFF 書き出し時、確定行は `state="final"` ＋ `<note>` に `| confirmed`。**この確定行だけ**が §7a の書き戻し対象です。
 

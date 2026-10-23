@@ -2,9 +2,9 @@
 """Project registry + dashboard for the Kotonoha beta5 launcher.
 
 Records each analyzed / Pre-translated article (過去のプロジェクトリスト) so work
-can be resumed anytime: re-opening a project's HTML restores the TEP edits/confirms
-the browser saved in localStorage. The project list is shown in its own browser tab
-via a generated dashboard (_projects.html), separate from the TEP HTML.
+can be resumed anytime: re-opening a project's work file (HTML) restores the TEP
+edits/confirms the browser saved in localStorage. The project list is shown in its own
+browser tab via a generated dashboard (_projects.html), separate from the work files.
 
 Store: _projects.json next to this script (override with --store). Fields per project:
   html, title, source, segs, mt, status(作業中/レビュー中/完了), memo, due, created, updated
@@ -414,6 +414,72 @@ def expand_sources(srcs, dir_exts, log=print):
     return entries
 
 
+def _first_source_path(p):
+    """プロジェクトの最初のソースのパス（dict/str どちらにも対応）。無ければ p['source']。"""
+    srcs = p.get("sources") or []
+    if srcs:
+        s0 = srcs[0]
+        return (s0.get("path", "") if isinstance(s0, dict) else (s0 or "")) or ""
+    return p.get("source", "") or ""
+
+
+# プロジェクトの作業サブフォルダー（この名前のフォルダーの親をプロジェクトルートとみなす）
+_WORK_SUBFOLDERS = {"1_en", "2_for review", "3_final", "_kotonoha", "_details"}
+
+
+def project_root_for(path):
+    """ソースのパスからプロジェクトフォルダー（親）を推定して返す。
+    1_en / 2_For review / 3_Final / _kotonoha / _Details のような作業サブフォルダーが
+    祖先にあれば、その親をプロジェクトルートとする。無ければソースの置かれたフォルダー。"""
+    if not path:
+        return ""
+    path = os.path.abspath(path)
+    probe = path if os.path.isdir(path) else os.path.dirname(path)
+    base_dir = probe
+    while True:
+        if os.path.basename(probe).lower() in _WORK_SUBFOLDERS:
+            return os.path.dirname(probe)
+        parent = os.path.dirname(probe)
+        if parent == probe:
+            break
+        probe = parent
+    return base_dir
+
+
+def details_dir_for(p, create=True):
+    """中間生成物（作業ファイル・manifest・combined 等）の保存先を返す。
+    = <プロジェクトルート>/_kotonoha（無ければ自動作成）。
+    ソースが特定できない場合は従来の out_dir かフォールバック先。"""
+    src0 = _first_source_path(p)
+    if src0:
+        root = project_root_for(src0)
+    else:
+        root = p.get("out_dir") or os.path.join(HERE, "..", "Kotonoha-out",
+                                                 (p.get("name") or p.get("id") or "project"))
+    det = os.path.join(root, "_kotonoha")
+    if create:
+        os.makedirs(det, exist_ok=True)
+    return os.path.abspath(det)
+
+
+def export_dest_for(p, out_path=""):
+    """出力（翻訳版）の保存先。
+    - out_path が絶対/区切り入りパス → そのフォルダー
+    - out_path が単なる名前（例 "3_Final"）→ プロジェクトルート下のサブフォルダー
+    - 未指定 → <ルート>/2_For review（既定）"""
+    src0 = _first_source_path(p)
+    root = project_root_for(src0) if src0 else (p.get("out_dir") or HERE)
+    if out_path:
+        if (os.sep in out_path) or ("/" in out_path) or (":" in out_path):
+            d = os.path.abspath(out_path)
+        else:
+            d = os.path.join(root, out_path)
+    else:
+        d = os.path.join(root, "2_For review")
+    os.makedirs(d, exist_ok=True)
+    return os.path.abspath(d)
+
+
 def run_project(projects, store, pid, out_path="", engine="", template="",
                 cache_dir="", log=print, capture=False):
     """Analyze + Pre-translate a saved definition. Shared by the `run` CLI command
@@ -433,8 +499,8 @@ def run_project(projects, store, pid, out_path="", engine="", template="",
     if not entries:
         return {"ok": False, "error": "no .mdx/.md source files found under the project's sources"}
 
-    out_dir = os.path.abspath(out_path or p.get("out_dir")
-                              or os.path.join(HERE, "..", "Kotonoha-out", p.get("name") or p.get("id")))
+    # 中間生成物はプロジェクトフォルダー配下 <2_For review>/_Details に保存する
+    out_dir = os.path.abspath(out_path) if out_path else details_dir_for(p)
     os.makedirs(out_dir, exist_ok=True)
     manifest = os.path.join(out_dir, "_sources.manifest.json")
     json.dump({"sources": entries}, open(manifest, "w", encoding="utf-8"),
@@ -481,25 +547,16 @@ def run_project(projects, store, pid, out_path="", engine="", template="",
         return {"ok": False, "error": "解析エンジンが異常終了しました (exit %d)" % rc,
                 "rc": rc, "log": out_text}
 
-    # Register each produced article; advance the definition's status + remember outputs.
-    reg = 0
-    produced = []   # 生成記事のタイトル（ダッシュボードでタブ自動表示に使用）
+    # 生成物（中間生成物）はプロジェクトに記録するだけ。別プロジェクトとして台帳に
+    # 自動登録はしない（プロジェクトを作成するのはユーザーのみ）。
+    artifacts = []
+    produced = []   # 実行後にプロジェクト名タブで自動表示する作業ファイル（title+html）
     if os.path.exists(combined):
         data = json.load(open(combined, encoding="utf-8-sig"))
         for art in data.get("articles", []):
             htmlp = art.get("html", "")
             if not htmlp:
                 continue
-            upsert(projects, htmlp, title=art.get("title"), source=art.get("source"),
-                   segs=art.get("segs"), mt=art.get("mt"),
-                   project=(p.get("name") or p.get("id")),
-                   name=art.get("title"),
-                   main_tm=p.get("main_tm", ""), product_tm=p.get("product_tm", ""),
-                   sub_tms=p.get("sub_tms", []),
-                   sources=([{"kind": "file", "path": art.get("source")}] if art.get("source") else []),
-                   out_dir=out_dir)
-            if art.get("title"):
-                produced.append(art.get("title"))
             # 再生成しても保存済みMT訳があれば自動で再反映（「実行」でMT反映が消えないように）
             md = htmlp + ".mt-done.jsonl"
             if os.path.isfile(htmlp) and os.path.isfile(md):
@@ -508,15 +565,99 @@ def run_project(projects, store, pid, out_path="", engine="", template="",
                     log("  MT再反映: %s" % os.path.basename(md))
                 except Exception as _e:
                     log("  WARN: MT再反映に失敗: %s" % _e)
-            reg += 1
+            rec = {"title": art.get("title", ""), "html": htmlp,
+                   "source": art.get("source", ""),
+                   "segs": art.get("segs"), "mt": art.get("mt")}
+            artifacts.append(rec)
+            if art.get("title"):
+                produced.append({"title": art.get("title"), "html": htmlp})
+    p["artifacts"] = artifacts
     if p.get("status") in (None, "", "未解析"):
         p["status"] = "作業中"
     p["out_dir"] = out_dir; p["combined"] = combined
     p["last_run"] = now(); p["updated"] = now()
     save(store, projects)
     return {"ok": True, "out_dir": out_dir, "combined": combined,
-            "registered": reg, "produced": produced,
+            "registered": len(artifacts), "produced": produced,
             "project": (p.get("name") or p.get("id")), "log": out_text}
+
+
+def _balanced_end(s, j):
+    """s[j]=='[' として、対応する ']' の位置を返す（文字列リテラル内の括弧は無視）。"""
+    depth = 0; k = j; instr = False; esc = False; q = ''
+    while k < len(s):
+        c = s[k]
+        if instr:
+            if esc: esc = False
+            elif c == '\\': esc = True
+            elif c == q: instr = False
+        else:
+            if c == '"' or c == "'": instr = True; q = c
+            elif c == '[': depth += 1
+            elif c == ']':
+                depth -= 1
+                if depth == 0: return k
+        k += 1
+    return -1
+
+def _seg_from_html(html):
+    i = html.find("const SEG = [")
+    if i < 0: return None
+    j = html.find("[", i); e = _balanced_end(html, j)
+    if e < 0: return None
+    try:
+        return json.loads(html[j:e + 1])
+    except Exception:
+        return None
+
+def export_json_from_tep(art, out_path, store):
+    """JSON記事の『出力』: 記事の訳文（Pre-translation の結果＋MT＋保存済み編集）を
+    uidmap 経由で元 JSON に適用し、翻訳済み JSON を出力（TMの再照合はしない）。
+    art は生成物 dict（html/title/source）。"""
+    import json_io
+    html = art.get("html", "")
+    if not (html and os.path.isfile(html)):
+        return {"ok": False, "error": "作業ファイル(HTML)が見つかりません"}
+    uidmap = html + ".uidmap.json"
+    if not os.path.isfile(uidmap):
+        return {"ok": False, "error": "uidmap が見つかりません: %s" % uidmap}
+    m = json.load(open(uidmap, encoding="utf-8-sig"))
+    uids = m.get("uids", [])
+    jpath = m.get("json", "") or art.get("source", "")
+    if not (jpath and os.path.isfile(jpath)):
+        return {"ok": False, "error": "元 JSON が見つかりません: %s" % jpath}
+    seg = _seg_from_html(open(html, encoding="utf-8").read())
+    if seg is None:
+        return {"ok": False, "error": "作業ファイルからSEGを取得できません"}
+    # 保存済み編集（_wip）をオーバーレイ（記事名＝TEPのタイトルでキー化）
+    edits = {}
+    try:
+        safe = ("".join(("_" if c in '\\/:*?"<>|' else c) for c in (art.get("title") or ""))[:120]) or "untitled"
+        wip = os.path.join(os.path.dirname(os.path.abspath(store)), "_wip", safe + ".json")
+        if os.path.isfile(wip):
+            edits = (json.load(open(wip, encoding="utf-8")).get("edits") or {})
+    except Exception:
+        edits = {}
+    def plain_ja(s):
+        return "".join(t for op, t in (s.get("ja") or []) if op != "del")
+    trans = {}; applied = 0
+    for i, uid in enumerate(uids):
+        if i >= len(seg):
+            break
+        txt = edits.get(str(i))
+        if txt is None:
+            txt = plain_ja(seg[i])
+        if txt and txt.strip():
+            trans[uid] = txt; applied += 1
+    if not trans:
+        return {"ok": False, "error": "適用できる訳がありません"}
+    try:
+        os.makedirs(os.path.dirname(os.path.abspath(out_path)), exist_ok=True)
+    except Exception:
+        pass
+    res = json_io.apply(jpath, out_path, trans)
+    return {"ok": True, "out": out_path, "applied": applied,
+            "filled": (res.get("filled") if isinstance(res, dict) else None)}
 
 
 def export_project(projects, store, pid, out_path="", cache_dir="",
@@ -541,15 +682,44 @@ def export_project(projects, store, pid, out_path="", cache_dir="",
     if not entries:
         return {"ok": False, "error": "no exportable source files (対応形式: %s)" % " ".join(exts)}
 
-    out_dir = os.path.abspath(out_path or p.get("out_dir")
-                              or os.path.join(HERE, "..", "Kotonoha-out", p.get("name") or p.get("id")))
-    os.makedirs(out_dir, exist_ok=True)
+    # 出力（翻訳版）の保存先: 選択可能（2_For review / 3_Final / 任意）。既定は 2_For review。
+    dest = export_dest_for(p, out_path)
+    # 中間生成物（manifest 等）は常に _Details に置く
+    det = details_dir_for(p)
+
+    # JSON記事: TMの再照合ではなく、記事の訳文（Pre-translation の結果＋MT＋編集）を直接適用して100%出力
+    arts = list(p.get("artifacts") or [])
+    if not arts and p.get("html"):
+        arts = [{"title": p.get("title", ""), "html": p.get("html", ""), "source": p.get("source", "")}]
+    json_arts = [a for a in arts
+                 if a.get("html") and os.path.isfile(a["html"])
+                 and os.path.isfile(a["html"] + ".uidmap.json")
+                 and (a.get("source", "") or "").lower().endswith(".json")]
+    if json_arts:
+        outs = []; total = 0; errs = []
+        for a in json_arts:
+            base = os.path.basename(a.get("source", "") or ((a.get("title", "") or "translated") + ".json"))
+            outp = os.path.join(dest, base)
+            res = export_json_from_tep(a, outp, store)
+            if res.get("ok"):
+                total += (res.get("applied") or 0); outs.append(outp)
+                log("JSON『%s』: 記事の訳文を適用して出力 → %s（適用 %d）"
+                    % (a.get("title", ""), outp, res.get("applied", 0)))
+            else:
+                errs.append("%s: %s" % (a.get("title", ""), res.get("error")))
+                log("WARN: 出力失敗 %s: %s" % (a.get("title", ""), res.get("error")))
+        if outs:
+            return {"ok": True, "out_dir": dest, "out": outs[0], "outs": outs,
+                    "applied": total, "mode": "tep", "log": ""}
+        log("WARN: 記事の訳文からの出力に失敗、TM方式にフォールバック: %s" % "; ".join(errs))
+
+    out_dir = det
     manifest = os.path.join(out_dir, "_export.manifest.json")
     json.dump({"sources": entries}, open(manifest, "w", encoding="utf-8"),
               ensure_ascii=False, indent=1)
     exporter = os.path.join(HERE, "doc_export.py")
     cmd = [sys.executable, exporter, "--source-manifest", manifest,
-           "--tmx", main_tm, "--out-dir", out_dir]
+           "--tmx", main_tm, "--out-dir", dest]
     subs = [st for st in p.get("sub_tms", []) if st]
     if subs:
         cmd += ["--sub-tmx"] + subs          # one flag, all paths (nargs="*")
@@ -559,7 +729,7 @@ def export_project(projects, store, pid, out_path="", cache_dir="",
         cmd += ["--mark-missing"]
 
     log("プロジェクト「%s」: 元形式で翻訳版を出力 → %s"
-        % (p.get("name", ""), os.path.join(out_dir, "translated")))
+        % (p.get("name", ""), os.path.join(dest, "translated")))
     out_text = ""
     if capture:
         r = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -569,7 +739,49 @@ def export_project(projects, store, pid, out_path="", cache_dir="",
         rc = subprocess.call(cmd)
     if rc != 0:
         return {"ok": False, "error": "出力に失敗しました (exit %d)" % rc, "rc": rc, "log": out_text}
-    return {"ok": True, "out_dir": os.path.join(out_dir, "translated"), "log": out_text}
+    return {"ok": True, "out_dir": os.path.join(dest, "translated"), "log": out_text}
+
+
+def project_details(projects, pid):
+    """『詳細』パネル用: 作業サマリー＋_Details（中間生成物）フォルダーの一覧を返す。"""
+    import datetime as _dt
+    p = find_by_id(projects, pid)
+    if not p:
+        return {"ok": False, "error": "project not found"}
+    det = details_dir_for(p, create=False)
+    root = os.path.dirname(det)         # プロジェクトルート（_kotonoha の親）
+    rev = os.path.join(root, "2_For review")
+    arts = p.get("artifacts") or []
+    art_html = set(os.path.abspath(a.get("html", "")) for a in arts if a.get("html"))
+    files = []
+    if os.path.isdir(det):
+        for nm in sorted(os.listdir(det)):
+            fp = os.path.join(det, nm)
+            if not os.path.isfile(fp):
+                continue
+            rec = {"name": nm, "path": fp,
+                   "is_tep": (nm.lower().endswith(".html") and os.path.abspath(fp) in art_html)}
+            try:
+                st = os.stat(fp)
+                rec["size"] = st.st_size
+                rec["mtime"] = _dt.datetime.fromtimestamp(st.st_mtime).strftime("%Y-%m-%d %H:%M")
+            except Exception:
+                pass
+            files.append(rec)
+    summary = {
+        "name": p.get("name") or p.get("id") or "",
+        "status": p.get("status", ""),
+        "sources": len(p.get("sources") or []),
+        "main_tm": os.path.basename(p.get("main_tm", "")),
+        "product_tm": bool(p.get("product_tm")),
+        "sub_tms": len(p.get("sub_tms") or []),
+        "last_run": p.get("last_run", ""),
+        "updated": p.get("updated", ""),
+        "artifacts": [{"title": a.get("title", ""), "html": a.get("html", ""),
+                       "segs": a.get("segs"), "mt": a.get("mt")} for a in arts],
+    }
+    return {"ok": True, "project_root": root, "review_dir": rev, "details_dir": det,
+            "exists": os.path.isdir(det), "summary": summary, "files": files}
 
 
 # ===== 台帳フィールド操作（pid ベース・serve API 用。CLI は --index 版を別に持つ） =====
@@ -947,6 +1159,27 @@ th .rz:hover{background:var(--accent);opacity:.35}
 .run:disabled,.exp:disabled{opacity:.55;cursor:default}
 .exp{display:inline-block;margin-left:5px;background:transparent;color:var(--done);border:1px solid var(--done);padding:5px 10px;border-radius:8px;font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer}
 .exp:hover{background:var(--done);color:#fff}
+.det{display:inline-block;margin-left:5px;background:transparent;color:var(--muted);border:1px solid var(--line);padding:5px 10px;border-radius:8px;font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer}
+.det:hover{border-color:var(--accent);color:var(--accent)}
+.det[aria-pressed=true]{background:var(--accent);color:#fff;border-color:var(--accent)}
+tr.detrow td{background:var(--bg);padding:0;border-right:none}
+.detpanel{white-space:normal;padding:14px 16px;font-size:13px;color:var(--ink)}
+.detpanel h3{font-size:14px;margin:0 0 8px}
+.detpanel .sumline{color:var(--muted);margin:0 0 12px;line-height:1.7}
+.detpanel .sumline b{color:var(--ink);font-weight:600}
+.detpanel .dpath{font-family:Consolas,"Courier New",monospace;font-size:12px;color:var(--muted);word-break:break-all}
+.detpanel .flist{border:1px solid var(--line);border-radius:8px;background:var(--card);overflow:hidden}
+.detpanel .frow{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--line)}
+.detpanel .frow:last-child{border-bottom:none}
+.detpanel .frow .fn{flex:1;min-width:0;word-break:break-all}
+.detpanel .frow .fm{color:var(--muted);font-size:12px;white-space:nowrap}
+.detpanel .frow .tep{color:var(--accent);font-weight:600;cursor:pointer;text-decoration:none}
+.detpanel .frow .reveal{color:var(--muted);cursor:pointer;text-decoration:none;font-size:12px;white-space:nowrap}
+.detpanel .frow .tep:hover,.detpanel .frow .reveal:hover{text-decoration:underline;color:var(--accent)}
+.detpanel .ebar{display:flex;gap:8px;align-items:center;margin:0 0 10px;flex-wrap:wrap}
+.detpanel .ebar button{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;padding:5px 11px;font-size:13px;cursor:pointer}
+.detpanel .ebar button:hover{border-color:var(--accent);color:var(--accent)}
+.detpanel .empty{color:var(--muted);padding:10px 0}
 #toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(12px);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:13px;max-width:min(92vw,640px);box-shadow:0 8px 24px rgba(0,0,0,.3);opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;z-index:50}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .srvbadge{display:none;font-size:12px;font-weight:600;color:#fff;background:var(--done);border-radius:999px;padding:3px 10px;margin-left:10px;vertical-align:middle}
@@ -1134,7 +1367,10 @@ function render(){
       if(KT.served){inner+='<button class="exp" type="button" data-pid="'+esc(p.pid)+'" title="TM を適用して元の形式で翻訳版を出力（.json/.docx/.xlsx 等。TEP確定→TM書き戻しの後に実行）">出力</button>';}}
     else if(p.uri){inner='<a class="open" href="'+esc(p.uri)+'" data-title="'+esc(p.project||p.title||p.name||"")+'" target="_blank" rel="noopener">開く</a>';}
     if(KT.served&&p.id){inner+='<button class="edit" type="button" data-id="'+esc(p.id)+'" title="状態・メモ・期日・削除">編集</button>';}
-    return "<tr>"+COLS.map(c=>cell(p,c.id)).join("")+'<td class="act">'+inner+'</td></tr>';
+    if(KT.served&&p.pid){inner+='<button class="det" type="button" data-pid="'+esc(p.pid)+'" aria-pressed="false" title="作業サマリーと中間生成物（_Details フォルダー）を表示">詳細</button>';}
+    var main="<tr>"+COLS.map(c=>cell(p,c.id)).join("")+'<td class="act">'+inner+'</td></tr>';
+    if(KT.served&&p.pid){main+='<tr class="detrow" id="detrow-'+esc(p.pid)+'" hidden><td colspan="'+(COLS.length+1)+'"><div class="detpanel" id="detpanel-'+esc(p.pid)+'"></div></td></tr>';}
+    return main;
   }).join("");
 }
 // clipboard copy (file:// では navigator.clipboard が無い場合があるので execCommand に退避)
@@ -1143,24 +1379,25 @@ function copyText(t){return (navigator.clipboard&&navigator.clipboard.writeText)
 let toastT=null;
 function toast(msg){let el=document.getElementById("toast");if(!el){el=document.createElement("div");el.id="toast";document.body.appendChild(el);}el.textContent=msg;el.classList.add("show");clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove("show"),3000);}
 document.getElementById("rows").addEventListener("click",e=>{
+  const tep=e.target.closest("a.tep[data-path]");
+  if(tep&&KT.served){e.preventDefault();openTEPbyPath(tep.getAttribute("data-path"),tep.textContent.replace(/（.*/,"").trim());return;}
+  const rv=e.target.closest("[data-reveal]");
+  if(rv&&KT.served){e.preventDefault();api("/api/open",{method:"POST",body:JSON.stringify({path:rv.getAttribute("data-reveal")})}).then(r=>toast(r&&r.ok?"保存場所を開きました":("開けませんでした："+((r&&r.error)||""))));return;}
+  const dopen=e.target.closest("button.detopen");
+  if(dopen&&KT.served){api("/api/open",{method:"POST",body:JSON.stringify({path:dopen.getAttribute("data-path")})}).then(r=>toast(r&&r.ok?"フォルダーを開きました":("開けませんでした："+((r&&r.error)||""))));return;}
   const eb=e.target.closest("button.edit");
   if(eb&&KT.served){const id=eb.getAttribute("data-id");const row=P.find(x=>x.id===id);if(row)openEdit(row);return;}
+  const db=e.target.closest("button.det");
+  if(db&&KT.served){toggleDetails(db.getAttribute("data-pid"),db);return;}
   const xb=e.target.closest("button.exp");
-  if(xb&&KT.served){
-    const pid=xb.getAttribute("data-pid");xb.disabled=true;const oldx=xb.textContent;xb.textContent="出力中…";
-    api("/api/export",{method:"POST",body:JSON.stringify({id:pid})}).then(r=>{
-      xb.disabled=false;xb.textContent=oldx;
-      toast(r&&r.ok?("元形式で出力しました: "+(r.out_dir||"")):("出力失敗："+((r&&r.error)||"不明なエラー")));
-    }).catch(err=>{xb.disabled=false;xb.textContent=oldx;toast("通信エラー: "+err);});
-    return;
-  }
+  if(xb&&KT.served){openExportChoice(xb.getAttribute("data-pid"),xb);return;}
   const b=e.target.closest("button.run");if(!b)return;
   const pid=b.getAttribute("data-pid"),cmd=b.getAttribute("data-cmd"),n=b.getAttribute("data-n");
   if(KT.served&&pid){
     b.disabled=true;const old=b.textContent;b.textContent="実行中…";
     api("/api/run",{method:"POST",body:JSON.stringify({id:pid})}).then(r=>{
       b.disabled=false;b.textContent=old;
-      toast(r&&r.ok?("実行完了："+(r.registered||0)+" 記事を登録しました"):("実行失敗："+((r&&r.error)||"不明なエラー")));
+      toast(r&&r.ok?("実行完了（生成 "+(r.registered||0)+" 件）"):("実行失敗："+((r&&r.error)||"不明なエラー")));
       refresh().then(function(){if(r&&r.ok&&r.produced)openProduced(r.project,r.produced);});
     }).catch(err=>{b.disabled=false;b.textContent=old;toast("通信エラー: "+err);});
     return;
@@ -1265,7 +1502,7 @@ function openCreate(){
   function create(then){if(!validate())return;run.disabled=true;mk.disabled=true;
     api("/api/create",{method:"POST",body:JSON.stringify(st)}).then(r=>{
       if(!r||!r.id){run.disabled=false;mk.disabled=false;toast("作成失敗："+((r&&r.error)||"不明"));return;}
-      if(then==="run"){toast("作成しました。実行中…");api("/api/run",{method:"POST",body:JSON.stringify({id:r.id})}).then(rr=>{closeOvl();toast(rr&&rr.ok?("実行完了："+(rr.registered||0)+" 記事を登録しました"):("作成済／実行失敗："+((rr&&rr.error)||"不明")));refresh().then(function(){if(rr&&rr.ok&&rr.produced)openProduced(rr.project,rr.produced);});}).catch(err=>{closeOvl();toast("作成済／実行の通信エラー: "+err);refresh();});}
+      if(then==="run"){toast("作成しました。実行中…");api("/api/run",{method:"POST",body:JSON.stringify({id:r.id})}).then(rr=>{closeOvl();toast(rr&&rr.ok?("実行完了（生成 "+(rr.registered||0)+" 件）"):("作成済／実行失敗："+((rr&&rr.error)||"不明")));refresh().then(function(){if(rr&&rr.ok&&rr.produced)openProduced(rr.project,rr.produced);});}).catch(err=>{closeOvl();toast("作成済／実行の通信エラー: "+err);refresh();});}
       else{closeOvl();toast("プロジェクトを作成しました（定義として保存）");refresh();}
     }).catch(err=>{run.disabled=false;mk.disabled=false;toast("通信エラー: "+err);});}
   run.onclick=()=>create("run");mk.onclick=()=>create("mk");
@@ -1352,7 +1589,7 @@ function openGlossary(){
   const sh=modalShell("UI Glossary を作成");
   sh.bd.appendChild(el("div","hint","ソース(.mdx)・生成HTML・確定XLIFF のいずれか1つ以上を指定。<out>.csv（Excel可）と .json を出力します。"));
   sh.bd.appendChild(listFieldK("ソース .mdx（複数可）","",'source',st.source));
-  sh.bd.appendChild(listFieldK("生成/TEP HTML（複数可）","",'html',st.html));
+  sh.bd.appendChild(listFieldK("生成した作業ファイル(HTML)（複数可）","",'html',st.html));
   sh.bd.appendChild(listFieldK("確定 XLIFF（複数可）","",'xliff',st.xliff));
   const fr=el("div","fld");const lab=el("label","toggle2");const cb=el("input");cb.type="checkbox";cb.onchange=()=>{st.confirmed_only=cb.checked;};lab.appendChild(cb);lab.appendChild(document.createTextNode(" XLIFF は確定行のみ使用する"));fr.appendChild(lab);sh.bd.appendChild(fr);
   sh.bd.appendChild(textField("出力プレフィックス（フルパス）","<prefix>.csv / .json を出力",st.out,v=>{st.out=v;},"C:\\...\\UI-Glossary"));
@@ -1435,7 +1672,7 @@ function openTermExtract(){
   const sh=modalShell("用語を抽出して登録");
   sh.bd.appendChild(el("div","hint","ソース(.mdx)/生成HTML/確定XLIFF から候補を抽出し、選んだ用語を用語集へ登録します。"));
   sh.bd.appendChild(listFieldK("ソース .mdx（複数可）","",'source',st.source));
-  sh.bd.appendChild(listFieldK("生成/TEP HTML（複数可）","",'html',st.html));
+  sh.bd.appendChild(listFieldK("生成した作業ファイル(HTML)（複数可）","",'html',st.html));
   sh.bd.appendChild(listFieldK("確定 XLIFF（複数可）","",'xliff',st.xliff));
   const doc=el("div","fld");doc.appendChild(el("label",null,"登録時のドキュメント名 / プロジェクト名（任意）"));
   const dwrap=el("div","row");const di=el("input");di.type="text";di.placeholder="ドキュメント名";const pi=el("input");pi.type="text";pi.placeholder="プロジェクト名";dwrap.appendChild(di);dwrap.appendChild(pi);doc.appendChild(dwrap);sh.bd.appendChild(doc);
@@ -1541,15 +1778,93 @@ document.getElementById("ptabs").addEventListener("click",function(e){
     if(KT.served){e.preventDefault();var href=a.getAttribute("href");var m=href.match(/[?&]id=([^&]+)/);var id=m?decodeURIComponent(m[1]):href;openTEP(id,href,a.getAttribute("data-title")||"");}
   });
 })();
-// 実行で生成された記事をプロジェクト名タブで自動表示（P から title 照合）
-function openProduced(projName,titles){
-  if(!KT.served||!titles||!titles.length)return;
-  titles.forEach(function(ti){
-    var row=P.find(function(x){return (x.title||x.name)===ti && x.uri;});
-    if(row){var m=row.uri.match(/[?&]id=([^&]+)/);var id=m?decodeURIComponent(m[1]):row.uri;
-      var label=(titles.length>1)?((projName||"")+" ／ "+ti):(projName||ti);
-      openTEP(id,row.uri,label);}
+// 生成物（中間生成物）の TEP を絶対パスで開く（別プロジェクト化せず /article?path= で配信）
+function tepKey(s){var h=0;for(var i=0;i<(s||"").length;i++){h=(h*31+s.charCodeAt(i))|0;}return "f"+(h>>>0).toString(36);}
+function openTEPbyPath(path,label){
+  if(!KT.served||!path)return;
+  openTEP(tepKey(path),"/article?path="+encodeURIComponent(path),label||path);
+}
+// 実行で生成された記事をプロジェクト名タブで自動表示（produced=[{title,html}]）
+function openProduced(projName,produced){
+  if(!KT.served||!produced||!produced.length)return;
+  produced.forEach(function(a){
+    var ti=(a&&a.title)||"";var html=(a&&a.html)||"";
+    if(!html)return;
+    var label=(produced.length>1)?((projName||"")+" ／ "+ti):(projName||ti);
+    openTEPbyPath(html,label);
   });
+}
+function fmtSize(n){if(n==null)return "";if(n<1024)return n+" B";if(n<1048576)return (n/1024).toFixed(1)+" KB";return (n/1048576).toFixed(1)+" MB";}
+// 『詳細』: プロジェクト行の下にサブセクションを開閉（作業サマリー＋_Details フォルダーの中間生成物）
+function toggleDetails(pid,btn){
+  var row=document.getElementById("detrow-"+pid),panel=document.getElementById("detpanel-"+pid);
+  if(!row||!panel)return;
+  var opening=row.hidden;
+  row.hidden=!opening;
+  if(btn)btn.setAttribute("aria-pressed",opening?"true":"false");
+  if(opening){
+    panel.innerHTML='<div class="empty">読み込み中…</div>';
+    api("/api/details?id="+encodeURIComponent(pid)).then(function(d){renderDetails(pid,panel,d);})
+      .catch(function(e){panel.innerHTML='<div class="empty">読み込みエラー: '+esc(String(e))+'</div>';});
+  }
+}
+function renderDetails(pid,panel,d){
+  if(!d||!d.ok){panel.innerHTML='<div class="empty">詳細を取得できませんでした'+(d&&d.error?("："+esc(d.error)):"")+'</div>';return;}
+  var s=d.summary||{},arts=s.artifacts||[],h='';
+  h+='<h3>作業サマリー</h3><div class="sumline">';
+  h+='状態: <b>'+esc(s.status||"-")+'</b> ／ ソース <b>'+(s.sources||0)+'</b> 件 ／ メインTM <b>'+esc(s.main_tm||"未設定")+'</b> ／ Product TM <b>'+(s.product_tm?"有":"無")+'</b> ／ サブTM <b>'+(s.sub_tms||0)+'</b> 件';
+  if(s.last_run)h+='<br>最終実行: <b>'+esc(s.last_run)+'</b>';
+  if(arts.length){var seg=0,mt=0;arts.forEach(function(x){seg+=(x.segs||0);mt+=(x.mt||0);});
+    h+='<br>生成記事: <b>'+arts.length+'</b> 件（計 '+seg+' セグメント ／ うち MT '+mt+'）';}
+  h+='</div>';
+  h+='<div class="ebar"><span style="color:var(--muted)">中間生成物（_kotonoha）:</span> <span class="dpath">'+esc(d.details_dir||"")+'</span> <button type="button" class="detopen" data-path="'+esc(d.details_dir||"")+'">フォルダーを開く</button></div>';
+  if(!d.files||!d.files.length){
+    h+='<div class="empty">まだ中間生成物はありません。「実行」すると、解析・Pre-translation の結果（作業ファイル ほか）がここに保存されます。</div>';
+  }else{
+    h+='<div class="flist">';
+    d.files.forEach(function(f){
+      h+='<div class="frow"><span class="fn">';
+      h+=f.is_tep?('<a class="tep" data-path="'+esc(f.path)+'">'+esc(f.name)+(f.is_tep?' <span style="font-weight:400;color:var(--muted)">（開いて編集）</span>':'')+'</a>'):esc(f.name);
+      h+='</span><span class="fm">'+esc(fmtSize(f.size))+(f.mtime?("　"+esc(f.mtime)):"")+'</span>';
+      h+='<a class="reveal" data-reveal="'+esc(f.path)+'" title="保存場所を開く">開く</a></div>';
+    });
+    h+='</div>';
+  }
+  panel.innerHTML=h;
+}
+// 『出力』: 保存先を選択（2_For review / 3_Final / 任意フォルダー）してから出力
+function openExportChoice(pid,btn){
+  if(!KT.served)return;
+  var chosen={mode:"review",path:""};
+  var m=el("div","modal");m.appendChild(el("h2",null,"出力先を選択"));
+  var bd=el("div","bd");
+  bd.appendChild(el("p",null,"翻訳版（記事の訳文を適用した成果物）の保存先を選びます。"));
+  var warn=el("p",null,"※ 2_For review に元ファイルと同名の成果物がある場合は上書きされます（元ファイルを残したいときは 3_Final か別フォルダーを選択）。");
+  warn.style.cssText="color:var(--muted);font-size:12px;margin:-4px 0 4px";bd.appendChild(warn);
+  var wrap=el("div","fld");
+  [["review","2_For review（既定）"],["final","3_Final"],["other","その他のフォルダーを選択…"]].forEach(function(o){
+    var lab=el("label","toggle2");lab.style.display="block";lab.style.margin="7px 0";
+    var r=el("input");r.type="radio";r.name="exdest";r.value=o[0];if(o[0]==="review")r.checked=true;
+    lab.appendChild(r);lab.appendChild(document.createTextNode(" "+o[1]));wrap.appendChild(lab);
+    r.onclick=function(){chosen.mode=o[0];if(o[0]==="other"){openBrowser("dir",chosen.path||"",function(dir){chosen.path=dir;pc.textContent="選択: "+dir;pc.hidden=false;});}};
+  });
+  bd.appendChild(wrap);
+  var pc=el("div","dpath");pc.hidden=true;pc.style.margin="4px 0 0";bd.appendChild(pc);
+  m.appendChild(bd);
+  var ft=el("div","ft");var go=el("button","primary","出力");
+  go.onclick=function(){
+    var body={id:pid};
+    if(chosen.mode==="final")body.out_path="3_Final";
+    else if(chosen.mode==="other"){if(!chosen.path){toast("フォルダーを選択してください");return;}body.out_path=chosen.path;}
+    else body.out_path="2_For review";
+    closeOvl();
+    toast("出力中…");
+    api("/api/export",{method:"POST",body:JSON.stringify(body)}).then(function(r){
+      toast(r&&r.ok?("出力しました: "+(r.out_dir||"")+(r.applied!=null?("（適用 "+r.applied+"）"):"")):("出力失敗："+((r&&r.error)||"不明なエラー")));
+    }).catch(function(err){toast("通信エラー: "+err);});
+  };
+  ft.appendChild(go);var c=el("button","ghost","キャンセル");c.onclick=closeOvl;ft.appendChild(c);
+  m.appendChild(ft);overlay(m);
 }
 // 初期化: タブ復元＆アクティブ表示
 (function(){ renderPTabs();
@@ -1927,7 +2242,7 @@ elif a.cmd == "serve":
         return {"dir": d, "parent": parent, "dirs": dirs, "files": files, "roots": browse_roots()}
 
     def _reskin_article(content, p):
-        """任意の（古い）TEP HTML を最新テンプレートに貼り替えて返す（SEGデータは流用）。
+        """任意の（古い）作業ファイル(HTML)を最新テンプレートに貼り替えて返す（SEGデータは流用）。
         これにより、過去に古いテンプレートで生成した記事も常に最新UIで表示できる。失敗時は None。"""
         import re as _re
         def _bal(s, j):
@@ -2002,7 +2317,8 @@ elif a.cmd == "serve":
 
         def _serve_article(self, rid):
             """Serve a registered artifact HTML over http with the KT token injected,
-            so its term pane can call /api/* (file:// 配信では不可)。登録済み html に限定。"""
+            so its term pane can call /api/* (file:// 配信では不可)。登録済み html に限定。
+            内容は生成された .html を**そのまま**配信する（貼り替えはしない＝ファイルと完全一致）。"""
             p = find_by_row_id(load(STORE), rid)
             hp = p.get("html", "") if p else ""
             if not (hp and os.path.isfile(hp)):
@@ -2011,11 +2327,50 @@ elif a.cmd == "serve":
                 content = open(hp, encoding="utf-8").read()
             except Exception as e:
                 self._send(404, {"error": str(e)}); return
-            rk = _reskin_article(content, p)   # 最新テンプレートへ貼り替え（SEG流用）。失敗時は元を使用
-            if rk:
-                content = rk
             kt = {"served": True, "token": TOKEN,
                   "doc": p.get("title", ""), "project": p.get("project", "")}
+            self._send(200, "<script>window.__KT=%s;</script>%s"
+                       % (json.dumps(kt, ensure_ascii=False), content),
+                       "text/html; charset=utf-8")
+
+        def _serve_article_path(self, path):
+            """生成物（中間生成物）の作業ファイル(HTML)を絶対パスで配信。
+            内容は生成された .html を**そのまま**配信（KTトークンのみ付与＝ファイルと完全一致）。
+            既知プロジェクトルート配下 or 旧 Kotonoha-out 配下のパスに限定（安全対策）。"""
+            if not path:
+                self._send(404, {"error": "article not found"}); return
+            path = os.path.abspath(path)
+            if not (os.path.isfile(path) and path.lower().endswith(".html")):
+                self._send(404, {"error": "article not found"}); return
+            projs = load(STORE)
+            owner = None; art = None
+            for pr in projs:
+                for a in (pr.get("artifacts") or []):
+                    if a.get("html") and os.path.abspath(a["html"]) == path:
+                        owner = pr; art = a; break
+                if owner:
+                    break
+            roots = []
+            for pr in projs:
+                s0 = _first_source_path(pr)
+                if s0:
+                    roots.append(os.path.abspath(project_root_for(s0)))
+            roots.append(os.path.abspath(os.path.join(HERE, "..", "Kotonoha-out")))
+            allowed = any(r and (path == r or path.startswith(r + os.sep)) for r in roots)
+            if not allowed:
+                self._send(403, {"error": "forbidden"}); return
+            try:
+                content = open(path, encoding="utf-8").read()
+            except Exception as e:
+                self._send(404, {"error": str(e)}); return
+            pseudo = {"title": (art.get("title") if art else
+                                os.path.splitext(os.path.basename(path))[0]),
+                      "name": (owner.get("name") if owner else ""),
+                      "source": (art.get("source") if art else ""),
+                      "html": path,
+                      "project": (owner.get("name") if owner else "")}
+            kt = {"served": True, "token": TOKEN,
+                  "doc": pseudo.get("title", ""), "project": pseudo.get("project", "")}
             self._send(200, "<script>window.__KT=%s;</script>%s"
                        % (json.dumps(kt, ensure_ascii=False), content),
                        "text/html; charset=utf-8")
@@ -2028,7 +2383,12 @@ elif a.cmd == "serve":
                 return
             if u.path == "/article":
                 q = urllib.parse.parse_qs(u.query)
-                self._serve_article(q.get("id", [""])[0]); return
+                pth = q.get("path", [""])[0]
+                if pth:
+                    self._serve_article_path(pth)
+                else:
+                    self._serve_article(q.get("id", [""])[0])
+                return
             if u.path == "/explorer":
                 # TM Match Explorer 親タブの既定表示: タブ付きTEP（翻訳/サマリー＋2ペイン, デモデータ）
                 tpl = TEMPLATE or os.path.join(HERE, "TM-Match-Explorer-demo.html")
@@ -2046,6 +2406,9 @@ elif a.cmd == "serve":
                     self._send(403, {"error": "forbidden"}); return
                 if u.path == "/api/projects":
                     self._send(200, {"rows": build_rows(load(STORE), served=True)}); return
+                if u.path == "/api/details":
+                    q = urllib.parse.parse_qs(u.query)
+                    self._send(200, project_details(load(STORE), q.get("id", [""])[0])); return
                 if u.path == "/api/browse":
                     q = urllib.parse.parse_qs(u.query)
                     self._send(200, list_dir(q.get("dir", [""])[0], q.get("kind", ["source"])[0])); return
@@ -2144,7 +2507,8 @@ elif a.cmd == "serve":
                 self._send(200, res); return
             if u.path == "/api/export":
                 projs = load(STORE)
-                res = export_project(projs, STORE, payload.get("id", ""), cache_dir=CACHE,
+                res = export_project(projs, STORE, payload.get("id", ""),
+                                     out_path=payload.get("out_path", ""), cache_dir=CACHE,
                                      mark_missing=bool(payload.get("mark_missing")),
                                      log=lambda *x: None, capture=True)
                 self._send(200, res); return

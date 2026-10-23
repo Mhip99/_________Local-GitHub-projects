@@ -1,0 +1,1225 @@
+{
+ "source": "C:\\Users\\Masaaki.Hori\\OneDrive - Domo Inc\\_________Local-GitHub-projects\\ED2710-20-MH-App-September 2026 Release Update Content-JA\\2_For review\\Creating DataFlows in Magic ETL.json",
+ "title": "Creating DataFlows in Magic ETL",
+ "count": 58,
+ "segments": [
+  {
+   "i": 14,
+   "en": "{1}If you need to combine data{2}",
+   "pct": 66.7,
+   "glossary": [
+    {
+     "en": "combine",
+     "ja": "結合"
+    }
+   ]
+  },
+  {
+   "i": 28,
+   "en": "{1}If you have limited data transformation experience{2}",
+   "pct": 71.4,
+   "glossary": [
+    {
+     "en": "you have",
+     "ja": "あなたが"
+    },
+    {
+     "en": "Limited",
+     "ja": "制限あり"
+    },
+    {
+     "en": "data",
+     "ja": "データ"
+    },
+    {
+     "en": "Transformation",
+     "ja": "変換"
+    }
+   ]
+  },
+  {
+   "i": 33,
+   "en": "Let’s get familiar with the ETL interface. Select each button to learn more about what these elements can help you build in your DataFlow. Find even more information about {1}Magic ETL{2} and each individual action in our Knowledge Base.",
+   "pct": 60.7,
+   "glossary": [
+    {
+     "en": "Get",
+     "ja": "取得"
+    },
+    {
+     "en": "ETL",
+     "ja": "ETL"
+    },
+    {
+     "en": "Select",
+     "ja": "選択"
+    },
+    {
+     "en": "Button",
+     "ja": "ボタン"
+    },
+    {
+     "en": "Learn more about",
+     "ja": "DomoのIntegration Cloudを"
+    },
+    {
+     "en": "Elements",
+     "ja": "要素"
+    },
+    {
+     "en": "Help",
+     "ja": "ヘルプ"
+    },
+    {
+     "en": "Build",
+     "ja": "作成する"
+    },
+    {
+     "en": "Find",
+     "ja": "検索"
+    },
+    {
+     "en": "Information",
+     "ja": "情報"
+    },
+    {
+     "en": "Action",
+     "ja": "操作"
+    },
+    {
+     "en": "knowledge base.",
+     "ja": "ナレッジベースをご覧ください。"
+    }
+   ]
+  },
+  {
+   "i": 34,
+   "en": "{1}Best practices{2}",
+   "pct": 0.0,
+   "glossary": []
+  },
+  {
+   "i": 39,
+   "en": "{1}Run Preview{2}",
+   "pct": 0.0,
+   "glossary": []
+  },
+  {
+   "i": 41,
+   "en": "{1}Settings{2}",
+   "pct": 0.0,
+   "glossary": []
+  },
+  {
+   "i": 42,
+   "en": "Set your DataFlow to run automatically based on when your input DataSet(s) update. If none are chosen, the DataFlow will need to be run manually.",
+   "pct": 68.4,
+   "glossary": [
+    {
+     "en": "Set",
+     "ja": "セット"
+    },
+    {
+     "en": "Dataflow",
+     "ja": "DataFlow"
+    },
+    {
+     "en": "Run",
+     "ja": "実行する"
+    },
+    {
+     "en": "Input",
+     "ja": "入力"
+    },
+    {
+     "en": "None",
+     "ja": "解除"
+    },
+    {
+     "en": "The DataFlow",
+     "ja": "DataFlow"
+    }
+   ]
+  },
+  {
+   "i": 43,
+   "en": "{1}DataSets{2}",
+   "pct": 0.0,
+   "glossary": []
+  },
+  {
+   "i": 44,
+   "en": "To start a DataFlow you’ll drag an {1}Input Dataset{2} tile over to the Magic canvas. To complete a DataSet you’ll select the {3}Output DatSet{4} tile. This will create an output DataSet that you can then use to create visualizations from after you’ve completed your data transforms.",
+   "pct": 62.7,
+   "glossary": [
+    {
+     "en": "Start a Dataflow",
+     "ja": "DataFlow を開始"
+    },
+    {
+     "en": "drag",
+     "ja": "ドラッグ"
+    },
+    {
+     "en": "Tile",
+     "ja": "タイル"
+    },
+    {
+     "en": "Magic",
+     "ja": "Magic"
+    },
+    {
+     "en": "Complete",
+     "ja": "完了"
+    },
+    {
+     "en": "DataSet",
+     "ja": "DataSet"
+    },
+    {
+     "en": "Select",
+     "ja": "選択"
+    },
+    {
+     "en": "Create",
+     "ja": "作成"
+    },
+    {
+     "en": "Output DataSet",
+     "ja": "出力 DataSet"
+    },
+    {
+     "en": "You can",
+     "ja": "次は行うことができます："
+    },
+    {
+     "en": "Use",
+     "ja": "以下を使用します："
+    },
+    {
+     "en": "Visualizations",
+     "ja": "可視化"
+    }
+   ]
+  },
+  {
+   "i": 45,
+   "en": "{1}Text{2}",
+   "pct": 0.0,
+   "glossary": []
+  },
+  {
+   "i": 46,
+   "en": "{1}Text tiles refer to components used to manipulate and transform text data within your ETL workflows. These functions help clean, format, and standardize textual data as part of your data transformation process in Magic ETL.{2}",
+   "pct": 66.7,
+   "glossary": [
+    {
+     "en": "Tiles",
+     "ja": "タイル"
+    },
+    {
+     "en": "Components",
+     "ja": "コンポーネント"
+    },
+    {
+     "en": "Used",
+     "ja": "使用済み"
+    },
+    {
+     "en": "Transform",
+     "ja": "変換"
+    },
+    {
+     "en": "text",
+     "ja": "テキスト"
+    },
+    {
+     "en": "data",
+     "ja": "データ"
+    },
+    {
+     "en": "within",
+     "ja": "以内"
+    },
+    {
+     "en": "ETL",
+     "ja": "ETL"
+    },
+    {
+     "en": "Functions",
+     "ja": "関数"
+    },
+    {
+     "en": "Help",
+     "ja": "ヘルプ"
+    },
+    {
+     "en": "Transformation",
+     "ja": "変換"
+    },
+    {
+     "en": "Process",
+     "ja": "プロセス"
+    }
+   ]
+  },
+  {
+   "i": 47,
+   "en": "{1}Dates and Numbers{2}",
+   "pct": 50.0,
+   "glossary": []
+  },
+  {
+   "i": 49,
+   "en": "{1}Utility{2}",
+   "pct": 0.0,
+   "glossary": []
+  },
+  {
+   "i": 51,
+   "en": "{1}Filter{2}",
+   "pct": 0.0,
+   "glossary": []
+  },
+  {
+   "i": 53,
+   "en": "{1}Combine Data{2}",
+   "pct": 0.0,
+   "glossary": []
+  },
+  {
+   "i": 64,
+   "en": "{1}Scripting{2}",
+   "pct": 0.0,
+   "glossary": []
+  },
+  {
+   "i": 66,
+   "en": "{1}Data Science{2}",
+   "pct": 0.0,
+   "glossary": []
+  },
+  {
+   "i": 74,
+   "en": "Magic ETL now includes the ability to add a tile directly to the canvas. The feature improves the speed of DataFlow creation and overall workflow efficiency.",
+   "pct": 70.0,
+   "glossary": [
+    {
+     "en": "Magic ETL",
+     "ja": "Magic ETL"
+    },
+    {
+     "en": "Now",
+     "ja": "今すぐ"
+    },
+    {
+     "en": "includes",
+     "ja": "含まれるもの："
+    },
+    {
+     "en": "ADD",
+     "ja": "追加"
+    },
+    {
+     "en": "Tile",
+     "ja": "タイル"
+    },
+    {
+     "en": "FEATURE",
+     "ja": "機能"
+    },
+    {
+     "en": "SPEED",
+     "ja": "スピード"
+    },
+    {
+     "en": "Dataflow",
+     "ja": "DataFlow"
+    },
+    {
+     "en": "Overall",
+     "ja": "全体的な"
+    },
+    {
+     "en": "Workflow",
+     "ja": "ワークフロー"
+    }
+   ]
+  },
+  {
+   "i": 93,
+   "en": "Capture rows that meet your filter criteria while viewing those that do not in a separate stream. Learn how to use the split join and split filter tiles in Magic ETL.",
+   "pct": 70.8,
+   "glossary": [
+    {
+     "en": "capture",
+     "ja": "キャプチャ"
+    },
+    {
+     "en": "rows that meet",
+     "ja": "以下の条件のうち、"
+    },
+    {
+     "en": "Filter Criteria",
+     "ja": "フィルター条件"
+    },
+    {
+     "en": "Viewing",
+     "ja": "閲覧中"
+    },
+    {
+     "en": "not in",
+     "ja": "次にない："
+    },
+    {
+     "en": "LEARN HOW",
+     "ja": "詳細"
+    },
+    {
+     "en": "Use",
+     "ja": "以下を使用します："
+    },
+    {
+     "en": "Split Join",
+     "ja": "結合を分割"
+    },
+    {
+     "en": "Split Filter",
+     "ja": "フィルターを分割"
+    },
+    {
+     "en": "Tiles",
+     "ja": "タイル"
+    },
+    {
+     "en": "Magic",
+     "ja": "Magic"
+    }
+   ]
+  },
+  {
+   "i": 96,
+   "en": "{1}For your first Magic ETL activity in this module, we'll start with a scenario. Let's say your manager has requested that you build a card that will show a comparison of different years of sales data.{2}",
+   "pct": 72.4,
+   "glossary": [
+    {
+     "en": "first",
+     "ja": "第1"
+    },
+    {
+     "en": "Magic ETL",
+     "ja": "Magic ETL"
+    },
+    {
+     "en": "Activity",
+     "ja": "アクティビティー"
+    },
+    {
+     "en": "Start",
+     "ja": "スタート"
+    },
+    {
+     "en": "Your Manager",
+     "ja": "あなたの上長"
+    },
+    {
+     "en": "Requested",
+     "ja": "リクエスト済"
+    },
+    {
+     "en": "Build a Card",
+     "ja": "カードを作成する"
+    },
+    {
+     "en": "Show",
+     "ja": "表示"
+    },
+    {
+     "en": "Comparison",
+     "ja": "比較"
+    },
+    {
+     "en": "Years",
+     "ja": "年"
+    },
+    {
+     "en": "Sales",
+     "ja": "売上"
+    }
+   ]
+  },
+  {
+   "i": 103,
+   "en": "Select {1}Upload a spreadsheet{2} in the {3}Connect Data{4} ribbon.",
+   "pct": 55.6,
+   "glossary": [
+    {
+     "en": "Select",
+     "ja": "選択"
+    },
+    {
+     "en": "In the",
+     "ja": "この"
+    }
+   ]
+  },
+  {
+   "i": 107,
+   "en": "Click {1}save{2}.",
+   "pct": 50.0,
+   "glossary": [
+    {
+     "en": "Click",
+     "ja": "DataSet名の隣にある"
+    }
+   ]
+  },
+  {
+   "i": 111,
+   "en": "Go to {1}Create{2} ({3}+{4}) in the left side menu in Domo and select {5}Transform Data {6}and then{7} Magic ETL {8}to open a new ETL canvas.",
+   "pct": 0.0,
+   "glossary": [
+    {
+     "en": "Go to",
+     "ja": "進む："
+    },
+    {
+     "en": "In the",
+     "ja": "この"
+    },
+    {
+     "en": "Left",
+     "ja": "離れました"
+    },
+    {
+     "en": "Menu",
+     "ja": "メニュー"
+    },
+    {
+     "en": "In Domo",
+     "ja": "Domoでは"
+    },
+    {
+     "en": "Select",
+     "ja": "選択"
+    },
+    {
+     "en": "data",
+     "ja": "データ"
+    },
+    {
+     "en": "Magic ETL",
+     "ja": "Magic ETL"
+    },
+    {
+     "en": "open",
+     "ja": "開く"
+    },
+    {
+     "en": "New",
+     "ja": "NEW"
+    },
+    {
+     "en": "ETL",
+     "ja": "ETL"
+    }
+   ]
+  },
+  {
+   "i": 117,
+   "en": "Expand{1} the {2}Utility {3}section on the left.{4}",
+   "pct": 46.2,
+   "glossary": [
+    {
+     "en": "on the",
+     "ja": "毎月"
+    }
+   ]
+  },
+  {
+   "i": 121,
+   "en": "Select {1}Done{2}.",
+   "pct": 66.7,
+   "glossary": [
+    {
+     "en": "Select",
+     "ja": "選択"
+    }
+   ]
+  },
+  {
+   "i": 122,
+   "en": "Repeat these steps for the other {1}Select Columns{2} tiles and rename the following columns:{3}{4}Magic Orders 2026:{5} OrderDate to \"Order Date\", Qty to \"Quantity\", ItemCost to \"Item Cost\", and ItemPrice to \"Item Price\".{6}{7}Magic Orders 2027:{8} OrderDate to \"Order Date\", Qty to \"Quantity\", ItemCost to \"Item Cost\", and ItemPrice to \"Item Price\".",
+   "pct": 0.0,
+   "glossary": [
+    {
+     "en": "REPEAT",
+     "ja": "繰り返し"
+    },
+    {
+     "en": "Steps",
+     "ja": "手順"
+    },
+    {
+     "en": "Tiles",
+     "ja": "タイル"
+    },
+    {
+     "en": "Rename",
+     "ja": "列名の変更"
+    },
+    {
+     "en": "The following",
+     "ja": "以下の"
+    },
+    {
+     "en": "Orders",
+     "ja": "注文"
+    },
+    {
+     "en": "Qty",
+     "ja": "数量"
+    }
+   ]
+  },
+  {
+   "i": 149,
+   "en": "Connect it to the input tile.{1}{2}{3}Note:{4}  In the following transform step, you are turning the 4 product column headers into row values distributed by month and year. Your actual forecast amounts for each product by month and year will be its own column. This will ensure that for every month and year, you report on one forecast value per product, and it will help you align with your sales data in a later join.",
+   "pct": 59.0,
+   "glossary": [
+    {
+     "en": "CONNECT",
+     "ja": "接続する"
+    },
+    {
+     "en": "Input",
+     "ja": "入力"
+    },
+    {
+     "en": "In the",
+     "ja": "この"
+    },
+    {
+     "en": "FOLLOWING",
+     "ja": "フォロー中"
+    },
+    {
+     "en": "Transform",
+     "ja": "変換"
+    },
+    {
+     "en": "Product",
+     "ja": "商品"
+    },
+    {
+     "en": "Column Headers",
+     "ja": "列のヘッダ"
+    },
+    {
+     "en": "Row",
+     "ja": "行"
+    },
+    {
+     "en": "values",
+     "ja": "値"
+    },
+    {
+     "en": "Distributed",
+     "ja": "分散"
+    },
+    {
+     "en": "By Month",
+     "ja": "月単位"
+    },
+    {
+     "en": "Actual",
+     "ja": "実際"
+    }
+   ]
+  },
+  {
+   "i": 156,
+   "en": "Use Step 4 to rename the columns if needed. By default the same name of the column will be entered. In this case, we will keep the default names.",
+   "pct": 55.0,
+   "glossary": [
+    {
+     "en": "Use",
+     "ja": "以下を使用します："
+    },
+    {
+     "en": "Step",
+     "ja": "ステップ"
+    },
+    {
+     "en": "Rename",
+     "ja": "列名の変更"
+    },
+    {
+     "en": "columns",
+     "ja": "列"
+    },
+    {
+     "en": "DEFAULT",
+     "ja": "デフォルト"
+    },
+    {
+     "en": "Name",
+     "ja": "名前"
+    },
+    {
+     "en": "Column",
+     "ja": "列"
+    },
+    {
+     "en": "Keep",
+     "ja": "保持"
+    }
+   ]
+  },
+  {
+   "i": 157,
+   "en": "Click {1}Run Preview{2}.",
+   "pct": 40.0,
+   "glossary": [
+    {
+     "en": "Click",
+     "ja": "DataSet名の隣にある"
+    }
+   ]
+  },
+  {
+   "i": 159,
+   "en": "Select {1}Done{2}.",
+   "pct": 66.7,
+   "glossary": [
+    {
+     "en": "Select",
+     "ja": "選択"
+    }
+   ]
+  },
+  {
+   "i": 162,
+   "en": "Because{1} y{2}ou don't have a forecasted value for every day for each product, you do not have a daily granularity for your products. So, we want to aggregate the data into a monthly granularity.",
+   "pct": 73.7,
+   "glossary": [
+    {
+     "en": "Value",
+     "ja": "値"
+    },
+    {
+     "en": "Every Day",
+     "ja": "毎日"
+    },
+    {
+     "en": "Daily",
+     "ja": "毎日"
+    },
+    {
+     "en": "Granularity",
+     "ja": "粒度"
+    },
+    {
+     "en": "Aggregate",
+     "ja": "集計"
+    },
+    {
+     "en": "data",
+     "ja": "データ"
+    },
+    {
+     "en": "Monthly",
+     "ja": "月1回"
+    }
+   ]
+  },
+  {
+   "i": 167,
+   "en": "Now click {1}Add Date Operation{2} button.",
+   "pct": 66.7,
+   "glossary": [
+    {
+     "en": "Now",
+     "ja": "今すぐ"
+    },
+    {
+     "en": "Click",
+     "ja": "DataSet名の隣にある"
+    },
+    {
+     "en": "Date",
+     "ja": "日付"
+    }
+   ]
+  },
+  {
+   "i": 171,
+   "en": "Click {1}Done{2}.",
+   "pct": 50.0,
+   "glossary": [
+    {
+     "en": "Click",
+     "ja": "DataSet名の隣にある"
+    }
+   ]
+  },
+  {
+   "i": 177,
+   "en": "Connect it to the {1}Date Operations {2}tile.",
+   "pct": 71.4,
+   "glossary": [
+    {
+     "en": "CONNECT",
+     "ja": "接続する"
+    },
+    {
+     "en": "Operations",
+     "ja": "事業"
+    }
+   ]
+  },
+  {
+   "i": 181,
+   "en": "Click {1}Done{2}.",
+   "pct": 50.0,
+   "glossary": [
+    {
+     "en": "Click",
+     "ja": "DataSet名の隣にある"
+    }
+   ]
+  },
+  {
+   "i": 186,
+   "en": "Connect it to the {1}Add Constants{2}.",
+   "pct": 66.7,
+   "glossary": [
+    {
+     "en": "CONNECT",
+     "ja": "接続する"
+    }
+   ]
+  },
+  {
+   "i": 193,
+   "en": "Click {1}Done{2}.",
+   "pct": 50.0,
+   "glossary": [
+    {
+     "en": "Click",
+     "ja": "DataSet名の隣にある"
+    }
+   ]
+  },
+  {
+   "i": 207,
+   "en": "Click {1}Save{2}.",
+   "pct": 50.0,
+   "glossary": [
+    {
+     "en": "Click",
+     "ja": "DataSet名の隣にある"
+    }
+   ]
+  },
+  {
+   "i": 218,
+   "en": "Click {1}Done{2}.",
+   "pct": 50.0,
+   "glossary": [
+    {
+     "en": "Click",
+     "ja": "DataSet名の隣にある"
+    }
+   ]
+  },
+  {
+   "i": 221,
+   "en": "Click and drag to highlight and select the {1}Date Operations{2} through the {3}Alter Columns{4} action.",
+   "pct": 73.3,
+   "glossary": [
+    {
+     "en": "Click",
+     "ja": "DataSet名の隣にある"
+    },
+    {
+     "en": "drag",
+     "ja": "ドラッグ"
+    },
+    {
+     "en": "Highlight",
+     "ja": "ハイライト"
+    },
+    {
+     "en": "Select",
+     "ja": "選択"
+    }
+   ]
+  },
+  {
+   "i": 222,
+   "en": "Select {1}Duplicate{2} from the {3}Options Menu{4}.",
+   "pct": 54.5,
+   "glossary": [
+    {
+     "en": "Select",
+     "ja": "選択"
+    }
+   ]
+  },
+  {
+   "i": 224,
+   "en": "Connect the {1}Date Operations 1 {2}to your {3}Append Rows{4}.",
+   "pct": 55.6,
+   "glossary": [
+    {
+     "en": "CONNECT",
+     "ja": "接続する"
+    },
+    {
+     "en": "Operations",
+     "ja": "事業"
+    }
+   ]
+  },
+  {
+   "i": 225,
+   "en": "To modify, select {1}Date Operations 1{2}. Then, click your Year operation.",
+   "pct": 62.5,
+   "glossary": [
+    {
+     "en": "Select",
+     "ja": "選択"
+    },
+    {
+     "en": "Operations",
+     "ja": "事業"
+    },
+    {
+     "en": "Click",
+     "ja": "DataSet名の隣にある"
+    },
+    {
+     "en": "Year",
+     "ja": "年毎"
+    }
+   ]
+  },
+  {
+   "i": 234,
+   "en": "Connect the {1}Alter Columns 1{2} tile to {3}Filter Rows{4}.",
+   "pct": 52.6,
+   "glossary": [
+    {
+     "en": "CONNECT",
+     "ja": "接続する"
+    },
+    {
+     "en": "columns",
+     "ja": "列"
+    },
+    {
+     "en": "Tile",
+     "ja": "タイル"
+    }
+   ]
+  },
+  {
+   "i": 235,
+   "en": "Click the {1}Add Filter Rule {2}button.",
+   "pct": 66.7,
+   "glossary": [
+    {
+     "en": "Click the",
+     "ja": "ユーザーのプロフィール写真の下にある"
+    },
+    {
+     "en": "Filter",
+     "ja": "フィルター"
+    },
+    {
+     "en": "Rule",
+     "ja": "ルール"
+    }
+   ]
+  },
+  {
+   "i": 240,
+   "en": "Click {1}Done{2}.",
+   "pct": 50.0,
+   "glossary": [
+    {
+     "en": "Click",
+     "ja": "DataSet名の隣にある"
+    }
+   ]
+  },
+  {
+   "i": 243,
+   "en": "You will now aggregate the data so that you can return a single row for each product by month and year. For example, it will allow you to show only one number for a specific product in January of 2026:",
+   "pct": 68.9,
+   "glossary": [
+    {
+     "en": "Now",
+     "ja": "今すぐ"
+    },
+    {
+     "en": "Aggregate",
+     "ja": "集計"
+    },
+    {
+     "en": "data",
+     "ja": "データ"
+    },
+    {
+     "en": "You can",
+     "ja": "次は行うことができます："
+    },
+    {
+     "en": "return",
+     "ja": "戻る"
+    },
+    {
+     "en": "Single Row",
+     "ja": "1行"
+    },
+    {
+     "en": "Product",
+     "ja": "商品"
+    },
+    {
+     "en": "By Month",
+     "ja": "月単位"
+    },
+    {
+     "en": "For example,",
+     "ja": "例："
+    },
+    {
+     "en": "ALLOW",
+     "ja": "許可"
+    },
+    {
+     "en": "Show only",
+     "ja": "表示を限定："
+    },
+    {
+     "en": "one",
+     "ja": "1"
+    }
+   ]
+  },
+  {
+   "i": 244,
+   "en": "To do this you will use the {1}Group By {2}tile. Drag and drop the Group By tile to the canvas.",
+   "pct": 66.7,
+   "glossary": [
+    {
+     "en": "To Do",
+     "ja": "作業"
+    },
+    {
+     "en": "Use",
+     "ja": "以下を使用します："
+    },
+    {
+     "en": "Drag and Drop",
+     "ja": "ドラッグ＆ドロップ"
+    },
+    {
+     "en": "Group By",
+     "ja": "グループ:"
+    },
+    {
+     "en": "Tile",
+     "ja": "タイル"
+    }
+   ]
+  },
+  {
+   "i": 245,
+   "en": "Connect the {1}Filter Rows{2} tile to {3}Group By{4}.",
+   "pct": 53.3,
+   "glossary": [
+    {
+     "en": "CONNECT",
+     "ja": "接続する"
+    },
+    {
+     "en": "Tile",
+     "ja": "タイル"
+    }
+   ]
+  },
+  {
+   "i": 246,
+   "en": "Select both Product and Date as columns that identify the grouping. This will ensure we get a monthly value for each product.",
+   "pct": 66.7,
+   "glossary": [
+    {
+     "en": "Select",
+     "ja": "選択"
+    },
+    {
+     "en": "Both",
+     "ja": "両方"
+    },
+    {
+     "en": "Product",
+     "ja": "商品"
+    },
+    {
+     "en": "Date",
+     "ja": "日付"
+    },
+    {
+     "en": "columns",
+     "ja": "列"
+    },
+    {
+     "en": "Identify",
+     "ja": "特定する"
+    },
+    {
+     "en": "Get",
+     "ja": "取得"
+    },
+    {
+     "en": "Monthly",
+     "ja": "月1回"
+    },
+    {
+     "en": "Value",
+     "ja": "値"
+    }
+   ]
+  },
+  {
+   "i": 255,
+   "en": "Connect your {1}Alter Columns{2} and {3}Group By{4} tiles to {5}Join Data{6}.",
+   "pct": 0.0,
+   "glossary": [
+    {
+     "en": "CONNECT",
+     "ja": "接続する"
+    },
+    {
+     "en": "Tiles",
+     "ja": "タイル"
+    }
+   ]
+  },
+  {
+   "i": 256,
+   "en": "Select {1}Group By{2} as the input on the left side of the inner join. This will automatically place {3}Alter Columns{4} on the right side.",
+   "pct": 63.2,
+   "glossary": [
+    {
+     "en": "Select",
+     "ja": "選択"
+    },
+    {
+     "en": "Input",
+     "ja": "入力"
+    },
+    {
+     "en": "on the",
+     "ja": "毎月"
+    },
+    {
+     "en": "Left",
+     "ja": "離れました"
+    },
+    {
+     "en": "Inner",
+     "ja": "内側"
+    },
+    {
+     "en": "Right",
+     "ja": "右揃え"
+    }
+   ]
+  },
+  {
+   "i": 258,
+   "en": "Click {1}Equality condition{2} again.",
+   "pct": 57.1,
+   "glossary": [
+    {
+     "en": "Click",
+     "ja": "DataSet名の隣にある"
+    }
+   ]
+  },
+  {
+   "i": 262,
+   "en": "Click {1}Done{2}.",
+   "pct": 50.0,
+   "glossary": [
+    {
+     "en": "Click",
+     "ja": "DataSet名の隣にある"
+    }
+   ]
+  },
+  {
+   "i": 267,
+   "en": "Under{1} Ultility, drag a {2}Select Columns{3} tile over to the canvas.{4}",
+   "pct": 63.6,
+   "glossary": [
+    {
+     "en": "drag",
+     "ja": "ドラッグ"
+    },
+    {
+     "en": "Tile",
+     "ja": "タイル"
+    }
+   ]
+  },
+  {
+   "i": 268,
+   "en": "{1}Connect the {2}Join Data{3} tile to the {4}Select Columns {5}tile.{6}",
+   "pct": 50.0,
+   "glossary": [
+    {
+     "en": "Tile",
+     "ja": "タイル"
+    },
+    {
+     "en": "columns",
+     "ja": "列"
+    }
+   ]
+  },
+  {
+   "i": 270,
+   "en": "{1}Select {2}Done{3}.{4}",
+   "pct": 0.0,
+   "glossary": []
+  },
+  {
+   "i": 271,
+   "en": "Drag an {1}Output Dataset{2} tile onto the canvas and connect {3}Select Columns{4} tile to it.",
+   "pct": 73.3,
+   "glossary": [
+    {
+     "en": "drag",
+     "ja": "ドラッグ"
+    },
+    {
+     "en": "Tile",
+     "ja": "タイル"
+    },
+    {
+     "en": "Canvas",
+     "ja": "キャンバス"
+    },
+    {
+     "en": "CONNECT",
+     "ja": "接続する"
+    }
+   ]
+  }
+ ]
+}

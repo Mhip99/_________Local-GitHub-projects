@@ -217,6 +217,25 @@ def tok_diff(a, b):
             if j1<j2: out.append(["add", " ".join(bt[j1:j2])+" "])
     return out or [["eq", b]]
 
+_TM_X_RE = re.compile(r'<x\b[^>]*?/?>', re.I)
+_TM_ID_RE = re.compile(r'\bid\s*=\s*"([^"]*)"', re.I)
+def norm_tm_tags(tgt):
+    """TM(TMX)ターゲットのXLIFFインラインタグ <x id="xN"/> をツールの {N} トークンへ正規化。
+    ソースは json_io で {n} トークン化されるのに対し、TMターゲットは TMX 由来の <x .../> のまま
+    格納されているため、そのままだとチップ表示が崩れる（例: ja に「<x id="x1"/>…」が生で残る）。
+    id の数字を取り出して {N} に、数字が無ければ出現順に採番する。<x .../> 以外は変更しない。"""
+    if not tgt or "<x" not in tgt.lower():
+        return tgt
+    seq = [0]
+    def repl(m):
+        mid = _TM_ID_RE.search(m.group(0))
+        dig = re.sub(r"\D", "", mid.group(1)) if mid else ""
+        if dig:
+            return "{%d}" % int(dig)
+        seq[0] += 1
+        return "{%d}" % seq[0]
+    return _TM_X_RE.sub(repl, tgt)
+
 def analyze(src):
     """src: list of source sentences -> (rows, mt_todo)."""
     src_norm = [norm(s) for s in src]
@@ -224,7 +243,7 @@ def analyze(src):
     for i, s in enumerate(src):
         sn = src_norm[i]
         if sn in exact_target:
-            tgt = exact_target[sn]
+            tgt = norm_tm_tags(exact_target[sn])
             ph = h(norm(src[i-1])) if i>0 else h("")
             nh = h(norm(src[i+1])) if i+1<len(src) else h("")
             is_ice = (sn in ice_ctx) and ((ph,nh) in ice_ctx[sn])
@@ -236,7 +255,7 @@ def analyze(src):
             bestk, r = best_fuzzy(sn)
             band = band_of(r); pct = "%.1f" % (r*100)
             if bestk and r >= 0.75:
-                tgt = exact_target.get(bestk, "")
+                tgt = norm_tm_tags(exact_target.get(bestk, ""))
                 rows.append({"b":band,"cat":CAT[band],"pct":pct,"st":"tm",
                              "en":tok_diff(bestk, s),"tm":tgt,"ja":[["eq", tgt]],"hist":hist_of(bestk),
                              "glossary":glossary_hits(sn)})
