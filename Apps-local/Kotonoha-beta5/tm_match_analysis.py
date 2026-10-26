@@ -110,9 +110,11 @@ inv = idx.inv; keys = idx.keys; product_terms = idx.product_terms
 exact_hist = getattr(idx, "exact_hist", {})   # norm_src -> [{"ja","date"},...] 版履歴（履歴ペイン用）
 
 def hist_of(k):
-    """Return this source's past translations, newest first, for the editor history pane."""
+    """Return this source's past translations, newest first, for the editor history pane.
+    タグは {n} トークンへ正規化して返す（<x id="xN"/> を履歴に生表示しない）。"""
     lst = exact_hist.get(k) or []
-    return sorted(lst, key=lambda r: (r.get("date") or ""), reverse=True)
+    lst = sorted(lst, key=lambda r: (r.get("date") or ""), reverse=True)
+    return [dict(r, ja=norm_tm_tags(r.get("ja", ""))) for r in lst]
 
 # ---- Product glossary lookup (phrase match by first token) ----
 pterm_by_first = {}
@@ -210,6 +212,41 @@ def best_fuzzy(qn):
         if r > bestr: bestr = r; best = k
     return best, bestr
 
+
+def topk_fuzzy(qn, k=50):
+    """近い TM エントリを類似度の高い順に最大 k 件返す（履歴ペインの候補表示用）。
+    各要素 = {"ja": 正規化済み訳文, "pct": 類似度%}。訳文が同一のものは上位のみ残す。"""
+    qtok = qn.split()
+    if not qtok:
+        return []
+    toks = sorted(set(qtok), key=lambda t: len(inv.get(t, [])))
+    cand = []; seen = set()
+    for t in toks[:6]:
+        for kid in inv.get(t, []):
+            if kid not in seen:
+                seen.add(kid); cand.append(kid)
+        if len(cand) > 400:
+            break
+    sm = difflib.SequenceMatcher(); sm.set_seq2(qtok)
+    scored = []
+    for kid in cand:
+        kk = keys[kid]; sm.set_seq1(kk.split())
+        scored.append((kk, sm.ratio()))
+    scored.sort(key=lambda x: x[1], reverse=True)
+    out = []; seen_ja = set()
+    for kk, r in scored:
+        tgt = exact_target.get(kk, "")
+        if not tgt:
+            continue
+        nt = norm_tm_tags(tgt)
+        if nt in seen_ja:
+            continue
+        seen_ja.add(nt)
+        out.append({"ja": nt, "pct": round(r * 100, 1)})
+        if len(out) >= k:
+            break
+    return out
+
 def tok_diff(a, b):
     at = a.split(); bt = b.split(); out = []
     for op,i1,i2,j1,j2 in difflib.SequenceMatcher(None, at, bt).get_opcodes():
@@ -262,8 +299,10 @@ def analyze(src):
                              "en":tok_diff(bestk, s),"tm":tgt,"ja":[["eq", tgt]],"hist":hist_of(bestk),
                              "glossary":glossary_hits(sn)})
             else:
+                # \u30de\u30c3\u30c1\u7387 \u226474% \u3067\u3082\u3001TM \u306b\u65e2\u8a33\u304c\u3042\u308c\u3070\u985e\u4f3c\u5ea6\u306e\u9ad8\u3044\u9806\u306b\u5019\u88dc\u3092\u5c65\u6b74\u3078\uff08\u4e0a\u4f4d\u306f UI \u304c5\u4ef6\u305a\u3064\u8868\u793a\uff09\u3002
+                bh = topk_fuzzy(sn, 50)
                 rows.append({"b":"<=74%","cat":"Added","pct":pct if bestk else "0.0","st":"mt",
-                             "en":[["add", s]],"tm":"\u2014","ja":[],"hist":[],
+                             "en":[["add", s]],"tm":"\u2014","ja":[],"hist":bh,
                              "glossary":glossary_hits(sn)})
                 mt_todo.append({"i":i, "en":s, "pct":float(pct if bestk else 0.0),
                                 "glossary":glossary_hits(sn)})
