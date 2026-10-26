@@ -242,7 +242,7 @@ def topk_fuzzy(qn, k=50):
         if nt in seen_ja:
             continue
         seen_ja.add(nt)
-        out.append({"ja": nt, "pct": round(r * 100, 1)})
+        out.append({"ja": nt, "en": kk, "pct": round(r * 100, 1)})
         if len(out) >= k:
             break
     return out

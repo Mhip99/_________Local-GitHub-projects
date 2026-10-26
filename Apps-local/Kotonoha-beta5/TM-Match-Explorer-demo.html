@@ -197,6 +197,7 @@ td.ja.isconfirmed::after{content:"確定";font-size:10px;color:var(--reuse);marg
 .histitem .meta .badge-latest{color:var(--reuse);font-weight:600;margin-left:6px;}
     .histitem .meta .mtlabel{display:inline-block;font-weight:700;color:#fff;background:#b5533a;border-radius:4px;padding:0 6px;font-size:11px;}
     .histitem .meta .pctlabel{display:inline-block;font-weight:700;color:var(--reuse);font-size:12px;}
+    .histitem .hsrc{color:var(--faint);font-size:12px;margin:2px 0 1px;word-break:break-word;}
     .histmore{margin:8px 0 2px;border:1px solid var(--hairline);background:var(--surface);color:inherit;border-radius:8px;padding:5px 12px;font-size:12px;cursor:pointer;}
     .histmore:hover{border-color:var(--accent);}
 .histitem .tgt{font-family:"Noto Sans JP","IBM Plex Sans",sans-serif;font-size:13.5px;color:var(--ink);white-space:pre-wrap;}
@@ -575,11 +576,12 @@ function fmtDate(d){
   return m?`${m[1]}-${m[2]}-${m[3]} ${m[4]}:${m[5]}`:d;
 }
 // 翻訳履歴ペイン: 最初は5件、「さらに表示」で5件ずつ展開
-let _histAll=[], _histShown=5;
+let _histAll=[], _histShown=5, _histSrcEn="";
 function renderHistory(i){
   const src=document.getElementById("histsrc");
   const s=SEG[i];
-  src.textContent=s?("“"+plain(s.en)+"”"):"";
+  _histSrcEn=s?plain(s.en):"";
+  src.textContent=s?("“"+_histSrcEn+"”"):"";
   const hist=(s&&s.hist)||[];
   // MT項を先頭、残りはエンジンの順（候補=類似度降順／版履歴=日付降順）を維持
   _histAll=hist.slice().sort((a,b)=>(!!a.mt!==!!b.mt)?(a.mt?-1:1):0);
@@ -597,7 +599,9 @@ function paintHistory(){
     else if(r.pct!=null)label='<span class="pctlabel">'+r.pct+'%</span>';
     else label=fmtDate(r.date);
     const badge=(idx===firstDated)?'<span class="badge-latest">最新</span>':'';
-    return '<div class="histitem'+(idx===firstDated?' latest':'')+'"><div class="meta">'+label+badge+'</div><div class="tgt">'+esc(r.ja||"")+'</div></div>';
+    const enTxt=(r.en!=null?r.en:_histSrcEn);  // 候補は一致したTM原文、版履歴はこの原文
+    const enLine=enTxt?('<div class="hsrc">'+esc(enTxt)+'</div>'):'';
+    return '<div class="histitem'+(idx===firstDated?' latest':'')+'"><div class="meta">'+label+badge+'</div>'+enLine+'<div class="tgt">'+esc(r.ja||"")+'</div></div>';
   }).join("")+'</div>';
   const remain=_histAll.length-_histShown;
   if(remain>0)h+='<button type="button" id="histmore" class="histmore">さらに表示（残り '+remain+' 件）</button>';
