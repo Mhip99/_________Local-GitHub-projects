@@ -56,9 +56,20 @@ def _load_records(path):
             yield json.loads(ln)
 
 
+def _read_run_mt(html_txt):
+    """作業ファイルの META.runMT を読む（既定 True）。False なら MT は翻訳欄ではなく履歴へ。"""
+    m = re.search(r'"runMT"\s*:\s*(true|false)', html_txt)
+    if m:
+        return m.group(1) == "true"
+    return True
+
+
 def inject_into_html(html_path, index_to_ja, out_path=None):
-    """index_to_ja: {int per-article index -> ja}. Returns (filled, out_of_range, still_empty)."""
+    """index_to_ja: {int per-article index -> ja}. Returns (filled, out_of_range, still_empty).
+    META.runMT が False のときは MT を翻訳欄(ja)ではなく履歴(hist)に「MT」項として入れる
+    （翻訳欄は英語のまま＝未反映）。True のときは従来どおり ja に反映。"""
     html_txt = open(html_path, encoding="utf-8").read()
+    run_mt = _read_run_mt(html_txt)
     m = re.search(SEG_RE, html_txt)
     if not m:
         raise RuntimeError("const SEG not found in %s" % html_path)
@@ -66,10 +77,23 @@ def inject_into_html(html_path, index_to_ja, out_path=None):
     filled = 0; missing = []
     for i, ja in index_to_ja.items():
         if 0 <= i < len(seg):
-            seg[i]["ja"] = [["eq", ja]]; seg[i]["st"] = "mt"; filled += 1
+            if run_mt:
+                seg[i]["ja"] = [["eq", ja]]; seg[i]["st"] = "mt"
+            else:
+                # 翻訳欄には入れず、履歴に「MT」項として先頭追加（重複は置換）
+                seg[i]["st"] = "mt"
+                hist = [h for h in (seg[i].get("hist") or []) if not h.get("mt")]
+                hist.insert(0, {"ja": ja, "mt": True})
+                seg[i]["hist"] = hist
+            filled += 1
         else:
             missing.append(i)
-    still_empty = [idx for idx, s in enumerate(seg) if s.get("st") == "mt" and not s.get("ja")]
+    # 反映残り: runMT時は ja 空、非runMT時は MT履歴が無いもの
+    if run_mt:
+        still_empty = [idx for idx, s in enumerate(seg) if s.get("st") == "mt" and not s.get("ja")]
+    else:
+        still_empty = [idx for idx, s in enumerate(seg)
+                       if s.get("st") == "mt" and not any(h.get("mt") for h in (s.get("hist") or []))]
     seg_json = json.dumps(seg, ensure_ascii=False)
     html_txt = html_txt[:m.start(1)] + seg_json + html_txt[m.end(1):]
     out = out_path or html_path

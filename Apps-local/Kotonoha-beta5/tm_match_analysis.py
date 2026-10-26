@@ -46,6 +46,8 @@ ap.add_argument("--out-dir", dest="out_dir", default="", help="output folder (ba
 ap.add_argument("--title", default="", help="article title (single-source only; batch derives per file)")
 ap.add_argument("--project-name", dest="project_name", default="", help="サマリーのメタ情報に表示するプロジェクト名（projects.py が渡す）")
 ap.add_argument("--project-detail", dest="project_detail", default="", help="サマリーのメタ情報に表示するプロジェクト詳細")
+ap.add_argument("--run-mt", dest="run_mt", default="1",
+                help="1: MT(≤74%)を翻訳欄に反映する前提 / 0: MTは履歴ペインに表示し翻訳欄は英語のまま（META.runMT に記録）")
 ap.add_argument("--cache-dir", dest="cache_dir", default=DEFAULT_CACHE,
                 help="index cache folder (default: %(default)s)")
 ap.add_argument("--no-cache", dest="no_cache", action="store_true", help="do not read/write the index cache")
@@ -350,6 +352,7 @@ for si, sp in enumerate(srcs):
         "tms": tm_list(),
         "project": {"name": (args.project_name or title or ""), "detail": args.project_detail or ""},
         "generated": time.strftime("%Y-%m-%d %H:%M"),
+        "runMT": str(args.run_mt).strip() not in ("0", "false", "False", ""),
     }
     open(outp, "w", encoding="utf-8", newline="\n").write(render(rows, title, meta))
     print("  saved:", outp, flush=True)

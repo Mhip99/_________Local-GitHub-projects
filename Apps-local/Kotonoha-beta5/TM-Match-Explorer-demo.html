@@ -163,6 +163,8 @@ td.ja.isedited::after{content:"編集済";font-size:10px;color:var(--accent);mar
 .taginsert:hover{background:var(--accent);color:#fff;}
 /* confirm (TEP sign-off) */
 .confcol{width:56px;text-align:center;white-space:nowrap;}
+    .confalllab{display:inline-flex;align-items:center;gap:4px;cursor:pointer;}
+    .confalllab input{margin:0;cursor:pointer;}
 .confbox{width:17px;height:17px;cursor:pointer;accent-color:var(--reuse);}
 .confbox:disabled{cursor:not-allowed;opacity:.4;}
 tr.confirmed{background:var(--reuse-wash);}
@@ -193,6 +195,7 @@ td.ja.isconfirmed::after{content:"確定";font-size:10px;color:var(--reuse);marg
 .histitem.latest{border-color:var(--reuse);}
 .histitem .meta{font-size:11px;color:var(--faint);font-family:"IBM Plex Mono",monospace;margin-bottom:3px;}
 .histitem .meta .badge-latest{color:var(--reuse);font-weight:600;margin-left:6px;}
+    .histitem .meta .mtlabel{display:inline-block;font-weight:700;color:#fff;background:#b5533a;border-radius:4px;padding:0 6px;font-size:11px;}
 .histitem .tgt{font-family:"Noto Sans JP","IBM Plex Sans",sans-serif;font-size:13.5px;color:var(--ink);white-space:pre-wrap;}
 #termadd{display:flex;flex-direction:column;gap:6px;border:1px solid var(--hairline);border-radius:8px;padding:10px;margin-bottom:10px;background:var(--surface-2);}
 #termadd input{padding:6px 8px;border:1px solid var(--hairline-strong);border-radius:6px;background:var(--surface);color:var(--ink);font:inherit;font-size:13px;}
@@ -296,6 +299,7 @@ header.top{margin-bottom:6px;gap:12px;align-items:center;}
     <label class="toggle"><input type="checkbox" id="editedonly"> 編集済みのみ</label>
     <label class="toggle"><input type="checkbox" id="confirmedonly"> 確定済みのみ</label>
     <button class="minibtn" id="confirmview" type="button">表示中を一括確定</button>
+    <button class="minibtn" id="runmt" type="button" title="履歴ペインに表示されている MT を翻訳欄に反映します" hidden>MTを実行する</button>
     <span class="editcount" id="editcount"></span>
     <span class="confcount" id="confcount"></span>
     <button class="minibtn" id="savewip" type="button" title="編集・確定の途中内容を保存（サーバーモードはサーバーにも保存し、次回開いた時に自動復元）">途中保存</button><span class="savedat" id="savedat" style="font-size:12px;opacity:.7;margin-left:6px"></span>
@@ -308,7 +312,7 @@ header.top{margin-bottom:6px;gap:12px;align-items:center;}
     <table>
       <colgroup><col class="c-idx"><col class="c-match"><col class="c-en"><col class="c-tm"><col class="c-ja"><col class="c-conf"></colgroup>
       <thead><tr>
-        <th>#</th><th>Match</th><th>English (source)</th><th>TM 訳（参考）</th><th>Japanese (Pre-translation)</th><th class="confcol">確定</th>
+        <th>#</th><th>Match</th><th>English (source)</th><th>TM 訳（参考）</th><th>Japanese (Pre-translation)</th><th class="confcol"><label class="confalllab" title="表示中をすべて確定/解除"><input type="checkbox" id="confall"> 確定</label></th>
       </tr></thead>
       <tbody id="rows"></tbody>
     </table>
@@ -364,6 +368,17 @@ const CATJA={Reused:"再利用",Modified:"修正",Added:"新規"};
 const esc=s=>s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 function diff(parts){return parts.map(([op,t])=>op==="eq"?esc(t):op==="add"?`<ins>${esc(t)}</ins>`:`<del>${esc(t)}</del>`).join("");}
 function plain(parts){return parts.map(([op,t])=>op==="del"?"":t).join("");}
+// runMT: false なら ≤74%(MT)行は翻訳欄に反映せず英語のまま・MTは履歴ペインへ。META.runMT（既定true）を
+// localStorage(kotonoha-runmt:<ART>) で上書き可能（作業ファイルの「MTを実行する」ボタン用）。
+let RUNMT = !(typeof META==="object" && META && META.runMT===false);
+// mt行の訳文（履歴の mt:true 項を優先、無ければ訳欄）＝「MTを挿入」「MTを実行する」で使う
+function mtText(i){const s=SEG[i];if(!s)return "";
+  const h=(s.hist||[]).find(x=>x&&x.mt);if(h&&h.ja)return h.ja;
+  return s.st==="mt"?plain(s.ja):"";}
+// 基準訳文（未編集時の既定）: runMT=false で未反映の MT 行は英語のまま
+function autoJa(i){const s=SEG[i];if(!s)return "";
+  if(!RUNMT && s.st==="mt" && !plain(s.ja))return plain(s.en);
+  return plain(s.ja);}
 // ===== インライン保護タグ（プレースアブル）: {n} を編集不可・移動可のチップとして扱う =====
 function tagLabel(t){
   if(!t)return "";
@@ -387,7 +402,7 @@ function serializeJa(node){let out="";node.childNodes.forEach(c=>{
   }});return out;}
 function makeChipEl(ph,tags){const d=document.createElement("div");d.innerHTML=chipHTML(String(ph),tags);return d.firstChild;}
 function saveJaField(field){const i=+field.getAttribute("data-i");const val=serializeJa(field);
-  if(val===plain(SEG[i].ja))delete edits[i];else edits[i]=val;
+  if(val===autoJa(i))delete edits[i];else edits[i]=val;
   saveEdits();updateEditedCount();
   if(i in confirms){delete confirms[i];saveConfirms();updateConfirmCount();}
   const tr=field.closest("tr");if(tr){tr.classList.toggle("edited",i in edits);tr.classList.remove("confirmed");}}
@@ -401,6 +416,8 @@ const state={cat:"all",bands:new Set(),q:"",editMode:false,editedOnly:false,conf
 const ART=((document.querySelector(".filepill")||{}).textContent||"export").replace("DEMO","").trim();
 const LSKEY="tmx-edits:"+ART;
 const LSKEY_C="tmx-confirms:"+ART;
+// この作業ファイルで「MTを実行する」を押した履歴があれば runMT を true に上書き（翻訳欄へ反映済み）
+try{if(localStorage.getItem("kotonoha-runmt:"+ART)==="1")RUNMT=true;}catch(e){}
 let edits={};
 try{edits=JSON.parse(localStorage.getItem(LSKEY)||"{}");}catch(e){edits={};}
 function saveEdits(){try{localStorage.setItem(LSKEY,JSON.stringify(edits));}catch(e){}scheduleAutoSave();}
@@ -423,7 +440,7 @@ function scheduleAutoSave(){
 }
 function confirmedCount(){return Object.keys(confirms).length;}
 function updateConfirmCount(){const el=document.getElementById("confcount");if(el)el.textContent=confirmedCount()?`確定 ${confirmedCount()} 件`:"";}
-function jaValue(i){return (i in edits)?edits[i]:plain(SEG[i].ja);}
+function jaValue(i){return (i in edits)?edits[i]:autoJa(i);}
 
 function computeSummary(){
   const total=SEG.length;
@@ -477,8 +494,11 @@ function render(){
     const idx=SEG.indexOf(s);
     const edited=(idx in edits);
     const confirmed=(idx in confirms);
-    const jaCur=edited?edits[idx]:plain(s.ja);
-    const jaView=edited?withChips(esc(jaCur),s.tags):(plain(s.ja)?withChips(diff(s.ja),s.tags):'<span class="japlaceholder">（MT未反映）</span>');
+    const jaCur=edited?edits[idx]:autoJa(idx);
+    const jaView=edited?withChips(esc(jaCur),s.tags)
+      :(plain(s.ja)?withChips(diff(s.ja),s.tags)
+        :((s.st==="mt"&&!RUNMT&&plain(s.en))?withChips(esc(plain(s.en)),s.tags)
+          :'<span class="japlaceholder">（MT未反映）</span>'));
     const jaCell=state.editMode
       ? `<td class="ja">${paletteHTML(s)}<div class="jaedit" contenteditable="true" data-i="${idx}">${withChips(esc(jaCur),s.tags)}</div></td>`
       : `<td class="ja${edited?' isedited':''}${confirmed?' isconfirmed':''}">${jaView}</td>`;
@@ -494,6 +514,8 @@ function render(){
       ${confCell}
     </tr>`;
   }).join("");
+  if(typeof syncConfAll==="function")syncConfAll();
+  if(typeof syncRunMtBtn==="function")syncRunMtBtn();
 }
 
 // events
@@ -556,11 +578,17 @@ function renderHistory(i){
   src.textContent=s?("“"+plain(s.en)+"”"):"";
   const hist=(s&&s.hist)||[];
   if(!hist.length){body.innerHTML='<div class="histhint">この原文の過去訳はまだありません（TEP 確定後に書き戻すと蓄積されます）。</div>';return;}
-  // 新しい順（analysis 側で降順済みだが念のため）
-  const sorted=hist.slice().sort((a,b)=>String(b.date||"").localeCompare(String(a.date||"")));
-  body.innerHTML='<div class="histlist">'+sorted.map((r,idx)=>
-    `<div class="histitem${idx===0?' latest':''}"><div class="meta">${fmtDate(r.date)}${idx===0?'<span class="badge-latest">最新</span>':''}</div><div class="tgt">${esc(r.ja||"")}</div></div>`
-  ).join("")+'</div>';
+  // MT項を先頭、その後は新しい順（analysis 側で降順済みだが念のため）
+  const sorted=hist.slice().sort((a,b)=>{
+    if(!!a.mt!==!!b.mt)return a.mt?-1:1;
+    return String(b.date||"").localeCompare(String(a.date||""));
+  });
+  const firstDated=sorted.findIndex(r=>!r.mt);
+  body.innerHTML='<div class="histlist">'+sorted.map((r,idx)=>{
+    const label=r.mt?'<span class="mtlabel">MT</span>':fmtDate(r.date);
+    const badge=(idx===firstDated)?'<span class="badge-latest">最新</span>':'';
+    return `<div class="histitem${idx===firstDated?' latest':''}"><div class="meta">${label}${badge}</div><div class="tgt">${esc(r.ja||"")}</div></div>`;
+  }).join("")+'</div>';
 }
 // ===== 用語ペイン（関連用語の表示＋選択語のライブ登録） =====
 const KTX=(window.__KT||{served:false,token:"",doc:"",project:""});
@@ -611,19 +639,58 @@ document.getElementById("rows").addEventListener("click",e=>{
   renderHistory(+tr.dataset.i);
   renderTerms(+tr.dataset.i);
 });
-// bulk-confirm every currently visible row that has a target
-document.getElementById("confirmview").addEventListener("click",()=>{
-  const q=state.q.trim().toLowerCase();let n=0;
+// 現在フィルター表示中のセグメント index 一覧（確定系の共通対象）
+function visibleIndices(){
+  const q=state.q.trim().toLowerCase();const out=[];
   SEG.forEach((s,idx)=>{
     if(state.cat!=="all"&&s.cat!==state.cat)return;
     if(state.bands.size&&!state.bands.has(s.b))return;
     if(state.editedOnly&&!(idx in edits))return;
     if(state.confirmedOnly&&!(idx in confirms))return;
     if(q){const hay=(plain(s.en)+" "+s.tm+" "+plain(s.ja)).toLowerCase();if(!hay.includes(q))return;}
-    if(jaValue(idx).trim()&&!(idx in confirms)){confirms[idx]=1;n++;}
+    out.push(idx);
   });
+  return out;
+}
+// bulk-confirm every currently visible row that has a target
+document.getElementById("confirmview").addEventListener("click",()=>{
+  let n=0;visibleIndices().forEach(idx=>{if(jaValue(idx).trim()&&!(idx in confirms)){confirms[idx]=1;n++;}});
   if(n){saveConfirms();updateConfirmCount();render();}
 });
+// 確定列ヘッダーの「すべて確定」= 表示中の行をまとめて確定/解除
+function syncConfAll(){
+  const cb=document.getElementById("confall");if(!cb)return;
+  const vis=visibleIndices().filter(i=>jaValue(i).trim());
+  const conf=vis.filter(i=>i in confirms).length;
+  cb.checked=vis.length>0&&conf===vis.length;
+  cb.indeterminate=conf>0&&conf<vis.length;
+  cb.disabled=vis.length===0;
+}
+(function(){var cb=document.getElementById("confall");if(!cb)return;
+  cb.addEventListener("change",function(){
+    var vis=visibleIndices();
+    if(cb.checked){vis.forEach(i=>{if(jaValue(i).trim())confirms[i]=1;});}
+    else{vis.forEach(i=>{if(i in confirms)delete confirms[i];});}
+    saveConfirms();updateConfirmCount();render();
+  });
+})();
+// 「MTを実行する」= 履歴にある MT を翻訳欄へ反映（runMT=false のとき表示）
+function syncRunMtBtn(){
+  var b=document.getElementById("runmt");if(!b)return;
+  b.hidden=RUNMT;   // MTを実行しなかった場合に表示
+}
+(function(){var b=document.getElementById("runmt");if(!b)return;
+  b.addEventListener("click",function(){
+    var n=0;SEG.forEach((s,i)=>{if(s&&s.st==="mt"){var t=mtText(i);if(t&&!(i in edits)){edits[i]=t;n++;}}});
+    if(!n && !SEG.some(s=>s&&s.st==="mt"&&(s.hist||[]).some(h=>h&&h.mt))){
+      if(typeof toast==="function")toast("反映できる MT がありません（先に mt-done を反映してください）");
+      return;
+    }
+    RUNMT=true;try{localStorage.setItem("kotonoha-runmt:"+ART,"1");}catch(e){}
+    saveEdits();updateEditedCount();render();
+    if(typeof toast==="function")toast("MT を翻訳欄に反映しました（"+n+" 件）");
+  });
+})();
 function xesc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
 function download(name,text,mime){
   const blob=new Blob([text],{type:(mime||"text/plain")+";charset=utf-8"});
@@ -692,7 +759,7 @@ document.querySelectorAll(".vtab").forEach(b=>b.addEventListener("click",()=>swi
   document.head.appendChild(st);
   var menu=document.createElement("div");menu.className="ctxmenu";document.body.appendChild(menu);
   var undo={}; // i -> [過去の値...]
-  function autoVal(i){return plain(SEG[i].ja);}
+  function autoVal(i){return autoJa(i);}
   function curVal(i){return (i in edits)?edits[i]:autoVal(i);}
   function pushUndo(i){var s=undo[i]||(undo[i]=[]);var v=curVal(i);if(s.length&&s[s.length-1]===v)return;s.push(v);if(s.length>50)s.shift();}
   function applyVal(i,val){
@@ -711,11 +778,13 @@ document.querySelectorAll(".vtab").forEach(b=>b.addEventListener("click",()=>swi
     var canUndo=undo[i]&&undo[i].length>0,h="";
     h+='<div class="mi'+(canUndo?'':' disabled')+'" data-act="undo">元に戻す'+(canUndo?' <small>('+undo[i].length+')</small>':'')+'</div>';
     h+='<div class="mi" data-act="eng">英語のまま</div>';
+    var _mt=mtText(i);
+    h+='<div class="mi'+(_mt?'':' disabled')+'" data-act="mt" title="現在の訳文はそのまま、末尾にMTを追加">MTを挿入</div>';
     h+='<div class="sep"></div><div class="mi hdr">履歴をコピー</div>';
     if(ctxHist.length){
       h+='<div class="sub">'+ctxHist.map(function(r,k){
         var p=esc((r.ja||"").slice(0,40))+((r.ja||"").length>40?'…':'');
-        return '<div class="mi" data-act="hist" data-k="'+k+'"><small>'+fmtDate(r.date)+'</small><br>'+p+'</div>';
+        return '<div class="mi" data-act="hist" data-k="'+k+'"><small>'+(r.mt?'MT':fmtDate(r.date))+'</small><br>'+p+'</div>';
       }).join("")+'</div>';
     } else { h+='<div class="mi disabled">（履歴なし）</div>'; }
     menu.innerHTML=h;menu.dataset.i=i;menu.style.display="block";
@@ -735,6 +804,7 @@ document.querySelectorAll(".vtab").forEach(b=>b.addEventListener("click",()=>swi
     var i=+menu.dataset.i,act=mi.getAttribute("data-act");
     if(act==="undo")doUndo(i);
     else if(act==="eng")keepEnglish(i);
+    else if(act==="mt"){var t=mtText(i);if(t){pushUndo(i);var cur=curVal(i);applyVal(i,(cur?cur:"")+t);}}
     else if(act==="hist"){var r=ctxHist[+mi.getAttribute("data-k")];if(r)pasteHist(i,r.ja||"");}
     hide();e.stopPropagation();
   });

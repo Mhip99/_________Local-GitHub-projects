@@ -28,6 +28,7 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_STORE = os.path.join(HERE, "_projects.json")
+VERSION = "beta5.01"   # 画面バナー / EMPTY_TMX の creationtoolversion などに使用
 STATUSES = ["作業中", "レビュー中", "完了"]
 
 def load(store):
@@ -308,7 +309,7 @@ def make_id(projects):
 
 EMPTY_TMX = ('<?xml version="1.0" encoding="UTF-8"?>\n'
              '<tmx version="1.4">\n'
-             '  <header creationtool="Kotonoha" creationtoolversion="beta5" segtype="sentence" '
+             '  <header creationtool="Kotonoha" creationtoolversion="' + VERSION + '" segtype="sentence" '
              'o-tmf="Kotonoha" adminlang="en-US" srclang="en-US" datatype="plaintext"/>\n'
              '  <body>\n  </body>\n</tmx>\n')
 
@@ -369,8 +370,10 @@ sys.stdout.write(res or "")
 '''
 
 
-def create_project_full(projects, name, sources=None, main_tm="", product_tm="", sub_tms=None):
-    """Create a definition in one shot (used by the serve API). Caller saves."""
+def create_project_full(projects, name, sources=None, main_tm="", product_tm="", sub_tms=None,
+                         run_mt=True):
+    """Create a definition in one shot (used by the serve API). Caller saves.
+    run_mt: 既訳のない(≤74%)セグメントのMTを翻訳欄に反映するか（False=英語のまま・MTは履歴へ）。"""
     pid = make_id(projects)
     projects.append({
         "id": pid, "type": "project", "name": name or pid, "status": "未解析",
@@ -378,6 +381,7 @@ def create_project_full(projects, name, sources=None, main_tm="", product_tm="",
                     for s in (sources or []) if s.get("path")],
         "main_tm": main_tm or "", "product_tm": product_tm or "",
         "sub_tms": [t for t in (sub_tms or []) if t],
+        "run_mt": bool(run_mt),
         "created": now(), "updated": now(),
     })
     return pid
@@ -511,7 +515,8 @@ def run_project(projects, store, pid, out_path="", engine="", template="",
 
     cmd = [sys.executable, engine, "--tmx", main_tm,
            "--source-manifest", manifest, "--template", template,
-           "--out-dir", out_dir, "--combined-todo", combined]
+           "--out-dir", out_dir, "--combined-todo", combined,
+           "--run-mt", ("1" if p.get("run_mt", True) else "0")]
     product_tm = p.get("product_tm", "")
     if product_tm:
         if os.path.exists(product_tm):
@@ -1098,7 +1103,7 @@ def dashboard_html(projects, served=False, token=""):
     ktcfg = json.dumps({"served": bool(served), "token": token or ""}, ensure_ascii=False)
     tpl = r"""<!doctype html><html lang="ja"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Kotonoha プロジェクト一覧</title>
+<title>Kotonoha プロジェクト一覧 (__VER__)</title>
 <style>
 :root{--bg:#F5F6F8;--card:#fff;--ink:#1B1F27;--muted:#5C6470;--line:#E4E7EC;--accent:#146C82;
 --work:#B77C1F;--work-bg:#F6ECD8;--rev:#146C82;--rev-bg:#E4F0F3;--done:#2E9E6B;--done-bg:#E4F3EC;}
@@ -1184,6 +1189,7 @@ tr.detrow td{background:var(--bg);padding:0;border-right:none}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .srvbadge{display:none;font-size:12px;font-weight:600;color:#fff;background:var(--done);border-radius:999px;padding:3px 10px;margin-left:10px;vertical-align:middle}
 body.served .srvbadge{display:inline-block}
+.verbadge{font-size:12px;font-weight:600;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:2px 9px;margin-left:8px;vertical-align:middle}
 .ovl{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:60;padding:16px}
 .modal{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:12px;max-width:720px;width:100%;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.4)}
 .modal h2{font-size:17px;margin:0;padding:16px 18px;border-bottom:1px solid var(--line)}
@@ -1235,7 +1241,7 @@ footer{color:var(--muted);font-size:12px;margin-top:18px}
 </style>
 <div class="ptabs" id="ptabs"></div>
 <div id="ptab-proj">
-<h1>Kotonoha プロジェクト一覧<span class="srvbadge">サーバーモード（作成・実行が有効）</span></h1>
+<h1>Kotonoha プロジェクト一覧 <span class="verbadge">__VER__</span><span class="srvbadge">サーバーモード（作成・実行が有効）</span></h1>
 <div class="sub">記事行の「<b>開く</b>」や定義行の「<b>実行</b>」で、その記事を上の<b>プロジェクト名タブ</b>に表示します（サーバーモード）。定義行は「<b>実行</b>」で解析＋Pre-translation、「<b>出力</b>」で元形式の翻訳版を出力。各行の「<b>編集</b>」で状態・メモ・期日・削除。ツールバーの「<b>ツール▾</b>」からMTを反映・索引キャッシュ作成・TM書き戻し・UI Glossary・ファイル比較・JAバージョンチェックを実行できます（サーバーモード時）。静的表示（file://）では別タブで開き、「実行」はコマンドをコピーします。列ヘッダー右端をドラッグで幅調整、列▾で表示/非表示（ブラウザに保存）。</div>
 <div class="tabs" id="tabs" hidden>
   <button class="tab" id="tab-projects" data-view="projects" aria-pressed="true" type="button">プロジェクト</button>
@@ -1462,7 +1468,8 @@ function openBrowser(kind,startDir,onPick){
   overlay(m);load(startDir||"");
 }
 function openCreate(){
-  const st={name:"",sources:[],main_tm:"",product_tm:"",sub_tms:[]};
+  let runmtDefault=true;try{runmtDefault=(localStorage.getItem("kotonoha-proj-runmt")!=="0");}catch(e){}
+  const st={name:"",sources:[],main_tm:"",product_tm:"",sub_tms:[],run_mt:runmtDefault};
   const m=el("div","modal");m.appendChild(el("h2",null,"新規プロジェクトの作成"));
   const bd=el("div","bd");
   bd.appendChild(el("div","hint","ソース・TM は Windows の「ファイルを開く」ダイアログで選択します（ダイアログが前面に出ます）。"));
@@ -1494,6 +1501,14 @@ function openCreate(){
   const fsub=el("div","fld");fsub.appendChild(el("label",null,"サブ TM（.tmx・任意・複数可／マッチ用）"));const subList=el("div");fsub.appendChild(subList);const addSub=el("button","mini","＋ サブ TM 追加");fsub.appendChild(addSub);bd.appendChild(fsub);
   function drawSub(){subList.innerHTML="";if(!st.sub_tms.length){subList.appendChild(el("div","hint","（未追加）"));}st.sub_tms.forEach((t,i)=>{const r=el("div","srcitem");r.appendChild(el("span","p",t));const x=el("button","mini danger","削除");x.onclick=()=>{st.sub_tms.splice(i,1);drawSub();};r.appendChild(x);subList.appendChild(r);});}
   addSub.onclick=()=>pick("tmx",true).then(r=>{if(r&&r.available===false){openBrowser("tmx","",p=>{st.sub_tms.push(p);drawSub();});return;}(r&&r.paths||[]).forEach(p=>st.sub_tms.push(p));drawSub();}).catch(err=>toast("選択エラー: "+err));drawSub();
+  // MTを実行（既訳のない≤74%セグメントのMTを翻訳欄に反映する／OFFなら翻訳欄は英語のまま・MTは履歴ペインに表示）
+  const fmt=el("div","fld");
+  const mtlab=el("label","toggle2");const mtcb=el("input");mtcb.type="checkbox";mtcb.checked=!!st.run_mt;
+  mtlab.appendChild(mtcb);mtlab.appendChild(document.createTextNode(" MTを実行（既訳のないセグメントのMTを翻訳欄に反映）"));
+  fmt.appendChild(mtlab);
+  fmt.appendChild(el("div","hint","OFF にすると翻訳欄は英語のまま表示し、MT の結果は翻訳履歴ペインに「MT」として表示します（作業ファイルで後から「MTを実行する」ボタンでも反映できます）。この選択は次回の作成時にも引き継がれます。"));
+  mtcb.onchange=()=>{st.run_mt=mtcb.checked;try{localStorage.setItem("kotonoha-proj-runmt",mtcb.checked?"1":"0");}catch(e){}};
+  bd.appendChild(fmt);
   m.appendChild(bd);
   // フッター
   const ft=el("div","ft");const run=el("button","primary","作成して実行");const mk=el("button","primary","保存");const cancel=el("button","ghost","キャンセル");
@@ -1721,7 +1736,7 @@ function renderPTabs(){
     tabs.forEach(function(t){var w="tep:"+t.id;
       html+='<button class="ptab" data-ptab="'+esc(w)+'" type="button" aria-pressed="'+(act===w)+'" title="'+esc(t.title)+'">'+esc(t.title||"(無題)")+'<span class="x" data-close="'+esc(t.id)+'" title="閉じる">×</span></button>';});
   } else if(KT.served){
-    html+='<button class="ptab" data-ptab="demo" type="button" aria-pressed="'+(act==="demo")+'">TM Match Explorer</button>';
+    html+='<button class="ptab" data-ptab="demo" type="button" aria-pressed="'+(act==="demo")+'">TM-Match-Explorer</button>';
   }
   bar.innerHTML=html;
 }
@@ -1738,7 +1753,7 @@ function ensureView(id,url){
 function ensureDemo(){
   var box=document.getElementById("tepviews");if(!box||document.getElementById("tepview-__demo__"))return;
   var v=document.createElement("div");v.id="tepview-__demo__";v.className="tepview";v.hidden=true;
-  v.innerHTML='<div class="tepbar"><span class="tephint">デモ表示（翻訳／サマリーの2タブ＋下部2ペイン）。プロジェクトを「実行」または記事を「開く」とプロジェクト名タブに表示します。</span></div><iframe class="tepframe" src="/explorer"></iframe>';
+  v.innerHTML='<div class="tepbar"><span class="tephint">空の表示（翻訳／サマリーの2タブ）。プロジェクトを「実行」または記事を「開く」とプロジェクト名タブに表示します。</span></div><iframe class="tepframe" src="/explorer"></iframe>';
   box.appendChild(v);
 }
 function showPTab(which){
@@ -1878,7 +1893,7 @@ function openExportChoice(pid,btn){
 if(KT.served){document.body.classList.add("served");var _tw=document.getElementById("toolswrap");if(_tw)_tw.hidden=false;var _tabs=document.getElementById("tabs");if(_tabs)_tabs.hidden=false;refresh();}
 </script></body></html>"""
     return (tpl.replace("__DATA__", data).replace("__COLS__", colmeta)
-               .replace("__KTCFG__", ktcfg))
+               .replace("__KTCFG__", ktcfg).replace("__VER__", VERSION))
 
 if a.cmd == "add":
     if not a.html:
@@ -2390,13 +2405,22 @@ elif a.cmd == "serve":
                     self._serve_article(q.get("id", [""])[0])
                 return
             if u.path == "/explorer":
-                # TM Match Explorer 親タブの既定表示: タブ付きTEP（翻訳/サマリー＋2ペイン, デモデータ）
+                # TM-Match-Explorer 親タブの既定表示: 空の翻訳／サマリー（プロジェクトが無いとき）
+                import re as _re
                 tpl = TEMPLATE or os.path.join(HERE, "TM-Match-Explorer-demo.html")
                 try:
                     content = open(tpl, encoding="utf-8").read()
                 except Exception as e:
                     self._send(404, {"error": str(e)}); return
-                kt = {"served": True, "token": TOKEN, "doc": "(デモ)", "project": ""}
+                # デモデータを空に（SEG=[]・最小META）＝空の翻訳/サマリーを表示
+                content = _re.sub(r"const SEG = \[[\s\S]*?\n\];", "const SEG = [];", content, count=1)
+                _meta = {"source": {"name": "", "path": ""}, "output": {"name": "", "path": ""},
+                         "tms": [], "project": {"name": "", "detail": ""}, "generated": "", "runMT": True}
+                content = _re.sub(r"const META = [\s\S]*?;\s*/\*__META__\*/",
+                                  "const META = " + json.dumps(_meta, ensure_ascii=False) + ";  /*__META__*/",
+                                  content, count=1)
+                content = content.replace('DomoStats Connector <span class="demoflag">DEMO</span>', "（プロジェクト未選択）")
+                kt = {"served": True, "token": TOKEN, "doc": "", "project": ""}
                 self._send(200, "<script>window.__KT=%s;</script>%s"
                            % (json.dumps(kt, ensure_ascii=False), content),
                            "text/html; charset=utf-8")
@@ -2496,7 +2520,8 @@ elif a.cmd == "serve":
                                           sources=payload.get("sources", []),
                                           main_tm=payload.get("main_tm", ""),
                                           product_tm=payload.get("product_tm", ""),
-                                          sub_tms=payload.get("sub_tms", []))
+                                          sub_tms=payload.get("sub_tms", []),
+                                          run_mt=payload.get("run_mt", True))
                 save(STORE, projs)
                 self._send(200, {"id": pid}); return
             if u.path == "/api/run":
