@@ -275,6 +275,20 @@ def norm_tm_tags(tgt):
         return "{%d}" % seq[0]
     return _TM_X_RE.sub(repl, tgt)
 
+def append_missing_tags(src, tgt):
+    """ソース src の {n} タグのうち tgt に含まれないものを末尾に補う（タグ落ち防止）。
+    TM訳にソースのタグが無いと編集欄にチップ（タグアイコン）が出ないため、全ソースタグを
+    必ず訳文に存在させる。順序維持・重複排除。"""
+    seen = set(); add = ""
+    for m in re.finditer(r"\{\d+\}", src or ""):
+        tg = m.group(0)
+        if tg in seen:
+            continue
+        seen.add(tg)
+        if tg not in (tgt or ""):
+            add += tg
+    return (tgt or "") + add
+
 def analyze(src):
     """src: list of source sentences -> (rows, mt_todo)."""
     src_norm = [norm(s) for s in src]
@@ -282,7 +296,7 @@ def analyze(src):
     for i, s in enumerate(src):
         sn = src_norm[i]
         if sn in exact_target:
-            tgt = norm_tm_tags(exact_target[sn])
+            tgt = append_missing_tags(s, norm_tm_tags(exact_target[sn]))
             ph = h(norm(src[i-1])) if i>0 else h("")
             nh = h(norm(src[i+1])) if i+1<len(src) else h("")
             is_ice = (sn in ice_ctx) and ((ph,nh) in ice_ctx[sn])
@@ -294,7 +308,7 @@ def analyze(src):
             bestk, r = best_fuzzy(sn)
             band = band_of(r); pct = "%.1f" % (r*100)
             if bestk and r >= 0.75:
-                tgt = norm_tm_tags(exact_target.get(bestk, ""))
+                tgt = append_missing_tags(s, norm_tm_tags(exact_target.get(bestk, "")))
                 rows.append({"b":band,"cat":CAT[band],"pct":pct,"st":"tm",
                              "en":tok_diff(bestk, s),"tm":tgt,"ja":[["eq", tgt]],"hist":hist_of(bestk),
                              "glossary":glossary_hits(sn)})

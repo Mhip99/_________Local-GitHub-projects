@@ -584,7 +584,7 @@
    "art": "Creating DataFlows in Magic ETL",
    "i": 117,
    "en": "Expand{1} the {2}Utility {3}section on the left.{4}",
-   "pct": 46.2,
+   "pct": 44.4,
    "glossary": [
     {
      "en": "on the",
@@ -949,7 +949,7 @@
    "art": "Creating DataFlows in Magic ETL",
    "i": 222,
    "en": "Select {1}Duplicate{2} from the {3}Options Menu{4}.",
-   "pct": 54.5,
+   "pct": 50.0,
    "glossary": [
     {
      "en": "Select",
