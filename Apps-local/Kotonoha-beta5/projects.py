@@ -1231,10 +1231,11 @@ footer{color:var(--muted);font-size:12px;margin-top:18px}
 <div class="wrap">
 <style>
 .ptabs{display:flex;flex-wrap:wrap;gap:4px;margin:10px 0 12px;border-bottom:2px solid var(--hairline);align-items:flex-end}
-.ptab{appearance:none;border:1px solid var(--hairline);border-bottom:none;background:var(--surface);color:inherit;padding:7px 12px;border-radius:10px 10px 0 0;font-weight:700;font-size:13px;cursor:pointer;margin-bottom:-2px;max-width:240px;line-height:1.25;max-height:2.9em;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word;text-align:left}
+.ptab{appearance:none;border:1px solid var(--hairline);border-bottom:none;background:var(--surface);color:inherit;padding:7px 10px 7px 12px;border-radius:10px 10px 0 0;font-weight:700;font-size:13px;cursor:pointer;margin-bottom:-2px;max-width:280px;display:flex;align-items:center;gap:6px;text-align:left}
 .ptab[aria-pressed="true"]{background:var(--accent,#2563eb);color:#fff;border-color:transparent}
-.ptab .x{margin-left:8px;opacity:.65;font-weight:400;cursor:pointer}
-.ptab .x:hover{opacity:1}
+.ptab .lbl{flex:1 1 auto;min-width:0;line-height:1.25;max-height:2.9em;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word}
+.ptab .x{flex:0 0 auto;margin-left:2px;opacity:.7;font-weight:700;font-size:15px;line-height:1;cursor:pointer;border-radius:4px;padding:0 3px}
+.ptab .x:hover{opacity:1;background:rgba(127,127,127,.25)}
 .tepbar{display:flex;align-items:center;gap:10px;margin:2px 0 8px}
 .tepbar .tephint{color:var(--muted);font-size:13px}
 .tepframe{display:block;width:100%;height:calc(100vh - 190px);min-height:420px;border:1px solid var(--hairline);border-radius:8px;background:var(--surface)}
@@ -1734,7 +1735,7 @@ function renderPTabs(){
   var tabs=KT.served?tepTabs():[];
   if(tabs.length){
     tabs.forEach(function(t){var w="tep:"+t.id;
-      html+='<button class="ptab" data-ptab="'+esc(w)+'" type="button" aria-pressed="'+(act===w)+'" title="'+esc(t.title)+'">'+esc(t.title||"(無題)")+'<span class="x" data-close="'+esc(t.id)+'" title="閉じる">×</span></button>';});
+      html+='<button class="ptab" data-ptab="'+esc(w)+'" type="button" aria-pressed="'+(act===w)+'" title="'+esc(t.title)+'"><span class="lbl">'+esc(t.title||"(無題)")+'</span><span class="x" data-close="'+esc(t.id)+'" title="閉じる">×</span></button>';});
   } else if(KT.served){
     html+='<button class="ptab" data-ptab="demo" type="button" aria-pressed="'+(act==="demo")+'">TM-Match-Explorer</button>';
   }
