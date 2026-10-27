@@ -827,6 +827,18 @@ def tm_list_rows(projects, with_count=True):
 def _tm_known_paths(projects):
     return set(r["path"].lower() for r in tm_list_rows(projects, with_count=False))
 
+def _conc_cache_dir():
+    """Concordance キャッシュ置き場（索引キャッシュと同じ TM 管理 Index フォルダー）。
+    リポジトリ/同期対象外なので巨大な pkl を置いても問題ない。"""
+    try:
+        c = read_cfg().get("CACHE", "")
+    except Exception:
+        c = ""
+    if c:
+        return c
+    return os.path.join(r"C:\Users\Masaaki.Hori\OneDrive - Domo Inc\________GitHub-production"
+                        r"\TM manaegment\TM\___Working", "Kotonoha", "Index")
+
 
 # ===== 台帳フィールド操作（pid ベース・serve API 用。CLI は --index 版を別に持つ） =====
 def update_field(projects, store, pid, field, value):
@@ -2514,8 +2526,17 @@ elif a.cmd == "serve":
                       "source": (art.get("source") if art else ""),
                       "html": path,
                       "project": (owner.get("name") if owner else "")}
+            # Concordance の既定検索対象 = この記事の所属プロジェクトの TM（メイン/サブ/Product）
+            kt_tms = []
+            if owner:
+                _seen = set()
+                for _p in ([owner.get("main_tm", ""), owner.get("product_tm", "")] + list(owner.get("sub_tms") or [])):
+                    if _p and os.path.abspath(_p).lower() not in _seen and os.path.isfile(_p):
+                        _seen.add(os.path.abspath(_p).lower())
+                        kt_tms.append({"path": os.path.abspath(_p), "name": os.path.basename(_p)})
             kt = {"served": True, "token": TOKEN,
-                  "doc": pseudo.get("title", ""), "project": pseudo.get("project", "")}
+                  "doc": pseudo.get("title", ""), "project": pseudo.get("project", ""),
+                  "tms": kt_tms}
             self._send(200, "<script>window.__KT=%s;</script>%s"
                        % (json.dumps(kt, ensure_ascii=False), content),
                        "text/html; charset=utf-8")
@@ -2585,6 +2606,30 @@ elif a.cmd == "serve":
                     except Exception as e:
                         self._send(200, {"ok": False, "error": str(e), "rows": []})
                     return
+                if u.path == "/api/conc-status":
+                    import tm_concordance
+                    q = urllib.parse.parse_qs(u.query)
+                    known = _tm_known_paths(load(STORE)); cd = _conc_cache_dir()
+                    out = []
+                    for tm in (q.get("tms", [""])[0] or "").split("\n"):
+                        tm = tm.strip()
+                        if not tm or os.path.abspath(tm).lower() not in known:
+                            continue
+                        out.append({"path": os.path.abspath(tm), "name": os.path.basename(tm),
+                                    "built": tm_concordance.is_built(tm, cd)})
+                    self._send(200, {"rows": out}); return
+                if u.path == "/api/conc-search":
+                    import tm_concordance
+                    q = urllib.parse.parse_qs(u.query)
+                    known = _tm_known_paths(load(STORE))
+                    tms = [t.strip() for t in (q.get("tms", [""])[0] or "").split("\n")
+                           if t.strip() and os.path.abspath(t.strip()).lower() in known]
+                    res = tm_concordance.search(
+                        tms, q.get("q", [""])[0], q.get("field", ["both"])[0],
+                        q.get("case", ["0"])[0] == "1", q.get("regex", ["0"])[0] == "1",
+                        q.get("mode", ["and"])[0], int(q.get("limit", ["300"])[0] or 300),
+                        _conc_cache_dir())
+                    self._send(200, res); return
                 if u.path == "/api/load-edits":
                     q = urllib.parse.parse_qs(u.query)
                     art = q.get("art", [""])[0] or "untitled"
@@ -2761,6 +2806,20 @@ elif a.cmd == "serve":
                 except Exception as e:
                     self._send(200, {"ok": False, "error": str(e)})
                 return
+            if u.path == "/api/conc-build":
+                import tm_concordance
+                known = _tm_known_paths(load(STORE)); cd = _conc_cache_dir()
+                results = []
+                for tm in (payload.get("tms") or []):
+                    if os.path.abspath(tm).lower() not in known:
+                        results.append({"path": tm, "name": os.path.basename(tm), "ok": False, "error": "unknown TM"}); continue
+                    try:
+                        r = tm_concordance.build(tm, cd)
+                        results.append({"path": os.path.abspath(tm), "name": os.path.basename(tm),
+                                        "ok": r.get("ok"), "count": r.get("count"), "error": r.get("error", "")})
+                    except Exception as e:
+                        results.append({"path": tm, "name": os.path.basename(tm), "ok": False, "error": str(e)})
+                self._send(200, {"results": results}); return
             if u.path == "/api/term-export":
                 terms = load_terms(TERMSTORE)
                 fmt = (payload.get("fmt") or "tsv").lower()
