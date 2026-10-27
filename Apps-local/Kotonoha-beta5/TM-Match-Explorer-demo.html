@@ -42,6 +42,7 @@
   --shadow:0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.35);
 }
 *{box-sizing:border-box}
+html,body{height:100%}
 [hidden]{display:none!important}
 body{background:var(--ground);color:var(--ink);
   font-family:"IBM Plex Sans","Noto Sans JP",system-ui,sans-serif;
@@ -179,14 +180,19 @@ td.ja.isconfirmed::after{content:"確定";font-size:10px;color:var(--reuse);marg
 .vtab{background:transparent;border:1px solid transparent;border-bottom:none;color:var(--muted);border-radius:8px 8px 0 0;padding:8px 18px;font:inherit;font-size:14px;font-weight:600;cursor:pointer;}
 .vtab[aria-pressed="true"]{background:var(--surface);border-color:var(--hairline);color:var(--ink);}
 /* fixed, resizable, scrollable work panes */
-.worklayout{display:flex;flex-direction:column;gap:12px;}
-.segpane{height:60vh;min-height:160px;overflow:auto;resize:vertical;border:1px solid var(--hairline);
+.worklayout{display:flex;flex-direction:column;gap:10px;flex:1;min-height:0;}
+.segpane{flex:0 0 auto;height:46vh;min-height:140px;overflow:auto;resize:vertical;border:1px solid var(--hairline);
   border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow);}
 .segpane table{margin:0;}
-.panerow{display:flex;gap:16px;align-items:stretch;}
-.histpane,.termpane{flex:1;min-width:0;height:15vh;min-height:88px;overflow:auto;resize:both;
-  background:var(--surface);border:1px solid var(--hairline);border-radius:var(--radius);box-shadow:var(--shadow);padding:12px 14px;}
+/* Reference ボックス（翻訳履歴・用語・Concordance を内包。名称は非表示）: 空きを埋めて自動拡張、ヘッダーDnDで並べ替え */
+.refbox{flex:1 1 auto;min-height:0;display:grid;gap:10px;grid-template-columns:1fr 1fr;grid-auto-rows:1fr;}
+.refbox>.refpane:last-child:nth-child(odd){grid-column:1 / -1;}
+.refpane,.histpane,.termpane{min-width:0;min-height:0;overflow:auto;display:flex;flex-direction:column;
+  background:var(--surface);border:1px solid var(--hairline);border-radius:var(--radius);box-shadow:var(--shadow);padding:10px 12px;}
+.refpane.dragover{outline:2px dashed var(--accent,#2b7a78);outline-offset:-3px;}
 .panehd{position:sticky;top:0;background:var(--surface);z-index:1;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin:0 0 10px;font-weight:600;padding-bottom:4px;}
+.refpane .panehd{cursor:grab;}
+.refpane .panehd:active{cursor:grabbing;}
 .termhint,.histhint{font-size:12.5px;color:var(--faint);}
 .histpane .histsrc{text-transform:none;letter-spacing:0;color:var(--muted);font-weight:500;margin-left:8px;
   font-family:"IBM Plex Mono","Noto Sans JP",monospace;font-size:12px;}
@@ -207,14 +213,23 @@ td.ja.isconfirmed::after{content:"確定";font-size:10px;color:var(--reuse);marg
 .termaddrow .k{color:var(--faint);font-size:11px;}
 .termsel{font-weight:600;color:var(--accent);word-break:break-word;}
 .termaddbtn{background:var(--accent);color:#fff;border:none;border-radius:7px;padding:7px 10px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;}
-.termlist{display:flex;flex-direction:column;gap:8px;}
-.termitem{border:1px solid var(--hairline);border-radius:8px;padding:8px 10px;background:var(--surface-2);}
-.termitem .s{font-weight:600;color:var(--ink);}
-.termitem .t{font-family:"Noto Sans JP","IBM Plex Sans",sans-serif;color:var(--ink);}
-.termitem .m{font-size:11px;color:var(--faint);margin-top:2px;}
+.termlist{display:flex;flex-direction:column;gap:6px;}
+.termitem{border:1px solid var(--hairline);border-radius:8px;padding:6px 8px;background:var(--surface-2);display:grid;grid-template-columns:1fr 1fr auto;gap:6px;align-items:center;}
+.termitem input{padding:5px 7px;border:1px solid var(--hairline-strong);border-radius:6px;background:var(--surface);color:var(--ink);font:inherit;font-size:12.5px;min-width:0;}
+.termitem input[readonly]{background:var(--surface-2);color:var(--faint);}
+.termitem .te-act{display:flex;gap:4px;}
+.termitem .te-act button{border:1px solid var(--hairline-strong);background:var(--surface);color:var(--ink);border-radius:6px;padding:4px 8px;font-size:12px;cursor:pointer;}
+.termitem .te-act .te-del:hover{border-color:#c0392b;color:#c0392b;}
+.termitem .te-act .te-save:hover{border-color:var(--accent);color:var(--accent);}
+/* 用語ペイン: 現在セグメントのEN/JA表示＋追加フォーム */
+.tpseg{border:1px solid var(--hairline);border-radius:8px;padding:8px 10px;margin-bottom:8px;background:var(--surface-2);}
+.tpk{font-size:11px;color:var(--faint);margin:4px 0 2px;letter-spacing:.04em;}
+.tpen,.tpja{font-size:13px;color:var(--ink);word-break:break-word;user-select:text;}
+.tpadd{display:flex;flex-direction:column;gap:6px;border:1px solid var(--hairline);border-radius:8px;padding:8px 10px;margin-bottom:10px;background:var(--surface-2);}
+.tpadd input{padding:6px 8px;border:1px solid var(--hairline-strong);border-radius:6px;background:var(--surface);color:var(--ink);font:inherit;font-size:13px;}
 tbody tr.selected{background:var(--accent-wash);}
 tbody tr.selected td.idx{box-shadow:inset 3px 0 0 var(--accent);}
-@media(max-width:820px){.panerow{flex-direction:column;}}
+@media(max-width:820px){.refbox{grid-template-columns:1fr;}}
 /* compact header / tabs / buttons（作業領域を広く取る） */
 .wrap{padding:14px 24px 36px;}
 header.top{margin-bottom:6px;gap:12px;align-items:center;}
@@ -233,9 +248,12 @@ header.top{margin-bottom:6px;gap:12px;align-items:center;}
 .minibtn{padding:5px 10px;font-size:12px;}
 .expbtn{padding:6px 12px;font-size:12px;}
 .search input{padding:7px 10px 7px 30px;font-size:13px;}
-.segpane{height:64vh;}
+.segpane{height:46vh;}
 /* タブ行にテーマ切替・アーティクル名を同居（タイトルは撤去） */
-.wrap{max-width:none;padding:10px clamp(16px,2.2vw,40px) 32px;}
+.wrap{max-width:none;padding:8px clamp(10px,1.6vw,24px) 8px;height:100%;display:flex;flex-direction:column;min-height:0;}
+#view-work{display:flex;flex-direction:column;min-height:0;flex:1;}
+#view-summary{min-height:0;overflow:auto;}
+body.summaryview #view-summary{flex:1;}
 /* セグメント表を全幅・固定レイアウトにし、English と Japanese を広く確保 */
 #segpane table{table-layout:fixed;width:100%;min-width:720px;}
 #segpane col.c-idx{width:42px;} #segpane col.c-match{width:92px;}
@@ -255,7 +273,7 @@ header.top{margin-bottom:6px;gap:12px;align-items:center;}
 .expbtn{padding:5px 11px;font-size:12px;}
 .themebtn,.filepill{padding:4px 9px;font-size:11.5px;}
 .count{margin:4px 2px;font-size:12px;}
-.segpane{height:66vh;}
+.segpane{height:46vh;}
 </style>
 
 <div class="wrap">
@@ -263,6 +281,9 @@ header.top{margin-bottom:6px;gap:12px;align-items:center;}
     <button class="vtab" id="vt-work" data-v="work" aria-pressed="true" type="button">翻訳</button>
     <button class="vtab" id="vt-summary" data-v="summary" aria-pressed="false" type="button">サマリー</button>
     <span class="filepill"><span class="dot"></span>DomoStats Connector <span class="demoflag">DEMO</span></span>
+    <button class="themebtn" id="winreload" type="button" title="このウィンドウを再読み込み">↻ 再読み込み</button>
+    <a class="themebtn" id="winnewtab" href="#" title="別タブで開く">⧉ 別タブで開く</a>
+    <button class="themebtn" id="winsaveclose" type="button" hidden title="作業内容を保存してこのタブを閉じる">保存して閉じる ×</button>
     <button class="themebtn" id="themebtn" type="button">◐ テーマ切替</button>
   </div>
   <section class="summary" id="view-summary" hidden>
@@ -322,23 +343,20 @@ header.top{margin-bottom:6px;gap:12px;align-items:center;}
     </table>
     <div class="empty" id="empty" hidden>該当するセグメントはありません。</div>
   </div>
-  <div class="panerow">
-    <div class="histpane" id="histpane">
-      <h3 class="panehd">翻訳履歴<span class="histsrc" id="histsrc"></span></h3>
+  <div class="refbox" id="refbox"><!-- Reference ボックス（名称非表示）: 翻訳履歴・用語・Concordance -->
+    <div class="refpane histpane" id="histpane" data-pane="hist">
+      <h3 class="panehd" draggable="true">翻訳履歴<span class="histsrc" id="histsrc"></span></h3>
       <div id="histbody"><div class="histhint">セグメントの行をクリックすると、その原文の過去訳（更新日時付き・新しい順）がここに表示されます。</div></div>
     </div>
-    <aside class="termpane" id="termpane">
-      <h3 class="panehd">用語<span class="histsrc" id="termsrc"></span></h3>
-      <div id="termadd" hidden>
-        <div class="hint">選択した語を用語集に登録:</div>
-        <div class="termaddrow"><span class="k">ソース</span><span class="termsel" id="termsel"></span></div>
-        <input id="termtgt" type="text" placeholder="ターゲット（訳語）">
-        <input id="termnote" type="text" placeholder="ノート（任意）">
-        <button class="termaddbtn" id="termaddbtn" type="button">＋ 用語集に追加</button>
-      </div>
-      <div id="termbody"><div class="termhint">行をクリックすると、その原文に含まれる用語がここに表示されます。原文の語を選択すると用語集に登録できます（サーバーモード時）。</div></div>
-    </aside>
-  </div><!-- /panerow -->
+    <div class="refpane termpane" id="termpane" data-pane="term">
+      <h3 class="panehd" draggable="true">用語集<span class="histsrc" id="termsrc"></span></h3>
+      <div id="termbody"><div class="termhint">行をクリックすると、その原文の EN/JA と用語集（EN/JA 編集可）、登録フォームが表示されます（サーバーモード時）。原文/訳文を選択すると登録フォームへ流し込めます。</div></div>
+    </div>
+    <div class="refpane concpane" id="concpane" data-pane="conc">
+      <h3 class="panehd" draggable="true">Concordance search</h3>
+      <div id="concbody"><div class="histhint">（準備中）Concordance 検索はここに表示されます。</div></div>
+    </div>
+  </div><!-- /refbox -->
   </div><!-- /worklayout -->
   </div><!-- /view-work -->
 
@@ -613,43 +631,71 @@ function paintHistory(){
 const KTX=(window.__KT||{served:false,token:"",doc:"",project:""});
 let selRow=-1;
 function apiT(path,opts){opts=opts||{};opts.headers=Object.assign({"X-KT-Token":KTX.token,"Content-Type":"application/json"},opts.headers||{});return fetch(path,opts).then(r=>r.json());}
+function attq(s){return esc(String(s==null?"":s)).replace(/"/g,"&quot;");}
 function renderTerms(i){
   selRow=i;
-  const src=document.getElementById("termsrc"),body=document.getElementById("termbody");
-  const seg=plain(SEG[i].en);
-  src.textContent=seg?('「'+(seg.length>40?seg.slice(0,40)+'…':seg)+'」'):"";
+  var en=plain(SEG[i].en), ja=jaValue(i)||"";
+  var srcEl=document.getElementById("termsrc");if(srcEl)srcEl.textContent=en?('「'+(en.length>30?en.slice(0,30)+'…':en)+'」'):"";
   function draw(list){
-    if(!list||!list.length){body.innerHTML='<div class="termhint">この原文に該当する用語はありません。</div>';return;}
-    body.innerHTML='<div class="termlist">'+list.map(t=>{
-      const s=esc(t.source!=null?t.source:(t.en||""));
-      const tg=esc(t.target!=null?t.target:(t.ja||""));
-      const meta=[t.note,t.doc,t.project].filter(Boolean).map(esc).join(" ・ ");
-      return '<div class="termitem"><div class="s">'+s+'</div><div class="t">'+(tg||'<span class="histhint">（訳未登録）</span>')+'</div>'+(meta?'<div class="m">'+meta+'</div>':'')+'</div>';
-    }).join("")+'</div>';
+    var h='';
+    h+='<div class="tpseg"><div class="tpk">原文 (EN)・選択して↓フォームへ</div><div class="tpen" id="tp-en">'+esc(en)+'</div>';
+    h+='<div class="tpk">訳文 (JA)・選択して↓フォームへ</div><div class="tpja" id="tp-ja">'+(esc(ja)||'<span class="histhint">（未入力）</span>')+'</div></div>';
+    h+='<div class="tpadd"><div class="tpk">用語集に追加（文／句／単語）</div>';
+    h+='<input id="termsel-en" placeholder="ソース (EN)">';
+    h+='<input id="termtgt" placeholder="ターゲット (JA)">';
+    h+='<input id="termnote" placeholder="ノート（任意）">';
+    h+='<button class="termaddbtn" id="termaddbtn" type="button">＋ 用語集に追加</button></div>';
+    if(list&&list.length){
+      h+='<div class="tpk">この原文の用語（EN/JA 編集可）</div><div class="termlist">'+list.map(function(t){
+        var id=t.id||"", s=(t.source!=null?t.source:(t.en||"")), tg=(t.target!=null?t.target:(t.ja||""));
+        var editable=(id&&KTX.served);
+        return '<div class="termitem" data-id="'+attq(id)+'">'
+          +'<input class="te-en" value="'+attq(s)+'"'+(editable?'':' readonly')+'>'
+          +'<input class="te-ja" value="'+attq(tg)+'"'+(editable?'':' readonly')+'>'
+          +'<div class="te-act">'+(editable?'<button class="te-save" type="button" title="EN/JA を保存">保存</button><button class="te-del" type="button" title="用語を削除">削除</button>':'<span class="histhint">ローカル</span>')+'</div>'
+          +'</div>';
+      }).join("")+'</div>';
+    } else { h+='<div class="termhint">この原文に該当する用語はありません。原文/訳文を選択して上のフォームから登録できます。</div>'; }
+    var body=document.getElementById("termbody");if(body)body.innerHTML=h;
   }
-  if(KTX.served){apiT("/api/terms?seg="+encodeURIComponent(seg)).then(d=>draw((d&&d.rows)||[])).catch(()=>draw(SEG[i].glossary||[]));}
+  if(KTX.served){apiT("/api/terms?seg="+encodeURIComponent(en)).then(function(d){draw((d&&d.rows)||[]);}).catch(function(){draw(SEG[i].glossary||[]);});}
   else {draw(SEG[i].glossary||[]);}
 }
-// 原文の語を選択 → 用語登録エリアを表示（サーバーモードのみ）
-document.getElementById("rows").addEventListener("mouseup",e=>{
+// 表(本文)で語を選択 → 追加フォームの EN へ
+document.getElementById("rows").addEventListener("mouseup",function(e){
   if(!KTX.served)return;
-  const sel=(window.getSelection?window.getSelection().toString():"").trim();
-  if(sel&&sel.length<=80){
-    const tr=e.target.closest("tr");if(tr&&tr.dataset.i)selRow=+tr.dataset.i;
-    document.getElementById("termsel").textContent=sel;
-    const tgt=document.getElementById("termtgt");if(selRow>=0&&!tgt.value)tgt.value=jaValue(selRow)||"";
-    document.getElementById("termadd").hidden=false;
+  var sel=(window.getSelection?window.getSelection().toString():"").trim();
+  if(sel&&sel.length<=120){
+    var tr=e.target.closest("tr");if(tr&&tr.dataset.i)selRow=+tr.dataset.i;
+    var a=document.getElementById("termsel-en");if(a)a.value=sel;
   }
 });
-(function(){var b=document.getElementById("termaddbtn");if(!b)return;b.addEventListener("click",function(){
-  var source=document.getElementById("termsel").textContent.trim();if(!source)return;
-  var rec={source:source,target:document.getElementById("termtgt").value,note:document.getElementById("termnote").value,
-           example:(selRow>=0?plain(SEG[selRow].en):""),doc:(KTX.doc||ART),project:(KTX.project||"")};
-  b.disabled=true;apiT("/api/term-save",{method:"POST",body:JSON.stringify(rec)}).then(function(){
-    b.disabled=false;document.getElementById("termtgt").value="";document.getElementById("termnote").value="";
-    document.getElementById("termadd").hidden=true;if(selRow>=0)renderTerms(selRow);
-  }).catch(function(){b.disabled=false;});
-});})();
+// 用語ペイン内: 原文/訳文の選択→フォーム流し込み、追加/保存/削除（委譲）
+(function(){var tb=document.getElementById("termbody");if(!tb)return;
+  tb.addEventListener("mouseup",function(e){
+    var sel=(window.getSelection?window.getSelection().toString():"").trim();if(!sel)return;
+    if(e.target.closest("#tp-en")){var a=document.getElementById("termsel-en");if(a)a.value=sel;}
+    else if(e.target.closest("#tp-ja")){var b=document.getElementById("termtgt");if(b)b.value=sel;}
+  });
+  tb.addEventListener("click",function(e){
+    if(!KTX.served)return;
+    if(e.target.closest("#termaddbtn")){
+      var src=(document.getElementById("termsel-en").value||"").trim();if(!src)return;
+      var rec={source:src,target:document.getElementById("termtgt").value,note:document.getElementById("termnote").value,
+               example:(selRow>=0?plain(SEG[selRow].en):""),doc:(KTX.doc||ART),project:(KTX.project||"")};
+      var btn=e.target.closest("#termaddbtn");btn.disabled=true;
+      apiT("/api/term-save",{method:"POST",body:JSON.stringify(rec)}).then(function(){if(selRow>=0)renderTerms(selRow);}).catch(function(){btn.disabled=false;});
+      return;
+    }
+    var it=e.target.closest(".termitem");if(!it)return;var id=it.getAttribute("data-id");if(!id)return;
+    if(e.target.closest(".te-save")){
+      var rec={id:id,source:it.querySelector(".te-en").value,target:it.querySelector(".te-ja").value};
+      apiT("/api/term-save",{method:"POST",body:JSON.stringify(rec)}).then(function(){if(selRow>=0)renderTerms(selRow);});
+    } else if(e.target.closest(".te-del")){
+      apiT("/api/term-delete",{method:"POST",body:JSON.stringify({id:id})}).then(function(){if(selRow>=0)renderTerms(selRow);});
+    }
+  });
+})();
 document.getElementById("rows").addEventListener("click",e=>{
   if(e.target.closest(".jaedit")||e.target.closest(".confbox")||e.target.closest(".palette"))return; // 編集/確定/タグ挿入はそのまま
   const tr=e.target.closest("tr");if(!tr||!tr.dataset.i)return;
@@ -739,12 +785,27 @@ function saveWIP(){
   try{localStorage.setItem(LSKEY,JSON.stringify(edits));localStorage.setItem(LSKEY_C,JSON.stringify(confirms));}catch(e){}
   var tag=document.getElementById("savedat");
   if(KTX.served){
-    apiT("/api/save-edits",{method:"POST",body:JSON.stringify({art:ART,edits:edits,confirms:confirms})})
-      .then(function(d){if(tag)tag.textContent=(d&&d.ok)?("保存しました "+(d.savedAt||_hm())):"保存失敗（ローカルには保存済）";})
+    return apiT("/api/save-edits",{method:"POST",body:JSON.stringify({art:ART,edits:edits,confirms:confirms})})
+      .then(function(d){if(tag)tag.textContent=(d&&d.ok)?("保存しました "+(d.savedAt||_hm())):"保存失敗（ローカルには保存済）";return d;})
       .catch(function(){if(tag)tag.textContent="保存（ローカルのみ）"+_hm();});
-  } else { if(tag)tag.textContent="保存（ローカル）"+_hm(); }
+  } else { if(tag)tag.textContent="保存（ローカル）"+_hm(); return Promise.resolve(); }
 }
 (function(){var b=document.getElementById("savewip");if(b)b.addEventListener("click",saveWIP);})();
+// TEPウィンドウ ヘッダー: 再読み込み / 別タブで開く / 保存して閉じる
+(function(){
+  var rl=document.getElementById("winreload");if(rl)rl.addEventListener("click",function(){location.reload();});
+  var nt=document.getElementById("winnewtab");if(nt){nt.setAttribute("href",location.href);nt.setAttribute("target","_blank");nt.setAttribute("rel","noopener");}
+  var sc=document.getElementById("winsaveclose");
+  // 「保存して閉じる」は iframe 内（サーバーモードで実ドキュメント）表示時のみ有効
+  if(sc && KTX.served && KTX.doc && window.parent && window.parent!==window){
+    sc.hidden=false;
+    sc.addEventListener("click",function(){
+      Promise.resolve(saveWIP()).then(function(){
+        try{ if(window.parent.closeActiveTEP) window.parent.closeActiveTEP(); }catch(e){}
+      });
+    });
+  }
+})();
 // Ctrl+S でも途中保存
 document.addEventListener("keydown",function(e){if((e.ctrlKey||e.metaKey)&&(e.key==="s"||e.key==="S")){e.preventDefault();saveWIP();}});
 // 開いた時にサーバー保存分を自動復元（サーバーモード）
@@ -762,8 +823,42 @@ function switchVTab(v){
   document.getElementById("view-summary").hidden=(v!=="summary");
   document.getElementById("vt-work").setAttribute("aria-pressed",String(v==="work"));
   document.getElementById("vt-summary").setAttribute("aria-pressed",String(v==="summary"));
+  document.body.classList.toggle("summaryview",v==="summary");
 }
 document.querySelectorAll(".vtab").forEach(b=>b.addEventListener("click",()=>switchVTab(b.dataset.v)));
+/* ===== Reference ボックス: ペインのドラッグ&ドロップ並べ替え（順序は localStorage に保存） ===== */
+(function(){
+  var box=document.getElementById("refbox");if(!box)return;
+  var LS="kotonoha-reforder";
+  function panes(){return Array.prototype.slice.call(box.querySelectorAll(".refpane"));}
+  try{var ord=JSON.parse(localStorage.getItem(LS)||"null");
+    if(ord&&ord.length){ord.forEach(function(p){var el=box.querySelector('.refpane[data-pane="'+p+'"]');if(el)box.appendChild(el);});}
+  }catch(e){}
+  function saveOrder(){try{localStorage.setItem(LS,JSON.stringify(panes().map(function(el){return el.getAttribute("data-pane");})));}catch(e){}}
+  var dragEl=null;
+  box.addEventListener("dragstart",function(e){
+    var hd=e.target.closest(".panehd");if(!hd){return;}
+    dragEl=hd.closest(".refpane");
+    try{e.dataTransfer.effectAllowed="move";e.dataTransfer.setData("text/plain","pane");}catch(_){}
+  });
+  box.addEventListener("dragover",function(e){
+    if(!dragEl)return;var over=e.target.closest(".refpane");if(!over||over===dragEl)return;
+    e.preventDefault();panes().forEach(function(p){p.classList.toggle("dragover",p===over);});
+  });
+  box.addEventListener("drop",function(e){
+    if(!dragEl)return;e.preventDefault();
+    var over=e.target.closest(".refpane");
+    panes().forEach(function(p){p.classList.remove("dragover");});
+    if(over&&over!==dragEl){
+      var r=over.getBoundingClientRect();
+      var after=((e.clientY-r.top)>r.height/2)||((e.clientX-r.left)>r.width/2);
+      box.insertBefore(dragEl, after?over.nextSibling:over);
+      saveOrder();
+    }
+    dragEl=null;
+  });
+  box.addEventListener("dragend",function(){panes().forEach(function(p){p.classList.remove("dragover");});dragEl=null;});
+})();
 /* ===== 編集ペイン右クリックメニュー: 元に戻す / 英語のまま / 履歴をコピー ===== */
 (function(){
   var st=document.createElement("style");

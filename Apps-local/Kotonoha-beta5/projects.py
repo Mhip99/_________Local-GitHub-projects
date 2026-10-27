@@ -1110,7 +1110,8 @@ def dashboard_html(projects, served=False, token=""):
 @media(prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#101319;--card:#191D25;--ink:#E9EBEF;--muted:#9BA3AF;--line:#2A303A;--accent:#48AEC6;--work:#D6A24A;--work-bg:#33280f80;--rev:#48AEC6;--rev-bg:#17303880;--done:#4CB985;--done-bg:#15302480;}}
 :root[data-theme=dark]{--bg:#101319;--card:#191D25;--ink:#E9EBEF;--muted:#9BA3AF;--line:#2A303A;--accent:#48AEC6;--work:#D6A24A;--work-bg:#33280f80;--rev:#48AEC6;--rev-bg:#17303880;--done:#4CB985;--done-bg:#15302480;}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI","Noto Sans JP",system-ui,sans-serif;line-height:1.5}
-.wrap{max-width:none;margin:0;padding:24px clamp(16px,2.5vw,48px) 60px}
+.wrap{max-width:none;margin:0;padding:8px clamp(8px,1.2vw,16px) 36px}
+body.served .wrap{padding-top:4px}
 h1{font-size:22px;margin:.2em 0}.sub{color:var(--muted);font-size:13px;margin-bottom:16px}
 .ctl{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:14px 0}
 .ctl input[type=search]{flex:1;min-width:180px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink)}
@@ -1230,15 +1231,15 @@ footer{color:var(--muted);font-size:12px;margin-top:18px}
 <script>window.__KT=__KTCFG__;</script>
 <div class="wrap">
 <style>
-.ptabs{display:flex;flex-wrap:wrap;gap:4px;margin:10px 0 12px;border-bottom:2px solid var(--hairline);align-items:flex-end}
-.ptab{appearance:none;border:1px solid var(--hairline);border-bottom:none;background:var(--surface);color:inherit;padding:7px 10px 7px 12px;border-radius:10px 10px 0 0;font-weight:700;font-size:13px;cursor:pointer;margin-bottom:-2px;max-width:280px;display:flex;align-items:center;gap:6px;text-align:left}
+.ptabs{display:flex;flex-wrap:wrap;gap:2px;margin:2px 0 6px;border-bottom:2px solid var(--hairline);align-items:flex-end}
+.ptab{appearance:none;border:1px solid var(--hairline);border-bottom:none;background:var(--surface);color:inherit;padding:5px 8px;border-radius:9px 9px 0 0;font-weight:700;font-size:13px;cursor:pointer;margin-bottom:-2px;max-width:280px;display:flex;align-items:center;gap:6px;text-align:left}
 .ptab[aria-pressed="true"]{background:var(--accent,#2563eb);color:#fff;border-color:transparent}
 .ptab .lbl{flex:1 1 auto;min-width:0;line-height:1.25;max-height:2.9em;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word}
 .ptab .x{flex:0 0 auto;margin-left:2px;opacity:.7;font-weight:700;font-size:15px;line-height:1;cursor:pointer;border-radius:4px;padding:0 3px}
 .ptab .x:hover{opacity:1;background:rgba(127,127,127,.25)}
 .tepbar{display:flex;align-items:center;gap:10px;margin:2px 0 8px}
 .tepbar .tephint{color:var(--muted);font-size:13px}
-.tepframe{display:block;width:100%;height:calc(100vh - 190px);min-height:420px;border:1px solid var(--hairline);border-radius:8px;background:var(--surface)}
+.tepframe{display:block;width:100%;height:calc(100vh - 84px);min-height:460px;border:1px solid var(--hairline);border-radius:8px;background:var(--surface)}
 </style>
 <div class="ptabs" id="ptabs"></div>
 <div id="ptab-proj">
@@ -1735,7 +1736,7 @@ function renderPTabs(){
   var tabs=KT.served?tepTabs():[];
   if(tabs.length){
     tabs.forEach(function(t){var w="tep:"+t.id;
-      html+='<button class="ptab" data-ptab="'+esc(w)+'" type="button" aria-pressed="'+(act===w)+'" title="'+esc(t.title)+'"><span class="lbl">'+esc(t.title||"(無題)")+'</span><span class="x" data-close="'+esc(t.id)+'" title="閉じる">×</span></button>';});
+      html+='<button class="ptab" data-ptab="'+esc(w)+'" type="button" aria-pressed="'+(act===w)+'" title="'+esc((t.title||"")+" — 解析・Pre-translation済み／作業内容は自動保存")+'"><span class="lbl">'+esc(t.title||"(無題)")+'</span><span class="x" data-close="'+esc(t.id)+'" title="閉じる">×</span></button>';});
   } else if(KT.served){
     html+='<button class="ptab" data-ptab="demo" type="button" aria-pressed="'+(act==="demo")+'">TM-Match-Explorer</button>';
   }
@@ -1745,18 +1746,19 @@ function viewIdFor(which){ if(which==="demo")return "tepview-__demo__"; if(which
 function ensureView(id,url){
   var box=document.getElementById("tepviews");if(!box||document.getElementById("tepview-"+id))return;
   var v=document.createElement("div");v.id="tepview-"+id;v.className="tepview";v.hidden=true;
-  v.innerHTML='<div class="tepbar"><span class="tephint">解析・Pre-translation済み／作業内容は自動保存</span><button class="btn rl" type="button">再読み込み</button><a class="btn nt" target="_blank" rel="noopener">別タブで開く</a></div><iframe class="tepframe"></iframe>';
+  // ヒント/再読み込み/別タブ/保存して閉じる は TEPウィンドウ（iframe内）側のヘッダーへ移設。ここは iframe のみ。
+  v.innerHTML='<iframe class="tepframe"></iframe>';
   box.appendChild(v);
-  var fr=v.querySelector("iframe");fr.src=url;
-  v.querySelector(".rl").onclick=function(){fr.src=fr.src;};
-  v.querySelector(".nt").href=url;
+  v.querySelector("iframe").src=url;
 }
 function ensureDemo(){
   var box=document.getElementById("tepviews");if(!box||document.getElementById("tepview-__demo__"))return;
   var v=document.createElement("div");v.id="tepview-__demo__";v.className="tepview";v.hidden=true;
-  v.innerHTML='<div class="tepbar"><span class="tephint">空の表示（翻訳／サマリーの2タブ）。プロジェクトを「実行」または記事を「開く」とプロジェクト名タブに表示します。</span></div><iframe class="tepframe" src="/explorer"></iframe>';
+  v.innerHTML='<iframe class="tepframe" src="/explorer"></iframe>';
   box.appendChild(v);
 }
+// TEPウィンドウ(iframe・同一オリジン)から「保存して閉じる」で現在のタブを閉じるために公開
+window.closeActiveTEP=function(){var a=ptabActive();if(a.indexOf("tep:")===0)closeTEP(a.slice(4));};
 function showPTab(which){
   ptabActiveSave(which);
   var proj=document.getElementById("ptab-proj");if(proj)proj.hidden=(which!=="proj");
