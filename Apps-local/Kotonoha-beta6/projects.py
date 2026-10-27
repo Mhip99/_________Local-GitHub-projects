@@ -1178,6 +1178,10 @@ def build_rows(projects, served=False):
                 len(p.get("sub_tms", [])))
         else:
             src = p.get("source", "")
+        # 「再開」判定: 生成済み作業ファイル(artifacts)の実体があれば再開（再解析せず開くだけ）可能
+        produced = [{"title": a.get("title", ""), "html": a.get("html", "")}
+                    for a in (p.get("artifacts") or [])
+                    if a.get("html") and os.path.isfile(a.get("html", ""))]
         rows.append({
             "n": i, "title": (p.get("title") or p.get("name") or ""), "status": p.get("status", ""),
             "project": p.get("project", ""),
@@ -1189,6 +1193,8 @@ def build_rows(projects, served=False):
             "id": row_id(p),
             "pid": (p.get("id", "") if runnable else ""),
             "cmd": (run_cmd(p.get("id", "")) if runnable else ""),
+            "produced": produced,
+            "ran": bool(produced),
         })
     return rows
 
@@ -1263,7 +1269,10 @@ th .rz:hover{background:var(--accent);opacity:.35}
 .open{display:inline-block;background:var(--accent);color:#fff;text-decoration:none;padding:6px 12px;border-radius:8px;font-size:13px;font-weight:600;white-space:nowrap}
 .run{display:inline-block;background:transparent;color:var(--accent);border:1px solid var(--accent);padding:5px 11px;border-radius:8px;font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer}
 .run:hover{background:var(--accent);color:#fff}
-.run:disabled,.exp:disabled{opacity:.55;cursor:default}
+.run:disabled,.exp:disabled,.resume:disabled{opacity:.55;cursor:default}
+.resume{display:inline-block;background:var(--accent);color:#fff;border:1px solid var(--accent);padding:5px 11px;border-radius:8px;font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer}
+.resume:hover{filter:brightness(1.08)}
+.run.reana{margin-left:5px;padding:5px 9px;font-size:12px;opacity:.85}
 .exp{display:inline-block;margin-left:5px;background:transparent;color:var(--done);border:1px solid var(--done);padding:5px 10px;border-radius:8px;font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer}
 .exp:hover{background:var(--done);color:#fff}
 .det{display:inline-block;margin-left:5px;background:transparent;color:var(--muted);border:1px solid var(--line);padding:5px 10px;border-radius:8px;font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer}
@@ -1499,8 +1508,19 @@ function render(){
   document.getElementById("empty").hidden=list.length>0;
   document.getElementById("rows").innerHTML=list.map(p=>{
     let inner="";
-    if(p.pid){inner='<button class="run" type="button" data-pid="'+esc(p.pid)+'" data-cmd="'+esc(p.cmd)+'" data-n="'+p.n+'" title="'+(KT.served?'クリックで解析＋Pre-translation を実行（結果はプロジェクト名タブに表示）':'クリックで実行コマンドをコピー ／ またはランチャー [P] で G → 番号 '+p.n)+'">実行</button>';
-      if(KT.served){inner+='<button class="exp" type="button" data-pid="'+esc(p.pid)+'" title="TM を適用して元の形式で翻訳版を出力（.json/.docx/.xlsx 等。TEP確定→TM書き戻しの後に実行）">出力</button>';}}
+    if(p.pid){
+      if(KT.served){
+        if(p.ran){
+          inner='<button class="resume" type="button" data-pid="'+esc(p.pid)+'" title="既存の作業ファイル（TEPウィンドウ）を開く。再解析はしないので編集はそのまま">再開</button>';
+          inner+='<button class="run reana" type="button" data-pid="'+esc(p.pid)+'" data-n="'+p.n+'" title="解析＋Pre-translation をやり直す（MTは保存済みを自動再反映）">再解析</button>';
+        } else {
+          inner='<button class="run" type="button" data-pid="'+esc(p.pid)+'" data-cmd="'+esc(p.cmd)+'" data-n="'+p.n+'" title="クリックで解析＋Pre-translation を実行（結果はプロジェクト名タブに表示）">実行</button>';
+        }
+        inner+='<button class="exp" type="button" data-pid="'+esc(p.pid)+'" title="TM を適用して元の形式で翻訳版を出力（.json/.docx/.xlsx 等。TEP確定→TM書き戻しの後に実行）">出力</button>';
+      } else {
+        inner='<button class="run" type="button" data-pid="'+esc(p.pid)+'" data-cmd="'+esc(p.cmd)+'" data-n="'+p.n+'" title="クリックで実行コマンドをコピー ／ またはランチャー [P] で G → 番号 '+p.n+'">実行</button>';
+      }
+    }
     else if(p.uri){inner='<a class="open" href="'+esc(p.uri)+'" data-title="'+esc(p.project||p.title||p.name||"")+'" target="_blank" rel="noopener">開く</a>';}
     if(KT.served&&p.id){inner+='<button class="edit" type="button" data-id="'+esc(p.id)+'" title="状態・メモ・期日・削除">編集</button>';}
     if(KT.served&&p.pid){inner+='<button class="det" type="button" data-pid="'+esc(p.pid)+'" aria-pressed="false" title="作業サマリーと中間生成物（_Details フォルダー）を表示">詳細</button>';}
@@ -1527,6 +1547,13 @@ document.getElementById("rows").addEventListener("click",e=>{
   if(db&&KT.served){toggleDetails(db.getAttribute("data-pid"),db);return;}
   const xb=e.target.closest("button.exp");
   if(xb&&KT.served){openExportChoice(xb.getAttribute("data-pid"),xb);return;}
+  const rz=e.target.closest("button.resume");
+  if(rz&&KT.served){
+    const pid=rz.getAttribute("data-pid");const row=P.find(x=>x.pid===pid);
+    if(row&&row.produced&&row.produced.length){openProduced(row.title||row.project||row.name||"",row.produced);}
+    else{toast("作業ファイルが見つかりません。『再解析』で生成してください。");}
+    return;
+  }
   const b=e.target.closest("button.run");if(!b)return;
   const pid=b.getAttribute("data-pid"),cmd=b.getAttribute("data-cmd"),n=b.getAttribute("data-n");
   if(KT.served&&pid){
