@@ -184,12 +184,13 @@ td.ja.isconfirmed::after{content:"確定";font-size:10px;color:var(--reuse);marg
 .segpane{flex:0 0 auto;height:46vh;min-height:140px;overflow:auto;resize:vertical;border:1px solid var(--hairline);
   border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow);}
 .segpane table{margin:0;}
-/* Reference ボックス（翻訳履歴・用語・Concordance を内包。名称は非表示）: 縦スタック。
-   ボックス自身を縦リサイズ可（高さ保持）。各ペインは高さを resize:vertical で個別調整、
-   ヘッダーのドラッグ&ドロップで縦に並べ替え（順序・サイズは保持）。 */
-.refbox{flex:0 0 auto;height:42vh;min-height:140px;overflow:auto;resize:vertical;
-  display:flex;flex-direction:column;gap:10px;}
-.refpane,.histpane,.termpane{flex:0 0 auto;height:200px;min-height:100px;overflow:auto;resize:vertical;
+/* Reference ボックス（翻訳履歴・用語・Concordance を内包。名称は非表示）: 折り返し配置で上下左右に自由配置。
+   既定は上段2＋下段1（各ペイン約半幅）。ペインを幅広にすると 1＋2 等にもできる。
+   各ペインは幅・高さとも resize:both で個別調整、ヘッダーのドラッグ&ドロップで並べ替え（順序・サイズ保持）。
+   ボックス自身も縦リサイズ可（高さ保持）。 */
+.refbox{flex:0 0 auto;height:46vh;min-height:140px;overflow:auto;resize:vertical;
+  display:flex;flex-wrap:wrap;gap:10px;align-content:flex-start;align-items:flex-start;}
+.refpane,.histpane,.termpane{flex:1 1 46%;min-width:200px;height:220px;min-height:110px;overflow:auto;resize:both;
   display:flex;flex-direction:column;
   background:var(--surface);border:1px solid var(--hairline);border-radius:var(--radius);box-shadow:var(--shadow);padding:10px 12px;}
 .refpane.dragover{outline:2px dashed var(--accent,#2b7a78);outline-offset:-3px;}
@@ -872,7 +873,8 @@ document.querySelectorAll(".vtab").forEach(b=>b.addEventListener("click",()=>swi
     panes().forEach(function(p){p.classList.remove("dragover");});
     if(over&&over!==dragEl){
       var r=over.getBoundingClientRect();
-      var after=((e.clientY-r.top)>r.height/2);   // 縦スタック: 上半分=前, 下半分=後ろ
+      // 折り返し配置: ポインタが対象ペインの左半分=前, 右半分=後ろ（＝左右・上下に自由配置）
+      var after=((e.clientX-r.left)>r.width/2);
       box.insertBefore(dragEl, after?over.nextSibling:over);
       saveOrder();
     }
@@ -896,6 +898,8 @@ document.querySelectorAll(".vtab").forEach(b=>b.addEventListener("click",()=>swi
   function saveBox(){clearTimeout(tB);tB=setTimeout(function(){try{localStorage.setItem(LSB,box.style.height||"");}catch(e){}},300);}
   function savePanes(){clearTimeout(tP);tP=setTimeout(function(){
     var o={};Array.prototype.forEach.call(box.querySelectorAll(".refpane"),function(p){
+      // 幅をリサイズしたら flex を固定化して幅が維持されるようにする
+      if(p.style.width && p.style.flex!=="0 0 auto")p.style.flex="0 0 auto";
       o[p.getAttribute("data-pane")]={w:p.style.width||"",h:p.style.height||""};});
     try{localStorage.setItem(LSP,JSON.stringify(o));}catch(e){}
   },300);}

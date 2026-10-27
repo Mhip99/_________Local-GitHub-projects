@@ -87,6 +87,11 @@
      "pct": 44.4
     },
     {
+     "ja": "これで、データがJoinされました。",
+     "en": "now you have your data joined together.",
+     "pct": 42.9
+    },
+    {
      "ja": "データ変換に関するアクティビティ<g id=\"i14\"> </g>",
      "en": "data transformation activities",
      "pct": 40.0
@@ -94,11 +99,6 @@
     {
      "ja": "疑問や質問に対しても、Data Warehouse が回答を提供します。",
      "en": "you have questions, the data warehouse can answer them.",
-     "pct": 37.5
-    },
-    {
-     "ja": "保存します。これで新しいデータソースが作成されます。",
-     "en": "save it, and you have a new data source!",
      "pct": 37.5
     }
    ]
