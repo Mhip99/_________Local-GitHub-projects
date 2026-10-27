@@ -789,6 +789,45 @@ def project_details(projects, pid):
             "exists": os.path.isdir(det), "summary": summary, "files": files}
 
 
+# ===== TM タブ: プロジェクトが使用する TM を列挙（編集は書込可能TMのみ許可） =====
+_TM_EDIT_MAXSIZE = 60 * 1024 * 1024   # これ以上大きいTMは編集対象外（巨大XTM保護）
+
+def _tm_editable(path, size):
+    """書込可能TMか: XTM（読み取り専用コーパス）配下でなく、サイズが閾値未満。"""
+    p = (path or "").replace("\\", "/").lower()
+    if "/xtm/" in p:
+        return False
+    return 0 < size < _TM_EDIT_MAXSIZE
+
+def tm_list_rows(projects, with_count=True):
+    """台帳の全プロジェクトが参照する TM（メイン/サブ/Product）を一覧化。"""
+    import tm_io
+    seen = set(); rows = []
+    def add(path, role):
+        if not path:
+            return
+        ap = os.path.abspath(path)
+        key = ap.lower()
+        if key in seen:
+            return
+        seen.add(key)
+        exists = os.path.isfile(ap)
+        size = (os.path.getsize(ap) if exists else 0)
+        editable = exists and _tm_editable(ap, size)
+        cnt = (tm_io.count(ap) if (editable and with_count) else None)
+        rows.append({"path": ap, "name": os.path.basename(ap), "role": role,
+                     "exists": exists, "size": size, "editable": editable, "count": cnt})
+    for p in projects:
+        add(p.get("main_tm", ""), "メインTM")
+        add(p.get("product_tm", ""), "Product TM")
+        for st in (p.get("sub_tms") or []):
+            add(st, "サブTM")
+    return rows
+
+def _tm_known_paths(projects):
+    return set(r["path"].lower() for r in tm_list_rows(projects, with_count=False))
+
+
 # ===== 台帳フィールド操作（pid ベース・serve API 用。CLI は --index 版を別に持つ） =====
 def update_field(projects, store, pid, field, value):
     """Set one ledger field (status/memo/due) on the project with this id, then save."""
@@ -1248,6 +1287,7 @@ footer{color:var(--muted);font-size:12px;margin-top:18px}
 <div class="tabs" id="tabs" hidden>
   <button class="tab" id="tab-projects" data-view="projects" aria-pressed="true" type="button">プロジェクト</button>
   <button class="tab" id="tab-terms" data-view="terms" aria-pressed="false" type="button">用語管理</button>
+  <button class="tab" id="tab-tm" data-view="tm" aria-pressed="false" type="button">TM</button>
 </div>
 <div id="view-projects">
 <div class="ctl">
@@ -1283,6 +1323,20 @@ footer{color:var(--muted);font-size:12px;margin-top:18px}
   <tbody id="trows"></tbody></table></div>
   <div class="empty" id="tempty" hidden>用語がありません。「＋ 用語を追加」または「用語を抽出…」で登録してください。</div>
 </div><!-- /view-terms -->
+<div id="view-tm" hidden>
+  <div class="ctl">
+    <select id="tmsel" title="編集するTMを選択"></select>
+    <input id="tmq" type="search" placeholder="TMを検索（EN・JA 部分一致）…">
+    <button class="btn new" id="tmaddbtn" type="button">＋ エントリ追加</button>
+    <span class="termcount" id="tmcount"></span>
+    <span class="termcount" id="tminfo" style="opacity:.75"></span>
+  </div>
+  <div class="tablewrap"><table id="tmtable"><colgroup>
+    <col style="width:44%"><col style="width:44%"><col style="width:132px"><col style="width:120px"></colgroup>
+  <thead><tr><th>EN（原文）</th><th>JA（訳）</th><th>更新</th><th class="act">操作</th></tr></thead>
+  <tbody id="tmrows"></tbody></table></div>
+  <div class="empty" id="tmempty" hidden>エントリがありません（または検索に一致しません）。編集可能なTM（書込可能・XTM以外）を選択してください。</div>
+</div><!-- /view-tm -->
 </div><!-- /ptab-proj -->
 <div id="tepviews"></div>
 <footer>台帳: _projects.json ／ 用語集: _terms.tsv（全プロジェクト共通）／ この一覧は <code>projects.py dashboard</code> で生成。開き直すと最新になります。</footer>
@@ -1715,11 +1769,84 @@ if(termExportPanel){
 function switchView(v){
   document.getElementById("view-projects").hidden=(v!=="projects");
   document.getElementById("view-terms").hidden=(v!=="terms");
+  var vtm=document.getElementById("view-tm");if(vtm)vtm.hidden=(v!=="tm");
   document.getElementById("tab-projects").setAttribute("aria-pressed",String(v==="projects"));
   document.getElementById("tab-terms").setAttribute("aria-pressed",String(v==="terms"));
+  var ttm=document.getElementById("tab-tm");if(ttm)ttm.setAttribute("aria-pressed",String(v==="tm"));
   if(v==="terms")loadTerms();
+  if(v==="tm")loadTM();
 }
 document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>switchView(b.dataset.view)));
+// ===== TM タブ: TMエントリの一覧/検索/編集(EN+JA)/削除 =====
+var TMLIST=[], TMCUR="";
+function tmDate(d){var m=/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})/.exec(d||"");return m?(m[1]+"-"+m[2]+"-"+m[3]+" "+m[4]+":"+m[5]):(d||"");}
+function loadTM(){
+  return api("/api/tm-list").then(function(d){
+    TMLIST=(d&&d.rows)||[];
+    var sel=document.getElementById("tmsel");if(!sel)return;
+    sel.innerHTML=TMLIST.map(function(r){
+      var lbl=r.name+" ["+r.role+"]"+(r.editable?(r.count!=null?(" ・"+r.count+"件"):""):" ・読み取り専用");
+      return '<option value="'+esc(r.path)+'"'+(r.editable?"":" data-ro=\"1\"")+'>'+esc(lbl)+'</option>';
+    }).join("");
+    // 既定は編集可能な先頭TM
+    var firstEditable=TMLIST.filter(function(r){return r.editable;})[0];
+    TMCUR=(firstEditable?firstEditable.path:(TMLIST[0]?TMLIST[0].path:""));
+    if(TMCUR)sel.value=TMCUR;
+    loadTMEntries();
+  }).catch(function(){});
+}
+function curTMrow(){return TMLIST.find(function(r){return r.path===TMCUR;});}
+function loadTMEntries(){
+  var q=(document.getElementById("tmq")||{}).value||"";
+  var info=document.getElementById("tminfo");var row=curTMrow();
+  if(info)info.textContent=row?(row.editable?"編集可":"読み取り専用（XTML/サイズ）"):"";
+  if(!TMCUR){document.getElementById("tmrows").innerHTML="";document.getElementById("tmempty").hidden=false;return;}
+  api("/api/tm-entries?tm="+encodeURIComponent(TMCUR)+"&q="+encodeURIComponent(q)).then(function(d){
+    var rows=(d&&d.rows)||[];renderTMrows(rows);
+  }).catch(function(){renderTMrows([]);});
+}
+function renderTMrows(rows){
+  var tb=document.getElementById("tmrows");var row=curTMrow();var ed=(row&&row.editable);
+  document.getElementById("tmcount").textContent=rows.length?(rows.length+" 件"):"";
+  document.getElementById("tmempty").hidden=rows.length>0;
+  tb.innerHTML=rows.map(function(r){
+    var act=ed?('<button class="edit" type="button" data-act="tmedit">編集</button><button class="edit" type="button" data-act="tmdel" style="margin-left:4px">削除</button>'):'<span class="meta">読取専用</span>';
+    return '<tr data-src="'+esc(r.src)+'" data-tgt="'+esc(r.tgt)+'">'
+      +'<td class="ti">'+esc(r.src)+'</td><td class="ti">'+esc(r.tgt)+'</td>'
+      +'<td class="meta">'+esc(tmDate(r.changedate))+'</td><td class="act">'+act+'</td></tr>';
+  }).join("");
+}
+function openTmEdit(src,tgt){
+  var row=curTMrow();if(!row||!row.editable)return;
+  var m=el("div","modal");m.appendChild(el("h2",null,src?"TMエントリを編集":"TMエントリを追加"));
+  var bd=el("div","bd");
+  function fld(label,val){var f=el("div","fld");f.appendChild(el("label",null,label));var ta=el("textarea");ta.value=val||"";f.appendChild(ta);bd.appendChild(f);return ta;}
+  var enI=fld("EN（原文）",src);var jaI=fld("JA（訳）",tgt);
+  m.appendChild(bd);
+  var ft=el("div","ft");var ok=el("button","primary",src?"保存":"追加");var c=el("button","ghost","キャンセル");
+  ok.onclick=function(){
+    var body={tm:TMCUR,old_src:src||"",old_tgt:tgt||"",src:enI.value,tgt:jaI.value};
+    ok.disabled=true;
+    api("/api/tm-save",{method:"POST",body:JSON.stringify(body)}).then(function(r){
+      closeOvl();toast(r&&r.ok?"TMを更新しました（バックアップ作成済）":("更新失敗："+((r&&r.error)||"不明")));loadTMEntries();
+    }).catch(function(e){ok.disabled=false;toast("通信エラー: "+e);});
+  };
+  c.onclick=closeOvl;ft.appendChild(ok);ft.appendChild(c);m.appendChild(ft);overlay(m);
+}
+(function(){
+  var sel=document.getElementById("tmsel");if(sel)sel.addEventListener("change",function(){TMCUR=sel.value;loadTMEntries();});
+  var q=document.getElementById("tmq");if(q)q.addEventListener("input",function(){clearTimeout(window._tmqT);window._tmqT=setTimeout(loadTMEntries,250);});
+  var add=document.getElementById("tmaddbtn");if(add)add.addEventListener("click",function(){var row=curTMrow();if(!row||!row.editable){toast("編集可能なTMを選択してください");return;}openTmEdit("","");});
+  var tb=document.getElementById("tmrows");if(tb)tb.addEventListener("click",function(e){
+    var b=e.target.closest("button[data-act]");if(!b)return;var tr=b.closest("tr");if(!tr)return;
+    var src=tr.getAttribute("data-src"),tgt=tr.getAttribute("data-tgt");
+    if(b.getAttribute("data-act")==="tmedit"){openTmEdit(src,tgt);}
+    else if(b.getAttribute("data-act")==="tmdel"){
+      if(!confirm("このTMエントリを削除しますか？\\n"+src+" → "+tgt))return;
+      api("/api/tm-delete",{method:"POST",body:JSON.stringify({tm:TMCUR,src:src,tgt:tgt})}).then(function(r){toast(r&&r.ok?"削除しました（バックアップ作成済）":("削除失敗："+((r&&r.error)||"不明")));loadTMEntries();});
+    }
+  });
+})();
 
 // ===== 親タブ: プロジェクト / TM Match Explorer（下位構造は各タブ内に維持） =====
 // ===== 親タブ: プロジェクト ＋ 開いた記事ごとのプロジェクト名タブ（複数可） =====
@@ -2444,6 +2571,20 @@ elif a.cmd == "serve":
                     seg = q.get("seg", [""])[0]
                     terms = load_terms(TERMSTORE)
                     self._send(200, {"rows": (terms_for_segment(terms, seg) if seg else terms)}); return
+                if u.path == "/api/tm-list":
+                    self._send(200, {"rows": tm_list_rows(load(STORE))}); return
+                if u.path == "/api/tm-entries":
+                    import tm_io
+                    q = urllib.parse.parse_qs(u.query)
+                    tm = q.get("tm", [""])[0]
+                    if os.path.abspath(tm).lower() not in _tm_known_paths(load(STORE)):
+                        self._send(403, {"error": "unknown TM"}); return
+                    try:
+                        rows = tm_io.search(tm, q.get("q", [""])[0], int(q.get("limit", ["500"])[0] or 500))
+                        self._send(200, {"ok": True, "rows": rows})
+                    except Exception as e:
+                        self._send(200, {"ok": False, "error": str(e), "rows": []})
+                    return
                 if u.path == "/api/load-edits":
                     q = urllib.parse.parse_qs(u.query)
                     art = q.get("art", [""])[0] or "untitled"
@@ -2600,6 +2741,26 @@ elif a.cmd == "serve":
                 n = term_delete(terms, payload.get("id", ""))
                 save_terms(TERMSTORE, terms)
                 self._send(200, {"ok": True, "deleted": n}); return
+            if u.path in ("/api/tm-save", "/api/tm-delete"):
+                import tm_io
+                tm = payload.get("tm", "")
+                ap = os.path.abspath(tm)
+                rows = tm_list_rows(load(STORE), with_count=False)
+                row = next((r for r in rows if r["path"].lower() == ap.lower()), None)
+                if not row:
+                    self._send(403, {"error": "unknown TM"}); return
+                if not row.get("editable"):
+                    self._send(200, {"ok": False, "error": "このTMは編集できません（XTM 読み取り専用／サイズ超過）"}); return
+                try:
+                    if u.path == "/api/tm-save":
+                        res = tm_io.update(ap, payload.get("old_src", ""), payload.get("old_tgt", ""),
+                                           payload.get("src", ""), payload.get("tgt", ""))
+                    else:
+                        res = tm_io.delete(ap, payload.get("src", ""), payload.get("tgt", ""))
+                    self._send(200, res)
+                except Exception as e:
+                    self._send(200, {"ok": False, "error": str(e)})
+                return
             if u.path == "/api/term-export":
                 terms = load_terms(TERMSTORE)
                 fmt = (payload.get("fmt") or "tsv").lower()
