@@ -1717,7 +1717,7 @@
    "art": "Creating DataFlows in Magic ETL",
    "i": 222,
    "en": "Select {1}Duplicate{2} from the {3}Options Menu{4}.",
-   "pct": 50.0,
+   "pct": 54.5,
    "glossary": [
     {
      "en": "Select",
@@ -1725,6 +1725,11 @@
     }
    ],
    "tm_candidates": [
+    {
+     "ja": "リストからレポートを選択します。",
+     "en": "select report from the list.",
+     "pct": 54.5
+    },
     {
      "ja": "リストからキャンペーンを選択します。",
      "en": "select a campaign from the list.",
@@ -1736,19 +1741,14 @@
      "pct": 50.0
     },
     {
-     "ja": "Select a File From The ZIP Archive",
-     "en": "select a file from the zip archive",
-     "pct": 46.2
+     "ja": "ドロップダウンからビューを選択します。",
+     "en": "select a view from the dropdown.",
+     "pct": 50.0
     },
     {
-     "ja": "スキーマを選択します。",
-     "en": "select the schema.",
-     "pct": 44.4
-    },
-    {
-     "ja": "モニターを選択します。",
-     "en": "select the monitor.",
-     "pct": 44.4
+     "ja": "ナビゲーションヘッダーから{27}［データ］ {28}を選択します。",
+     "en": "select data from the navigational header.",
+     "pct": 50.0
     }
    ]
   },

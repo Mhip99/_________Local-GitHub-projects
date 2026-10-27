@@ -184,11 +184,12 @@ td.ja.isconfirmed::after{content:"確定";font-size:10px;color:var(--reuse);marg
 .segpane{flex:0 0 auto;height:46vh;min-height:140px;overflow:auto;resize:vertical;border:1px solid var(--hairline);
   border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow);}
 .segpane table{margin:0;}
-/* Reference ボックス（翻訳履歴・用語・Concordance を内包。名称は非表示）: ボックス自身を縦リサイズ可（高さは保持）。
-   内部の各ペインは resize:both で個別にリサイズ可。ヘッダーDnDで並べ替え。 */
+/* Reference ボックス（翻訳履歴・用語・Concordance を内包。名称は非表示）: 縦スタック。
+   ボックス自身を縦リサイズ可（高さ保持）。各ペインは高さを resize:vertical で個別調整、
+   ヘッダーのドラッグ&ドロップで縦に並べ替え（順序・サイズは保持）。 */
 .refbox{flex:0 0 auto;height:42vh;min-height:140px;overflow:auto;resize:vertical;
-  display:flex;flex-wrap:wrap;gap:10px;align-content:flex-start;}
-.refpane,.histpane,.termpane{flex:1 1 300px;min-width:200px;min-height:120px;overflow:auto;resize:both;
+  display:flex;flex-direction:column;gap:10px;}
+.refpane,.histpane,.termpane{flex:0 0 auto;height:200px;min-height:100px;overflow:auto;resize:vertical;
   display:flex;flex-direction:column;
   background:var(--surface);border:1px solid var(--hairline);border-radius:var(--radius);box-shadow:var(--shadow);padding:10px 12px;}
 .refpane.dragover{outline:2px dashed var(--accent,#2b7a78);outline-offset:-3px;}
@@ -871,7 +872,7 @@ document.querySelectorAll(".vtab").forEach(b=>b.addEventListener("click",()=>swi
     panes().forEach(function(p){p.classList.remove("dragover");});
     if(over&&over!==dragEl){
       var r=over.getBoundingClientRect();
-      var after=((e.clientY-r.top)>r.height/2)||((e.clientX-r.left)>r.width/2);
+      var after=((e.clientY-r.top)>r.height/2);   // 縦スタック: 上半分=前, 下半分=後ろ
       box.insertBefore(dragEl, after?over.nextSibling:over);
       saveOrder();
     }
