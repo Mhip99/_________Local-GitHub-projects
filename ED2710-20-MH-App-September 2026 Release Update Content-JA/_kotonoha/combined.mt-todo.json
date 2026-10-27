@@ -87,11 +87,6 @@
      "pct": 44.4
     },
     {
-     "ja": "これで、データがJoinされました。",
-     "en": "now you have your data joined together.",
-     "pct": 42.9
-    },
-    {
      "ja": "データ変換に関するアクティビティ<g id=\"i14\"> </g>",
      "en": "data transformation activities",
      "pct": 40.0
@@ -99,6 +94,11 @@
     {
      "ja": "疑問や質問に対しても、Data Warehouse が回答を提供します。",
      "en": "you have questions, the data warehouse can answer them.",
+     "pct": 37.5
+    },
+    {
+     "ja": "保存します。これで新しいデータソースが作成されます。",
+     "en": "save it, and you have a new data source!",
      "pct": 37.5
     }
    ]
@@ -919,7 +919,7 @@
    "art": "Creating DataFlows in Magic ETL",
    "i": 117,
    "en": "Expand{1} the {2}Utility {3}section on the left.{4}",
-   "pct": 46.2,
+   "pct": 44.4,
    "glossary": [
     {
      "en": "on the",
@@ -928,19 +928,9 @@
    ],
    "tm_candidates": [
     {
-     "ja": "アイコンはマップに表示されます。",
-     "en": "the icon displays on the map.",
-     "pct": 46.2
-    },
-    {
      "ja": "次に",
      "en": "on the",
      "pct": 44.4
-    },
-    {
-     "ja": "都市名のスペルを再チェックします。",
-     "en": "double-check the spelling on the city name.",
-     "pct": 42.9
     },
     {
      "ja": "データはキーで並べ替える必要があります。",
@@ -948,9 +938,19 @@
      "pct": 40.0
     },
     {
-     "ja": "上部にタブがあることに{1}注目してください",
-     "en": "notice that there's the tabs on the top.",
-     "pct": 40.0
+     "ja": "カテゴリーの目盛り上でラベルを非表示または表示",
+     "en": "hide or show the labels on the category scale",
+     "pct": 37.5
+    },
+    {
+     "ja": "値の目盛り上でラベルを非表示または表示",
+     "en": "hide or show the labels on the value scale",
+     "pct": 37.5
+    },
+    {
+     "ja": "最初の行にセクション名だけを表示します。",
+     "en": "only show the section name on the first row.",
+     "pct": 37.5
     }
    ]
   },
@@ -1717,7 +1717,7 @@
    "art": "Creating DataFlows in Magic ETL",
    "i": 222,
    "en": "Select {1}Duplicate{2} from the {3}Options Menu{4}.",
-   "pct": 54.5,
+   "pct": 50.0,
    "glossary": [
     {
      "en": "Select",
@@ -1725,11 +1725,6 @@
     }
    ],
    "tm_candidates": [
-    {
-     "ja": "リストからレポートを選択します。",
-     "en": "select report from the list.",
-     "pct": 54.5
-    },
     {
      "ja": "リストからキャンペーンを選択します。",
      "en": "select a campaign from the list.",
@@ -1741,14 +1736,19 @@
      "pct": 50.0
     },
     {
-     "ja": "ドロップダウンからビューを選択します。",
-     "en": "select a view from the dropdown.",
-     "pct": 50.0
+     "ja": "Select a File From The ZIP Archive",
+     "en": "select a file from the zip archive",
+     "pct": 46.2
     },
     {
-     "ja": "ナビゲーションヘッダーから{27}［データ］ {28}を選択します。",
-     "en": "select data from the navigational header.",
-     "pct": 50.0
+     "ja": "スキーマを選択します。",
+     "en": "select the schema.",
+     "pct": 44.4
+    },
+    {
+     "ja": "モニターを選択します。",
+     "en": "select the monitor.",
+     "pct": 44.4
     }
    ]
   },
