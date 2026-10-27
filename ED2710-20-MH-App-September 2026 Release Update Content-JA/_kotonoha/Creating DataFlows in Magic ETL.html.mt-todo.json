@@ -12,6 +12,33 @@
      "en": "combine",
      "ja": "結合"
     }
+   ],
+   "tm_candidates": [
+    {
+     "ja": "{5}データを結合する必要がある場合{6}",
+     "en": "if you need to combine data",
+     "pct": 66.7
+    },
+    {
+     "ja": "異なるDataSetを結合する必要がある。また、SQLについてよく知らない。",
+     "en": "you need to combine dissimilar datasets and aren’t familiar with sql.",
+     "pct": 47.1
+    },
+    {
+     "ja": "異なるDataSetを組み合わせるか、データを簡単に正規化する必要がある場合。",
+     "en": "you need to combine dissimilar datasets or normalize your data easily.",
+     "pct": 47.1
+    },
+    {
+     "ja": "結合する列",
+     "en": "columns to combine",
+     "pct": 44.4
+    },
+    {
+     "ja": "文字列を結合したい時など、などの関数と併用すると便利です。",
+     "en": "this is useful with functions like when you need to combine strings.",
+     "pct": 44.4
+    }
    ]
   },
   {
@@ -34,6 +61,33 @@
     {
      "en": "Transformation",
      "ja": "変換"
+    }
+   ],
+   "tm_candidates": [
+    {
+     "ja": "{7}データ変換操作に慣れていない場合{8}",
+     "en": "if you have limited data transformation experience",
+     "pct": 71.4
+    },
+    {
+     "ja": "データ変換",
+     "en": "data transformation",
+     "pct": 44.4
+    },
+    {
+     "ja": "データ変換に関するアクティビティ<g id=\"i14\"> </g>",
+     "en": "data transformation activities",
+     "pct": 40.0
+    },
+    {
+     "ja": "疑問や質問に対しても、Data Warehouse が回答を提供します。",
+     "en": "you have questions, the data warehouse can answer them.",
+     "pct": 37.5
+    },
+    {
+     "ja": "保存します。これで新しいデータソースが作成されます。",
+     "en": "save it, and you have a new data source!",
+     "pct": 37.5
     }
    ]
   },
@@ -90,25 +144,55 @@
      "en": "knowledge base.",
      "ja": "ナレッジベースをご覧ください。"
     }
+   ],
+   "tm_candidates": [
+    {
+     "ja": "以下の各ボタンを選択して、各要素がDataFlowでの処理にどのように役立つかを確認してください。",
+     "en": "select each button to learn more about what these elements can help you build in your dataflow.",
+     "pct": 60.7
+    },
+    {
+     "ja": "Magic ETLと各操作の詳細については、{13}<g id=\"i2\"><g id=\"i1\">{14}</g></g>{15}ナレッジベース{16}を参照してください。",
+     "en": "find even more information about magic etl and each individual action in our knowledge base.",
+     "pct": 48.1
+    },
+    {
+     "ja": "Magic ETLの詳細については、{3}<g id=\"i2\"><g id=\"i1\">{4}</g></g>{5}ナレッジベース{6}を参照してください。",
+     "en": "find even more information about magic etl in our knowledge base.",
+     "pct": 36.0
+    },
+    {
+     "ja": "ここでは、ETLインターフェースについて説明します。",
+     "en": "let’s get familiar with the etl interface.",
+     "pct": 30.4
+    },
+    {
+     "ja": "各ピンポイントを選択し、変革への取り組みに含めるべき要素を学びましょう。",
+     "en": "select each pinpoint to learn about different elements to include in your change initiative.",
+     "pct": 30.2
+    }
    ]
   },
   {
    "i": 34,
    "en": "{1}Best practices{2}",
    "pct": 0.0,
-   "glossary": []
+   "glossary": [],
+   "tm_candidates": []
   },
   {
    "i": 39,
    "en": "{1}Run Preview{2}",
    "pct": 0.0,
-   "glossary": []
+   "glossary": [],
+   "tm_candidates": []
   },
   {
    "i": 41,
    "en": "{1}Settings{2}",
    "pct": 0.0,
-   "glossary": []
+   "glossary": [],
+   "tm_candidates": []
   },
   {
    "i": 42,
@@ -139,13 +223,41 @@
      "en": "The DataFlow",
      "ja": "DataFlow"
     }
+   ],
+   "tm_candidates": [
+    {
+     "ja": "入力DataSetの更新時にDataFlowが自動的に実行されるように設定することができます。",
+     "en": "set your dataflow to run automatically based on when your input dataset(s) update.",
+     "pct": 68.4
+    },
+    {
+     "ja": "何も選択しなかった場合は、DataFlowを手動で実行する必要があります。",
+     "en": "if none are chosen, the dataflow will need to be run manually.",
+     "pct": 64.9
+    },
+    {
+     "ja": "DataFlowは手動で実行オプションを選択しないと更新されません。",
+     "en": "the dataflow will not update without someone selecting the run option manually.",
+     "pct": 27.0
+    },
+    {
+     "ja": "再度有効にするには、手動でDataSetを実行します。",
+     "en": "to reactivate, run the dataset manually.",
+     "pct": 25.8
+    },
+    {
+     "ja": "これらはDataSetにより決定されるの{35}ではなく{36}、地域にもとづいて自動的に含まれます。",
+     "en": "these are not determined by your dataset—they are included automatically based on the region.",
+     "pct": 25.6
+    }
    ]
   },
   {
    "i": 43,
    "en": "{1}DataSets{2}",
    "pct": 0.0,
-   "glossary": []
+   "glossary": [],
+   "tm_candidates": []
   },
   {
    "i": 44,
@@ -200,13 +312,41 @@
      "en": "Visualizations",
      "ja": "可視化"
     }
+   ],
+   "tm_candidates": [
+    {
+     "ja": "これにより、出力DataSetが作成されます。データの変換後にこの出力DataSetを使用して、可視化データを作成できます。",
+     "en": "this will create an output dataset that you can then use to create visualizations from after you’ve completed your data transforms.",
+     "pct": 62.7
+    },
+    {
+     "ja": "スクリプトの作成が完了したら、{17}［保存して閉じる］{18}を選択する必要があります。この方法で保存したスクリプトは、Analyzer内の［データ］列に表示されます。",
+     "en": "you always need to select save & close after you’ve completed your formula before it will appear in your data column list in analyzer.",
+     "pct": 20.0
+    },
+    {
+     "ja": "何らかの変換をした後（出力DataSetを設定した場合）、異なるDomo DataSetに書き戻せます。",
+     "en": "write back to a different domo dataset (if you’ve configured an output dataset) once you’ve made any transformations.",
+     "pct": 18.8
+    },
+    {
+     "ja": "Beast Modeを使用すると、基本的な変換、日付変換、カード要素の変換など、様々な追加の変換を作成できます。",
+     "en": "you can use beast modes to create basic transforms, date transforms, card element transforms and a number of additional transforms.",
+     "pct": 18.2
+    },
+    {
+     "ja": "データが表示され、Sales DataSetに正しい列を結合したかどうかを確認できます。",
+     "en": "this will allow you to see your data and make sure you’ve got the correct columns you want to join into your sales dataset.",
+     "pct": 17.1
+    }
    ]
   },
   {
    "i": 45,
    "en": "{1}Text{2}",
    "pct": 0.0,
-   "glossary": []
+   "glossary": [],
+   "tm_candidates": []
   },
   {
    "i": 46,
@@ -261,43 +401,102 @@
      "en": "Process",
      "ja": "プロセス"
     }
+   ],
+   "tm_candidates": [
+    {
+     "ja": "これらの関数は、Magic ETLでのデータ変換プロセスの一環としてテキストデータのクリーニング、フォーマット、標準化を行うために役立ちます。{34}",
+     "en": "these functions help clean, format, and standardize textual data as part of your data transformation process in magic etl.",
+     "pct": 66.7
+    },
+    {
+     "ja": "{33}［テキスト］タイルとは、ETLワークフロー内のテキストデータの処理や変換に使用されるコンポーネントを指します。",
+     "en": "text tiles refer to components used to manipulate and transform text data within your etl workflows.",
+     "pct": 58.8
+    },
+    {
+     "ja": "コードエンジン関数でにより、Domo DataSetをリアルタイムに操作し変換するためのカスタムコードを書き込むことが可能になります。",
+     "en": "code engine functions allow you to write custom code to manipulate and transform domo datasets in real time.",
+     "pct": 22.6
+    },
+    {
+     "ja": "5. 必要に応じタイルを追加して、データをクリーンアップし、操作します。",
+     "en": "5. add more tiles to cleanse and manipulate your data if desired.",
+     "pct": 21.3
+    },
+    {
+     "ja": "スクリプティングタイルの前後に、従来のすべてのDataFlowタイルを使用してデータを操作できることも、覚えておいてください。",
+     "en": "don't forget that you can still use all of the classic dataflow tiles to manipulate the data before and after your scripting tile.",
+     "pct": 20.7
+    }
    ]
   },
   {
    "i": 47,
    "en": "{1}Dates and Numbers{2}",
    "pct": 50.0,
-   "glossary": []
+   "glossary": [],
+   "tm_candidates": [
+    {
+     "ja": "AND",
+     "en": "and",
+     "pct": 50.0
+    },
+    {
+     "ja": "日時",
+     "en": "date and time",
+     "pct": 33.3
+    },
+    {
+     "ja": "絵文字と反応",
+     "en": "emojis and reactions",
+     "pct": 33.3
+    },
+    {
+     "ja": "すっきりと整理",
+     "en": "neat and organized",
+     "pct": 33.3
+    },
+    {
+     "ja": "{user1}と{user2}",
+     "en": "{user1} and {user2}",
+     "pct": 33.3
+    }
+   ]
   },
   {
    "i": 49,
    "en": "{1}Utility{2}",
    "pct": 0.0,
-   "glossary": []
+   "glossary": [],
+   "tm_candidates": []
   },
   {
    "i": 51,
    "en": "{1}Filter{2}",
    "pct": 0.0,
-   "glossary": []
+   "glossary": [],
+   "tm_candidates": []
   },
   {
    "i": 53,
    "en": "{1}Combine Data{2}",
    "pct": 0.0,
-   "glossary": []
+   "glossary": [],
+   "tm_candidates": []
   },
   {
    "i": 64,
    "en": "{1}Scripting{2}",
    "pct": 0.0,
-   "glossary": []
+   "glossary": [],
+   "tm_candidates": []
   },
   {
    "i": 66,
    "en": "{1}Data Science{2}",
    "pct": 0.0,
-   "glossary": []
+   "glossary": [],
+   "tm_candidates": []
   },
   {
    "i": 74,
@@ -343,6 +542,33 @@
     {
      "en": "Workflow",
      "ja": "ワークフロー"
+    }
+   ],
+   "tm_candidates": [
+    {
+     "ja": "Magic ETLで、タイルを直接キャンバスに追加できるようになりました。",
+     "en": "magic etl now includes the ability to add a tile directly to the canvas.",
+     "pct": 70.0
+    },
+    {
+     "ja": "この機能により、DataFlowの作成速度が向上し、ワークフロー全体の効率が向上します。",
+     "en": "the feature improves the speed of dataflow creation and overall workflow efficiency.",
+     "pct": 63.2
+    },
+    {
+     "ja": "Magic ETLに新しく追加された「キャンバスから追加」オプションを使うと、キャンバス上のすべての非終端タイルの横に表示される小さなプラスボタンから、タイルを直接キャンバスに追加できます。これによりDataFlowの作成速度が向上し、ワークフローの効率化につながります。 {1}",
+     "en": "the new “add from canvas” option in magic etl allows you to add a tile directly to the canvas, using a small plus button next to all non-terminal tiles on the canvas. this improves the speed of dataflow creation and drives workflow efficiency.",
+     "pct": 55.1
+    },
+    {
+     "ja": "Magic ETLに、キャンバス上で最後に配置されるタイルを除くすべてのタイルの横に表示される小さなプラスボタンから、タイルを直接キャンバスに追加する機能が加わりました。",
+     "en": "magic etl now includes the ability to add a tile directly to the canvas using a plus button that appears next to all non-terminal tiles on the canvas.",
+     "pct": 51.9
+    },
+    {
+     "ja": "キャンバスから直接タイルを追加できるようになりました。",
+     "en": "we added the ability to add a tile directly from the canvas.",
+     "pct": 47.4
     }
    ]
   },
@@ -395,6 +621,33 @@
      "en": "Magic",
      "ja": "Magic"
     }
+   ],
+   "tm_candidates": [
+    {
+     "ja": "フィルター条件に一致する行を取得し、一致していない行は別のストリームに表示します。",
+     "en": "capture rows that meet your filter criteria while viewing those that do not in a separate stream.",
+     "pct": 70.8
+    },
+    {
+     "ja": "<g id=\"i6\">［フィルターを分割］</g> — フィルター条件に一致する行を取得し、一致していない行は別のストリームに表示します。",
+     "en": "split filter — capture rows that meet your filter criteria while viewing those that do not in a separate stream.",
+     "pct": 66.7
+    },
+    {
+     "ja": "Magic ETLで［結合を分割］タイルと［フィルターを分割］タイルの使い方を確認してください。",
+     "en": "learn how to use the split join and split filter tiles in magic etl.",
+     "pct": 62.2
+    },
+    {
+     "ja": "<g id=\"i7\">Magic ETLの［結合を分割］タイルと［フィルターを分割］タイルの使い方</g><g id=\"i8\">/s/article/000005919</g>を参照してください。",
+     "en": "learn how to use the split join and split filter tiles in magic etl /s/article/000005919 .",
+     "pct": 55.3
+    },
+    {
+     "ja": "{420}フィルターを分割 — {421}フィルター条件に一致する行を取得し、別のストリームを使用していない行を表示します。",
+     "en": "split filter — capture rows that meet your filter criteria and view those that do not using a separate stream.",
+     "pct": 54.9
+    }
    ]
   },
   {
@@ -446,6 +699,33 @@
      "en": "Sales",
      "ja": "売上"
     }
+   ],
+   "tm_candidates": [
+    {
+     "ja": "それは、異なる年の販売データを比較するためのカードを作成するようにマネージャーから指示されたというシナリオです。{58}",
+     "en": "let's say your manager has requested that you build a card that will show a comparison of different years of sales data.",
+     "pct": 72.4
+    },
+    {
+     "ja": "{56}このモジュールで最初のMagic ETLのアクティビティを行うにあたり、1つのシナリオを使用します。",
+     "en": "for your first magic etl activity in this module, we'll start with a scenario.",
+     "pct": 52.0
+    },
+    {
+     "ja": "このビデオでは{1}インターフェイスのいくつかの機能の{2}{3}概要を説明します",
+     "en": "in this video, we'll provide an overview of several features of the interface.",
+     "pct": 20.4
+    },
+    {
+     "ja": "このセクションでは、施設管理アプリケーションの基本的な主要事項をいくつか説明します。",
+     "en": "in this section, we'll be going over a few key basics of the facility management application.",
+     "pct": 19.2
+    },
+    {
+     "ja": "このモジュールでは、データの可視化に関するいくつかの原則と、これらの原則の適用例を確認します。",
+     "en": "in this module, you'll review some principles of data visualization and examples of the application of these principles.",
+     "pct": 18.5
+    }
    ]
   },
   {
@@ -461,6 +741,33 @@
      "en": "In the",
      "ja": "この"
     }
+   ],
+   "tm_candidates": [
+    {
+     "ja": "{65}［データを接続］{66}リボンで{67}［スプレッドシートをアップロード］{68}を選択します。",
+     "en": "select upload a spreadsheet in the connect data ribbon.",
+     "pct": 55.6
+    },
+    {
+     "ja": "メニューリボンで{7}［データ］{8}を選択します。",
+     "en": "select data in the menu ribbon.",
+     "pct": 53.3
+    },
+    {
+     "ja": "{35}［データを接続］{36}リボンで{37}［ファイル］{38}を選択します。",
+     "en": "select file in the connect data ribbon.",
+     "pct": 50.0
+    },
+    {
+     "ja": "2. リボンで{1031}［フィルターを保存］{1032}を選択します。{1033}{1034}{1035}<g id=\"i196\"><g id=\"i195\">{1036}</g></g>{1037}{1038}",
+     "en": "2. select save filters in the ribbon.",
+     "pct": 50.0
+    },
+    {
+     "ja": "［データを接続］リボンで{14}［ファイル］{15}を選択します。{16}3.",
+     "en": "select file in the connect data ribbon. 3.",
+     "pct": 47.1
+    }
    ]
   },
   {
@@ -471,6 +778,33 @@
     {
      "en": "Click",
      "ja": "DataSet名の隣にある"
+    }
+   ],
+   "tm_candidates": [
+    {
+     "ja": "クリックして",
+     "en": "click to",
+     "pct": 50.0
+    },
+    {
+     "ja": "［保存］をクリックします。",
+     "en": "click save.",
+     "pct": 50.0
+    },
+    {
+     "ja": "［Done］をクリックします。",
+     "en": "click done.",
+     "pct": 50.0
+    },
+    {
+     "ja": "{73}［適用］{74}をクリックします。",
+     "en": "click apply.",
+     "pct": 50.0
+    },
+    {
+     "ja": "［Add］をクリックします。",
+     "en": "click add.",
+     "pct": 50.0
     }
    ]
   },
@@ -523,16 +857,44 @@
      "en": "ETL",
      "ja": "ETL"
     }
-   ]
+   ],
+   "tm_candidates": []
   },
   {
    "i": 117,
    "en": "Expand{1} the {2}Utility {3}section on the left.{4}",
-   "pct": 44.4,
+   "pct": 46.2,
    "glossary": [
     {
      "en": "on the",
      "ja": "毎月"
+    }
+   ],
+   "tm_candidates": [
+    {
+     "ja": "アイコンはマップに表示されます。",
+     "en": "the icon displays on the map.",
+     "pct": 46.2
+    },
+    {
+     "ja": "次に",
+     "en": "on the",
+     "pct": 44.4
+    },
+    {
+     "ja": "都市名のスペルを再チェックします。",
+     "en": "double-check the spelling on the city name.",
+     "pct": 42.9
+    },
+    {
+     "ja": "データはキーで並べ替える必要があります。",
+     "en": "the data must be sorted on the keys.",
+     "pct": 40.0
+    },
+    {
+     "ja": "上部にタブがあることに{1}注目してください",
+     "en": "notice that there's the tabs on the top.",
+     "pct": 40.0
     }
    ]
   },
@@ -544,6 +906,33 @@
     {
      "en": "Select",
      "ja": "選択"
+    }
+   ],
+   "tm_candidates": [
+    {
+     "ja": "{774}select",
+     "en": "select",
+     "pct": 66.7
+    },
+    {
+     "ja": "広告を選択",
+     "en": "select ad",
+     "pct": 50.0
+    },
+    {
+     "ja": "レポートを選択",
+     "en": "select report",
+     "pct": 50.0
+    },
+    {
+     "ja": "通貨を選択します。",
+     "en": "select currency.",
+     "pct": 50.0
+    },
+    {
+     "ja": "ページを選択…",
+     "en": "select pages...",
+     "pct": 50.0
     }
    ]
   },
@@ -580,7 +969,8 @@
      "en": "Qty",
      "ja": "数量"
     }
-   ]
+   ],
+   "tm_candidates": []
   },
   {
    "i": 149,
@@ -635,6 +1025,33 @@
      "en": "Actual",
      "ja": "実際"
     }
+   ],
+   "tm_candidates": [
+    {
+     "ja": "これにより、すべての月と年について製品ごとに1つの予測値にもとづいてレポートを作成し、あとでJoinする際に販売データと一致させることができます。",
+     "en": "this will ensure that for every month and year, you report on one forecast value per product, and it will help you align with your sales data in a later join.",
+     "pct": 59.0
+    },
+    {
+     "ja": "次の変換のステップで、4つの製品の列ヘッダーを、月または年で分けられた行の値に変換します。",
+     "en": "in the following transform step, you are turning the 4 product column headers into row values distributed by month and year.",
+     "pct": 44.2
+    },
+    {
+     "ja": "{109}{110}{111}注記：{112}次の変換のステップで、4つの製品の列ヘッダーを、月または年で分けられた行の値に変換します。",
+     "en": "note: in the following transform step, you are turning the 4 product column headers into row values distributed by month and year.",
+     "pct": 43.8
+    },
+    {
+     "ja": "不等式演算子（<、>、>=、<+など）、関係を範囲として指定できるキーワード（BETWEENなど）、SQLベースのJoinで使用できるその他の関数などを使用できます。",
+     "en": "you can use inequality operators such as (such as , =, and <+); keywords that allow you to indicate the relationship as a range (like between); and other functions you might use in a sql-based join.",
+     "pct": 16.4
+    },
+    {
+     "ja": "INCLUDE列で、結合以外の操作にも使用するDataSetから含める各行に1を配置します。",
+     "en": "in the \"include\" column, place a 1 in each row that you are including from your data that isn't being used solely for a join.",
+     "pct": 16.2
+    }
    ]
   },
   {
@@ -674,6 +1091,33 @@
      "en": "Keep",
      "ja": "保持"
     }
+   ],
+   "tm_candidates": [
+    {
+     "ja": "デフォルトでは、同じ列名が入力されます。",
+     "en": "by default the same name of the column will be entered.",
+     "pct": 55.0
+    },
+    {
+     "ja": "ここでは、デフォルトの名前をそのまま使用します。",
+     "en": "in this case, we will keep the default names.",
+     "pct": 47.4
+    },
+    {
+     "ja": "ステップ4で、必要に応じて列名を変更します。",
+     "en": "use step 4 to rename the columns if needed.",
+     "pct": 47.4
+    },
+    {
+     "ja": "ステップ2で、ピボットされた列名を格納する列に名前を付けます。",
+     "en": "in step 2, name the column that will hold the pivoted column names.",
+     "pct": 33.3
+    },
+    {
+     "ja": "この場合、まとめ数字を見てチャートの内容を理解できなければ、そのKPIカードは役に立たないということになります。",
+     "en": "if users cannot grasp the meaning of the chart from the summary number in this case, then the kpi card has failed.",
+     "pct": 31.4
+    }
    ]
   },
   {
@@ -685,6 +1129,33 @@
      "en": "Click",
      "ja": "DataSet名の隣にある"
     }
+   ],
+   "tm_candidates": [
+    {
+     "ja": "クリックして",
+     "en": "click to",
+     "pct": 40.0
+    },
+    {
+     "ja": "［保存］をクリックします。",
+     "en": "click save.",
+     "pct": 40.0
+    },
+    {
+     "ja": "［Done］をクリックします。",
+     "en": "click done.",
+     "pct": 40.0
+    },
+    {
+     "ja": "{73}［適用］{74}をクリックします。",
+     "en": "click apply.",
+     "pct": 40.0
+    },
+    {
+     "ja": "［Add］をクリックします。",
+     "en": "click add.",
+     "pct": 40.0
+    }
    ]
   },
   {
@@ -695,6 +1166,33 @@
     {
      "en": "Select",
      "ja": "選択"
+    }
+   ],
+   "tm_candidates": [
+    {
+     "ja": "{774}select",
+     "en": "select",
+     "pct": 66.7
+    },
+    {
+     "ja": "広告を選択",
+     "en": "select ad",
+     "pct": 50.0
+    },
+    {
+     "ja": "レポートを選択",
+     "en": "select report",
+     "pct": 50.0
+    },
+    {
+     "ja": "通貨を選択します。",
+     "en": "select currency.",
+     "pct": 50.0
+    },
+    {
+     "ja": "ページを選択…",
+     "en": "select pages...",
+     "pct": 50.0
     }
    ]
   },
@@ -731,6 +1229,33 @@
      "en": "Monthly",
      "ja": "月1回"
     }
+   ],
+   "tm_candidates": [
+    {
+     "ja": "各製品の日次の予測値はないため、日次単位で製品の予測データを確認することはできません。",
+     "en": "because you don't have a forecasted value for every day for each product, you do not have a daily granularity for your products.",
+     "pct": 73.7
+    },
+    {
+     "ja": "各製品の日次の予測値はないため、日次単位で製品の予測データを確認することはできません。{123}{124}",
+     "en": "because y ou don't have a forecasted value for every day for each product, you do not have a daily granularity for your products.",
+     "pct": 72.4
+    },
+    {
+     "ja": "そのため、ここではデータを月次単位で集計します。",
+     "en": "so, we want to aggregate the data into a monthly granularity.",
+     "pct": 48.9
+    },
+    {
+     "ja": "指定した粒度に従い、列が変更およびグループ化されました。",
+     "en": "you now have a column that you have altered and grouped according to your specified granularity.",
+     "pct": 24.0
+    },
+    {
+     "ja": "データを取得したい広告クライアント製品を選択します。",
+     "en": "select the ad client product, you want to retrieve data for.",
+     "pct": 22.2
+    }
    ]
   },
   {
@@ -750,6 +1275,33 @@
      "en": "Date",
      "ja": "日付"
     }
+   ],
+   "tm_candidates": [
+    {
+     "ja": "{129}［日付の演算を追加］{130}ボタンをクリックします。",
+     "en": "now click add date operation button.",
+     "pct": 66.7
+    },
+    {
+     "ja": "{193}［日付の演算を追加］{194}ボタンを選択します。",
+     "en": "now select the add date operation button.",
+     "pct": 46.2
+    },
+    {
+     "ja": "{67}<g id=\"i7\"><g id=\"i6\">{68}</g></g>{69}ボタンをクリックします。",
+     "en": "click the button.",
+     "pct": 44.4
+    },
+    {
+     "ja": "［+Add Permissions］ボタンをクリックします。",
+     "en": "click +add permissions button.",
+     "pct": 40.0
+    },
+    {
+     "ja": "{12}［+］{13}ボタンをクリックします。",
+     "en": "click the + button.",
+     "pct": 40.0
+    }
    ]
   },
   {
@@ -760,6 +1312,33 @@
     {
      "en": "Click",
      "ja": "DataSet名の隣にある"
+    }
+   ],
+   "tm_candidates": [
+    {
+     "ja": "クリックして",
+     "en": "click to",
+     "pct": 50.0
+    },
+    {
+     "ja": "［保存］をクリックします。",
+     "en": "click save.",
+     "pct": 50.0
+    },
+    {
+     "ja": "［Done］をクリックします。",
+     "en": "click done.",
+     "pct": 50.0
+    },
+    {
+     "ja": "{73}［適用］{74}をクリックします。",
+     "en": "click apply.",
+     "pct": 50.0
+    },
+    {
+     "ja": "［Add］をクリックします。",
+     "en": "click add.",
+     "pct": 50.0
     }
    ]
   },
@@ -776,6 +1355,33 @@
      "en": "Operations",
      "ja": "事業"
     }
+   ],
+   "tm_candidates": [
+    {
+     "ja": "［定数を追加］アクションを{177}［日付の演算］{178}タイルに接続します。",
+     "en": "connect it to the date operations tile.",
+     "pct": 71.4
+    },
+    {
+     "ja": "上記のタイルを入力タイルに接続します。",
+     "en": "connect it to the input tile.",
+     "pct": 61.5
+    },
+    {
+     "ja": "［列を結合］アクションを{185}［定数を追加］{186}に接続します。",
+     "en": "connect it to the add constants .",
+     "pct": 57.1
+    },
+    {
+     "ja": "［グループ化］タイルを［行をフィルター］タイルに接続します。",
+     "en": "connect it to the filter rows tile.",
+     "pct": 57.1
+    },
+    {
+     "ja": "［列を選択］タイルを{246}［データを結合］{247}タイルに接続します。",
+     "en": "connect it to the join data tile.",
+     "pct": 57.1
+    }
    ]
   },
   {
@@ -786,6 +1392,33 @@
     {
      "en": "Click",
      "ja": "DataSet名の隣にある"
+    }
+   ],
+   "tm_candidates": [
+    {
+     "ja": "クリックして",
+     "en": "click to",
+     "pct": 50.0
+    },
+    {
+     "ja": "［保存］をクリックします。",
+     "en": "click save.",
+     "pct": 50.0
+    },
+    {
+     "ja": "［Done］をクリックします。",
+     "en": "click done.",
+     "pct": 50.0
+    },
+    {
+     "ja": "{73}［適用］{74}をクリックします。",
+     "en": "click apply.",
+     "pct": 50.0
+    },
+    {
+     "ja": "［Add］をクリックします。",
+     "en": "click add.",
+     "pct": 50.0
     }
    ]
   },
@@ -798,6 +1431,33 @@
      "en": "CONNECT",
      "ja": "接続する"
     }
+   ],
+   "tm_candidates": [
+    {
+     "ja": "上記のタイルを入力タイルに接続します。",
+     "en": "connect it to the input tile.",
+     "pct": 66.7
+    },
+    {
+     "ja": "［定数を追加］アクションを{177}［日付の演算］{178}タイルに接続します。",
+     "en": "connect it to the date operations tile.",
+     "pct": 61.5
+    },
+    {
+     "ja": "［列を結合］アクションを{185}［定数を追加］{186}に接続します。",
+     "en": "connect it to the add constants .",
+     "pct": 61.5
+    },
+    {
+     "ja": "［グループ化］タイルを［行をフィルター］タイルに接続します。",
+     "en": "connect it to the filter rows tile.",
+     "pct": 61.5
+    },
+    {
+     "ja": "［列を選択］タイルを{246}［データを結合］{247}タイルに接続します。",
+     "en": "connect it to the join data tile.",
+     "pct": 61.5
+    }
    ]
   },
   {
@@ -808,6 +1468,33 @@
     {
      "en": "Click",
      "ja": "DataSet名の隣にある"
+    }
+   ],
+   "tm_candidates": [
+    {
+     "ja": "クリックして",
+     "en": "click to",
+     "pct": 50.0
+    },
+    {
+     "ja": "［保存］をクリックします。",
+     "en": "click save.",
+     "pct": 50.0
+    },
+    {
+     "ja": "［Done］をクリックします。",
+     "en": "click done.",
+     "pct": 50.0
+    },
+    {
+     "ja": "{73}［適用］{74}をクリックします。",
+     "en": "click apply.",
+     "pct": 50.0
+    },
+    {
+     "ja": "［Add］をクリックします。",
+     "en": "click add.",
+     "pct": 50.0
     }
    ]
   },
@@ -820,6 +1507,33 @@
      "en": "Click",
      "ja": "DataSet名の隣にある"
     }
+   ],
+   "tm_candidates": [
+    {
+     "ja": "クリックして",
+     "en": "click to",
+     "pct": 50.0
+    },
+    {
+     "ja": "［保存］をクリックします。",
+     "en": "click save.",
+     "pct": 50.0
+    },
+    {
+     "ja": "［Done］をクリックします。",
+     "en": "click done.",
+     "pct": 50.0
+    },
+    {
+     "ja": "{73}［適用］{74}をクリックします。",
+     "en": "click apply.",
+     "pct": 50.0
+    },
+    {
+     "ja": "［Add］をクリックします。",
+     "en": "click add.",
+     "pct": 50.0
+    }
    ]
   },
   {
@@ -830,6 +1544,33 @@
     {
      "en": "Click",
      "ja": "DataSet名の隣にある"
+    }
+   ],
+   "tm_candidates": [
+    {
+     "ja": "クリックして",
+     "en": "click to",
+     "pct": 50.0
+    },
+    {
+     "ja": "［保存］をクリックします。",
+     "en": "click save.",
+     "pct": 50.0
+    },
+    {
+     "ja": "［Done］をクリックします。",
+     "en": "click done.",
+     "pct": 50.0
+    },
+    {
+     "ja": "{73}［適用］{74}をクリックします。",
+     "en": "click apply.",
+     "pct": 50.0
+    },
+    {
+     "ja": "［Add］をクリックします。",
+     "en": "click add.",
+     "pct": 50.0
     }
    ]
   },
@@ -854,16 +1595,70 @@
      "en": "Select",
      "ja": "選択"
     }
+   ],
+   "tm_candidates": [
+    {
+     "ja": "{235}［日付の演算］{236}アクションから{237}［列のタイプを設定］{238}アクションまでを、クリック操作とドラッグ操作でハイライト表示します。",
+     "en": "click and drag to highlight and select the date operations through the set columns action.",
+     "pct": 73.3
+    },
+    {
+     "ja": "{314}［日付の演算］{315}アクションから{316}［値マッパー］{317}アクションまでを、クリック操作とドラッグ操作でハイライト表示します。",
+     "en": "click and drag to highlight and select the date operations through the value mapper action.",
+     "pct": 73.3
+    },
+    {
+     "ja": "キャンバス内でクリックし、{217}［日付の演算］{218}アクションから{219}［列を変更］{220}アクションまでをドラッグして選択します。",
+     "en": "click and drag to highlight and select the date operations through the alter columns action.",
+     "pct": 73.3
+    },
+    {
+     "ja": "[{149}はい{150}] をクリックして、アクションを確認します。",
+     "en": "click yes to confirm the action.",
+     "pct": 38.1
+    },
+    {
+     "ja": "押す、長押し、およびドラッグして、ズームする領域をハイライト",
+     "en": "press, hold, and drag to highlight an area to zoom",
+     "pct": 32.0
+    }
    ]
   },
   {
    "i": 222,
    "en": "Select {1}Duplicate{2} from the {3}Options Menu{4}.",
-   "pct": 50.0,
+   "pct": 54.5,
    "glossary": [
     {
      "en": "Select",
      "ja": "選択"
+    }
+   ],
+   "tm_candidates": [
+    {
+     "ja": "リストからレポートを選択します。",
+     "en": "select report from the list.",
+     "pct": 54.5
+    },
+    {
+     "ja": "リストからキャンペーンを選択します。",
+     "en": "select a campaign from the list.",
+     "pct": 50.0
+    },
+    {
+     "ja": "リストからDataSetを選択します。",
+     "en": "select the dataset from the list.",
+     "pct": 50.0
+    },
+    {
+     "ja": "ドロップダウンからビューを選択します。",
+     "en": "select a view from the dropdown.",
+     "pct": 50.0
+    },
+    {
+     "ja": "ナビゲーションヘッダーから{27}［データ］ {28}を選択します。",
+     "en": "select data from the navigational header.",
+     "pct": 50.0
     }
    ]
   },
@@ -879,6 +1674,33 @@
     {
      "en": "Operations",
      "ja": "事業"
+    }
+   ],
+   "tm_candidates": [
+    {
+     "ja": "{332}［日付の演算1］{333}を{334}［行を追加］{335}に接続します。",
+     "en": "connect the date operations 1 to your append rows.",
+     "pct": 55.6
+    },
+    {
+     "ja": "{231}［日付の演算1］{232}を{233}［行を追加］{234}に接続します。",
+     "en": "connect the date operations 1 to your append rows .",
+     "pct": 52.6
+    },
+    {
+     "ja": "［定数を追加］アクションを{177}［日付の演算］{178}タイルに接続します。",
+     "en": "connect it to the date operations tile.",
+     "pct": 37.5
+    },
+    {
+     "ja": "{262}［行をフィルター］{263}を{264}［列のタイプを設定1］{265}タイルの接続します。",
+     "en": "connect filter rows to the set column type 1 tile.",
+     "pct": 31.6
+    },
+    {
+     "ja": "{195}［行をフィルター］{196}を{197}［値マッパー1］{198} {199}{200}タイルに接続します。",
+     "en": "connect filter rows to the set value mapper 1 tile.",
+     "pct": 31.6
     }
    ]
   },
@@ -903,6 +1725,33 @@
      "en": "Year",
      "ja": "年毎"
     }
+   ],
+   "tm_candidates": [
+    {
+     "ja": "「年」の演算をクリックします。",
+     "en": "then, click your year operation.",
+     "pct": 62.5
+    },
+    {
+     "ja": "修正を加えるため、{235}［日付の演算1］{236}を選択し、",
+     "en": "to modify, select date operations 1 .",
+     "pct": 44.4
+    },
+    {
+     "ja": "次に、{7}［再起動］{8}をクリックします。",
+     "en": "then, click restart .",
+     "pct": 26.7
+    },
+    {
+     "ja": "「月番号」の演算を選択します。",
+     "en": "select the \"month number\" operation.",
+     "pct": 25.0
+    },
+    {
+     "ja": "{127}次に、希望するメトリクスを選択します。{128}",
+     "en": "then, select your desired metric.",
+     "pct": 25.0
+    }
    ]
   },
   {
@@ -921,6 +1770,33 @@
     {
      "en": "Tile",
      "ja": "タイル"
+    }
+   ],
+   "tm_candidates": [
+    {
+     "ja": "{241}［列を変更1］{242}タイルを{243}［行をフィルター］{244}に接続します。",
+     "en": "connect the alter columns 1 tile to filter rows .",
+     "pct": 52.6
+    },
+    {
+     "ja": "{154}［追加］{155}タイルを出力に接続します。",
+     "en": "connect the append tile to your output.",
+     "pct": 50.0
+    },
+    {
+     "ja": "{98}［列を選択］{99}タイルをキャンバスにドラッグします。",
+     "en": "drag the select columns tile to the canvas.",
+     "pct": 47.1
+    },
+    {
+     "ja": "{92}［データを結合］{93}タイルを {94}［出力DataSet］{95}タイルに接続します。",
+     "en": "connect the join tile to the output dataset tile.",
+     "pct": 44.4
+    },
+    {
+     "ja": "{211}［行をフィルター］{212}タイルを{213}［グループ化］{214}タイルに接続します。",
+     "en": "connect the filter rows tile to group by .",
+     "pct": 44.4
     }
    ]
   },
@@ -941,6 +1817,33 @@
      "en": "Rule",
      "ja": "ルール"
     }
+   ],
+   "tm_candidates": [
+    {
+     "ja": "{245}［フィルタールールを追加］{246}ボタンをクリックします。",
+     "en": "click the add filter rule button.",
+     "pct": 66.7
+    },
+    {
+     "ja": "フィルタールールを追加",
+     "en": "add filter rule",
+     "pct": 44.4
+    },
+    {
+     "ja": "#right_click_filter",
+     "en": "right click filter",
+     "pct": 44.4
+    },
+    {
+     "ja": "クリックしてフィルターする",
+     "en": "click to filter",
+     "pct": 44.4
+    },
+    {
+     "ja": "キャンバスで<g id=\"i6\">［行をフィルター］</g>タイルをクリックします。",
+     "en": "click the filter rows tile in the canvas.",
+     "pct": 42.9
+    }
    ]
   },
   {
@@ -951,6 +1854,33 @@
     {
      "en": "Click",
      "ja": "DataSet名の隣にある"
+    }
+   ],
+   "tm_candidates": [
+    {
+     "ja": "クリックして",
+     "en": "click to",
+     "pct": 50.0
+    },
+    {
+     "ja": "［保存］をクリックします。",
+     "en": "click save.",
+     "pct": 50.0
+    },
+    {
+     "ja": "［Done］をクリックします。",
+     "en": "click done.",
+     "pct": 50.0
+    },
+    {
+     "ja": "{73}［適用］{74}をクリックします。",
+     "en": "click apply.",
+     "pct": 50.0
+    },
+    {
+     "ja": "［Add］をクリックします。",
+     "en": "click add.",
+     "pct": 50.0
     }
    ]
   },
@@ -1007,6 +1937,33 @@
      "en": "one",
      "ja": "1"
     }
+   ],
+   "tm_candidates": [
+    {
+     "ja": "このタスクでは、製品ごとに年単位と月単位のデータを1行で表示できるように、データを集計します。",
+     "en": "you will now aggregate the data so that you can return a single row for each product by month and year.",
+     "pct": 68.9
+    },
+    {
+     "ja": "例えば、特定の製品について、2026年1月における数値を1つだけ表示することができます。",
+     "en": "for example, it will allow you to show only one number for a specific product in january of 2026:",
+     "pct": 64.4
+    },
+    {
+     "ja": "例えば、特定の製品について、2014年1月における数値を1つだけ表示することができます。",
+     "en": "for example, it will allow you to show only one number for a specific product in january of 2014:",
+     "pct": 61.0
+    },
+    {
+     "ja": "{804}以下のデータを集計して、部署ごとに日別の売り上げを把握することが求められています。",
+     "en": "you've been asked to aggregate the following data so that you have sales by department by day.",
+     "pct": 24.6
+    },
+    {
+     "ja": "{1126}以下のDataSetを集計して、毎日の部署別の売り上げを把握するように求められました。",
+     "en": "you've been asked to aggregate the following dataset so that you have sales by department for every day.",
+     "pct": 24.1
+    }
    ]
   },
   {
@@ -1034,6 +1991,33 @@
      "en": "Tile",
      "ja": "タイル"
     }
+   ],
+   "tm_candidates": [
+    {
+     "ja": "キャンバス上にドロップします。",
+     "en": "drag and drop the group by tile to the canvas.",
+     "pct": 66.7
+    },
+    {
+     "ja": "<g id=\"i49\">［グループ化］</g>タイルをオーサリングキャンバスにドラッグ＆ドロップします。",
+     "en": "drag and drop a group by tile onto the authoring canvas.",
+     "pct": 51.6
+    },
+    {
+     "ja": "{200}［行を追加］{201}タイルをキャンバスにドラッグ＆ドロップします。",
+     "en": "drag and drop an append rows tile to the canvas.",
+     "pct": 46.7
+    },
+    {
+     "ja": "{27}［入力DataSet］{28}タイルをキャンバスにドラッグ＆ドロップします。",
+     "en": "drag and drop an input dataset tile to the canvas.",
+     "pct": 46.7
+    },
+    {
+     "ja": "まず、{56}［グループ化］{57}タイルをキャンバスにドラッグします。",
+     "en": "first, drag the group by tile out onto the canvas.",
+     "pct": 46.7
+    }
    ]
   },
   {
@@ -1048,6 +2032,33 @@
     {
      "en": "Tile",
      "ja": "タイル"
+    }
+   ],
+   "tm_candidates": [
+    {
+     "ja": "{154}［追加］{155}タイルを出力に接続します。",
+     "en": "connect the append tile to your output.",
+     "pct": 53.3
+    },
+    {
+     "ja": "{92}［データを結合］{93}タイルを {94}［出力DataSet］{95}タイルに接続します。",
+     "en": "connect the join tile to the output dataset tile.",
+     "pct": 47.1
+    },
+    {
+     "ja": "{211}［行をフィルター］{212}タイルを{213}［グループ化］{214}タイルに接続します。",
+     "en": "connect the filter rows tile to group by .",
+     "pct": 47.1
+    },
+    {
+     "ja": "{241}［列を変更1］{242}タイルを{243}［行をフィルター］{244}に接続します。",
+     "en": "connect the alter columns 1 tile to filter rows .",
+     "pct": 44.4
+    },
+    {
+     "ja": "{303}{304}［データを結合］{305}タイルを{306}［列を選択］{307}タイルに接続します。{308}",
+     "en": "connect the join data tile to the select columns tile.",
+     "pct": 44.4
     }
    ]
   },
@@ -1092,6 +2103,33 @@
      "en": "Value",
      "ja": "値"
     }
+   ],
+   "tm_candidates": [
+    {
+     "ja": "グループ化を識別するのに使用する列として、「製品」列と「日付」列を選択します。",
+     "en": "select both product and date as columns that identify the grouping.",
+     "pct": 66.7
+    },
+    {
+     "ja": "これにより、製品ごとに毎月の値を取得できるようになります。",
+     "en": "this will ensure we get a monthly value for each product.",
+     "pct": 66.7
+    },
+    {
+     "ja": "グループ化の基準となる列として［製品］を選択します。",
+     "en": "select product as the column to identify the grouping.",
+     "pct": 38.7
+    },
+    {
+     "ja": "{394}［列を追加］{395}をクリックし、グループ化の基準となる列として［日付］を選択します。",
+     "en": "click add column and select date as the column to identify the grouping.",
+     "pct": 34.3
+    },
+    {
+     "ja": "グループ化する列を選択します。",
+     "en": "select the columns in the grouping.",
+     "pct": 28.6
+    }
    ]
   },
   {
@@ -1107,7 +2145,8 @@
      "en": "Tiles",
      "ja": "タイル"
     }
-   ]
+   ],
+   "tm_candidates": []
   },
   {
    "i": 256,
@@ -1138,6 +2177,33 @@
      "en": "Right",
      "ja": "右揃え"
     }
+   ],
+   "tm_candidates": [
+    {
+     "ja": "Inner Joinの左側の入力として、{277}［グループ化］{278}を選択します。",
+     "en": "select group by as the input on the left side of the inner join.",
+     "pct": 63.2
+    },
+    {
+     "ja": "結合画面の左側で、{422}［グループ化］{423}を入力として選択します。",
+     "en": "select group by as the input on the left side of the join.",
+     "pct": 59.5
+    },
+    {
+     "ja": "{56}［データを結合］{57}ペインの左側で、［これまでの売上予測 + [自分のイニシャル] 1］DataSetを選択します。",
+     "en": "in the join data configuration pane, select forecast sales all time + [your initials] 1, as the dataset on the left side of the join.",
+     "pct": 40.8
+    },
+    {
+     "ja": "最後に、Joinの左側にある特定化するための列と右側にある一致する列の両方で、［日付］を選択します。",
+     "en": "lastly, select date as both the identifying and matching column on the left-side and right-side of the join.",
+     "pct": 38.1
+    },
+    {
+     "ja": "Joinの左側にある履歴DataSetを選択した場合、下に示すように{102}Left Outer{103} Joinを使用します。",
+     "en": "if you selected the historical dataset on the left side of the join, as shown below, use a left outer join.",
+     "pct": 35.6
+    }
    ]
   },
   {
@@ -1149,6 +2215,33 @@
      "en": "Click",
      "ja": "DataSet名の隣にある"
     }
+   ],
+   "tm_candidates": [
+    {
+     "ja": "もう一度{176}［Download］{177}をクリックします。",
+     "en": "click download again.",
+     "pct": 57.1
+    },
+    {
+     "ja": "もう一度［次へ］をクリックします。",
+     "en": "click next again.",
+     "pct": 57.1
+    },
+    {
+     "ja": "{346}［Continue（次に進む）］{347}をもう一度クリックします。",
+     "en": "click continue again.",
+     "pct": 57.1
+    },
+    {
+     "ja": "もう一度、{232}{233}［保存］{234}{235}をクリックします。",
+     "en": "click save again.",
+     "pct": 57.1
+    },
+    {
+     "ja": "もう一度{283}［等値条件］{284}をクリックします。",
+     "en": "click equality condition again.",
+     "pct": 50.0
+    }
    ]
   },
   {
@@ -1159,6 +2252,33 @@
     {
      "en": "Click",
      "ja": "DataSet名の隣にある"
+    }
+   ],
+   "tm_candidates": [
+    {
+     "ja": "クリックして",
+     "en": "click to",
+     "pct": 50.0
+    },
+    {
+     "ja": "［保存］をクリックします。",
+     "en": "click save.",
+     "pct": 50.0
+    },
+    {
+     "ja": "［Done］をクリックします。",
+     "en": "click done.",
+     "pct": 50.0
+    },
+    {
+     "ja": "{73}［適用］{74}をクリックします。",
+     "en": "click apply.",
+     "pct": 50.0
+    },
+    {
+     "ja": "［Add］をクリックします。",
+     "en": "click add.",
+     "pct": 50.0
     }
    ]
   },
@@ -1175,6 +2295,33 @@
      "en": "Tile",
      "ja": "タイル"
     }
+   ],
+   "tm_candidates": [
+    {
+     "ja": "{299}［ユーティリティー］で、{300}［列を選択］{301}タイルをキャンバスにドラッグします。{302}",
+     "en": "under ultility, drag a select columns tile over to the canvas.",
+     "pct": 63.6
+    },
+    {
+     "ja": "{267}［データを結合］{268}タイルをキャンバスにドラッグします。",
+     "en": "drag a join data tile over to the canvas.",
+     "pct": 60.0
+    },
+    {
+     "ja": "{319}［列を編集］で、{320}［列を選択］{321}タイルをキャンバスにドラッグします。{322}",
+     "en": "under edit columns, drag a select columns tile over to the canvas.",
+     "pct": 52.2
+    },
+    {
+     "ja": "{453}［ユーティリティー］{454}で、{455}［列を選択］{456}タイルをキャンバスにドラッグします。",
+     "en": "under utility , drag a select columns tile over to the canvas.",
+     "pct": 52.2
+    },
+    {
+     "ja": "{135}［出力DataSet］{136}タイルをキャンバスにドラッグします。",
+     "en": "drag an output dataset tile over to the canvas.",
+     "pct": 50.0
+    }
    ]
   },
   {
@@ -1190,13 +2337,41 @@
      "en": "columns",
      "ja": "列"
     }
+   ],
+   "tm_candidates": [
+    {
+     "ja": "{303}{304}［データを結合］{305}タイルを{306}［列を選択］{307}タイルに接続します。{308}",
+     "en": "connect the join data tile to the select columns tile.",
+     "pct": 50.0
+    },
+    {
+     "ja": "{169}Pythonスクリプト{170}タイルをDataFlowに追加します。",
+     "en": "add the python scripting tile to the dataflow.",
+     "pct": 44.4
+    },
+    {
+     "ja": "DataFlowに{179}出力DataSet{180}タイルを追加します。",
+     "en": "add the output dataset tile to the dataflow.",
+     "pct": 44.4
+    },
+    {
+     "ja": "{98}［列を選択］{99}タイルをキャンバスにドラッグします。",
+     "en": "drag the select columns tile to the canvas.",
+     "pct": 44.4
+    },
+    {
+     "ja": "{92}［データを結合］{93}タイルを {94}［出力DataSet］{95}タイルに接続します。",
+     "en": "connect the join tile to the output dataset tile.",
+     "pct": 42.1
+    }
    ]
   },
   {
    "i": 270,
    "en": "{1}Select {2}Done{3}.{4}",
    "pct": 0.0,
-   "glossary": []
+   "glossary": [],
+   "tm_candidates": []
   },
   {
    "i": 271,
@@ -1218,6 +2393,33 @@
     {
      "en": "CONNECT",
      "ja": "接続する"
+    }
+   ],
+   "tm_candidates": [
+    {
+     "ja": "{317}［出力DataSet］{318}タイルをキャンバスにドラッグし、そのタイルに{319}［列を選択］{320}タイルを接続します。",
+     "en": "drag an output dataset tile onto the canvas and connect select columns tile to it.",
+     "pct": 73.3
+    },
+    {
+     "ja": "［出力DataSet］タイルをキャンバスにドラッグし、［列を選択］タイルに接続します。",
+     "en": "drag an output dataset tile onto the canvas and connect it to the select columns tile.",
+     "pct": 58.1
+    },
+    {
+     "ja": "<g id=\"i52\">［AI予測］</g>タイルをオーサリングキャンバスにドラッグ＆ドロップして、DataFlowに接続します。",
+     "en": "drag and drop an ai forecasting tile onto the authoring canvas and connect to your dataflow.",
+     "pct": 58.1
+    },
+    {
+     "ja": "［定数を追加］タイルをキャンバスにドラッグし、入力DataSetに接続します。",
+     "en": "drag an add constants tile to the canvas and connect it to your input dataset.",
+     "pct": 53.3
+    },
+    {
+     "ja": "［入力DataSet］タイルをキャンバスにドラッグし、使用するDataSetを選択します。",
+     "en": "drag an \"input dataset\" tile onto the canvas and select the dataset you want to use.",
+     "pct": 51.6
     }
    ]
   }

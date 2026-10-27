@@ -318,8 +318,9 @@ def analyze(src):
                 rows.append({"b":"<=74%","cat":"Added","pct":pct if bestk else "0.0","st":"mt",
                              "en":[["add", s]],"tm":"\u2014","ja":[],"hist":bh,
                              "glossary":glossary_hits(sn)})
+                # MT \u3092\u5916\u90e8AI\u3067\u4f5c\u308b\u969b\u3001\u6307\u5b9aTM\u306e\u8a72\u5f53\u65e2\u8a33\uff08\u6700\u3082\u8fd1\u3044\u5019\u88dc\u30fb\u4e0a\u4f4d5\u4ef6\uff09\u3092\u5fc5\u305a\u53c2\u7167\u3067\u304d\u308b\u3088\u3046\u540c\u68b1\u3059\u308b
                 mt_todo.append({"i":i, "en":s, "pct":float(pct if bestk else 0.0),
-                                "glossary":glossary_hits(sn)})
+                                "glossary":glossary_hits(sn), "tm_candidates":bh[:5]})
     return rows, mt_todo
 
 # ---- template (read once) ----
@@ -434,7 +435,8 @@ for si, sp in enumerate(srcs):
                      "segs": len(src), "mt": len(mt_todo)})
     for e in mt_todo:
         combined.append({"gi": gi, "art": art_key, "i": e["i"], "en": e["en"],
-                         "pct": e["pct"], "glossary": e["glossary"]})
+                         "pct": e["pct"], "glossary": e["glossary"],
+                         "tm_candidates": e.get("tm_candidates", [])})
         gi += 1
 
 # ---- combined MT to-do (feature 3) ----

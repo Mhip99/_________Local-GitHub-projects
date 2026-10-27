@@ -279,9 +279,11 @@ python inject_mt.py --html "…\<記事>.html" --mt "…\<記事>.html.mt-done.j
                  "title":"DomoStats Connector","source":"…","segs":1703,"mt":1695} ],
   "segments": [ {"gi":0,"art":"TM-Match-Explorer-DomoStats Connector","i":2,
                  "en":"This article…","pct":32.0,
-                 "glossary":[{"en":"DomoStats","ja":"DomoStats"}]} ] }
+                 "glossary":[{"en":"DomoStats","ja":"DomoStats"}],
+                 "tm_candidates":[{"en":"this article covers…","ja":"この記事では…","pct":"47.1"}]} ] }
 ```
 - `gi` … 全記事横断の**グローバル通し番号**。`art`＋`i` … どの記事の何行目か。
+- `glossary` … 指定 TM（Product TM）由来の用語ヒント。`tm_candidates` … **指定 TM（メイン/サブ/Product）の該当既訳（最も近い候補・類似度順に上位5件）**。MT 作成時に外部AIがこれらを参照し、TM に沿った訳にする（全プロジェクト共通）。
 
 **`combined.mt-done.jsonl`**（Claude が作成／③一括反映の入力。1行1レコード）
 ```
@@ -406,8 +408,9 @@ TM（XTM の .tmx）を差し替えると指紋が変わり、次回に自動で
 ### 10.4 出力先の選択（§4c 参照）
 - 出力時に **2_For review / 3_Final / 任意フォルダー** から保存先を選べます（既定は 2_For review）。2_For review は元ソースと同名だと上書きになる点に注意。
 
-### 10.5 MT の任意化（反映先の制御）
+### 10.5 MT の任意化（反映先の制御）／MT は指定 TM を参照
 > このツールに MT 翻訳エンジンは内蔵していません。MT は外部 AI（Claude 等）で `mt-todo` を翻訳→ `mt-done` を**反映**する人手フローです。ここでの「MTを実行」は**反映先の制御**です。
+- **MT は指定 TM を必ず参照**：`mt-todo` の各セグメントに、用語ヒント（`glossary`＝Product TM 由来）に加えて **`tm_candidates`（指定 TM の該当既訳＝最も近い候補・類似度順に上位5件）** を同梱します（全プロジェクト共通）。外部AIはこれらを参照して TM に沿った訳を作成します。≤74% は完全一致が無い区分のため「該当既訳」は最も近い候補の利用です。
 - **作成ダイアログの「MTを実行」チェック**（ブラウザに記憶し次回の作成にも引き継ぎ）：
   - **ON**：既訳のない（≤74%）セグメントの MT を**翻訳欄に反映**します（従来どおり）。
   - **OFF**：翻訳欄は**英語のまま**表示し、反映した MT の結果は**翻訳履歴ペイン**に入り、左上に日付でなく **"MT"** と表示されます。作業ファイルのツールバー **「MTを実行する」** で、履歴の MT を後から翻訳欄へまとめて反映できます。
