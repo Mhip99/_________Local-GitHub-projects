@@ -49,6 +49,56 @@ def ncase(p):
 def now():
     return datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
 
+
+# ===== 操作履歴（アクティビティログ）: _history.json（_projects.json の隣）=====
+_HIST_CAP = 3000   # 肥大化防止（古いものから切り捨て）
+
+def history_path(store):
+    return os.path.join(os.path.dirname(os.path.abspath(store)), "_history.json")
+
+def load_history(store):
+    p = history_path(store)
+    if os.path.exists(p):
+        try:
+            return json.load(open(p, encoding="utf-8-sig")).get("rows", [])
+        except Exception:
+            return []
+    return []
+
+def save_history(store, rows):
+    json.dump({"rows": rows[-_HIST_CAP:]}, open(history_path(store), "w", encoding="utf-8"),
+              ensure_ascii=False, indent=1)
+
+def log_history(store, action, detail="", project=""):
+    """操作を1件追記。失敗してもメイン処理は止めない。"""
+    try:
+        rows = load_history(store)
+        hid = "h-" + datetime.datetime.now().strftime("%Y%m%d%H%M%S%f")
+        rows.append({"id": hid, "at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                     "action": action, "detail": detail or "", "project": project or "", "memo": ""})
+        save_history(store, rows)
+    except Exception:
+        pass
+
+def history_update(store, hid, data):
+    rows = load_history(store)
+    for r in rows:
+        if r.get("id") == hid:
+            for k in ("detail", "memo"):
+                if k in data:
+                    r[k] = (data.get(k) or "")
+            r["updated"] = now()
+            break
+    save_history(store, rows)
+    return True
+
+def history_delete(store, hid):
+    rows = load_history(store)
+    n = len(rows)
+    rows[:] = [r for r in rows if r.get("id") != hid]
+    save_history(store, rows)
+    return n - len(rows)
+
 # ===== 用語管理（termbase）: 全プロジェクト共通の単一 TSV =====
 TERM_COLS = ["id", "source", "target", "example", "note", "doc", "project", "created", "updated"]
 TERM_EXPORT = [("source", "ソース"), ("target", "ターゲット"), ("example", "用例"),
@@ -1295,26 +1345,26 @@ footer{color:var(--muted);font-size:12px;margin-top:18px}
 <div class="ptabs" id="ptabs"></div>
 <div id="ptab-proj">
 <h1>Kotonoha プロジェクト一覧 <span class="verbadge">__VER__</span><span class="srvbadge">サーバーモード（作成・実行が有効）</span></h1>
-<div class="sub">記事行の「<b>開く</b>」や定義行の「<b>実行</b>」で、その記事を上の<b>プロジェクト名タブ</b>に表示します（サーバーモード）。定義行は「<b>実行</b>」で解析＋Pre-translation、「<b>出力</b>」で元形式の翻訳版を出力。各行の「<b>編集</b>」で状態・メモ・期日・削除。ツールバーの「<b>ツール▾</b>」からMTを反映・索引キャッシュ作成・TM書き戻し・UI Glossary・ファイル比較・JAバージョンチェックを実行できます（サーバーモード時）。静的表示（file://）では別タブで開き、「実行」はコマンドをコピーします。列ヘッダー右端をドラッグで幅調整、列▾で表示/非表示（ブラウザに保存）。</div>
 <div class="tabs" id="tabs" hidden>
-  <button class="tab" id="tab-projects" data-view="projects" aria-pressed="true" type="button">プロジェクト</button>
-  <button class="tab" id="tab-terms" data-view="terms" aria-pressed="false" type="button">用語管理</button>
-  <button class="tab" id="tab-tm" data-view="tm" aria-pressed="false" type="button">TM</button>
+  <button class="tab" id="tab-projects" data-view="projects" aria-pressed="true" type="button" title="プロジェクト一覧。定義行＝実行/出力/編集/詳細">プロジェクト</button>
+  <button class="tab" id="tab-terms" data-view="terms" aria-pressed="false" type="button" title="用語集（全プロジェクト共通 _terms.tsv）の管理">用語管理</button>
+  <button class="tab" id="tab-tm" data-view="tm" aria-pressed="false" type="button" title="TM（翻訳メモリ）エントリの一覧/検索/編集/削除">TM</button>
+  <button class="tab" id="tab-history" data-view="history" aria-pressed="false" type="button" title="操作の履歴（日付・作業内容）。メモ追加・編集・削除可">履歴</button>
 </div>
 <div id="view-projects">
 <div class="ctl">
-  <button class="btn new" id="newbtn" type="button">＋ 新規作成</button>
-  <input id="q" type="search" placeholder="タイトル・メモ・ソースを検索…">
-  <button class="chip" data-st="all" aria-pressed="true">すべて</button>
-  <button class="chip" data-st="作業中" aria-pressed="false">作業中</button>
-  <button class="chip" data-st="レビュー中" aria-pressed="false">レビュー中</button>
-  <button class="chip" data-st="完了" aria-pressed="false">完了</button>
-  <label class="toggle"><input type="checkbox" id="hideDone"> 完了を隠す</label>
-  <span class="colmenu" id="toolswrap" hidden><button class="btn" id="toolsbtn" type="button">ツール ▾</button><div id="toolspanel" class="toolspanel" hidden></div></span>
-  <span class="colmenu"><button class="btn" id="colbtn" type="button">列 ▾</button><div id="colpanel" hidden></div></span>
-  <button class="btn" id="resetbtn" type="button">既定に戻す</button>
-  <button class="btn" id="lockbtn" type="button" aria-pressed="false">固定</button>
-  <button class="themebtn" id="theme">◐ テーマ</button>
+  <button class="btn new" id="newbtn" type="button" title="新規プロジェクトを作成（名前・ソース・メイン/Product/サブTMを指定。作成して実行も可）">＋ 新規作成</button>
+  <input id="q" type="search" placeholder="タイトル・メモ・ソースを検索…" title="タイトル・メモ・ソースを部分一致で絞り込み">
+  <button class="chip" data-st="all" aria-pressed="true" title="すべての状態を表示">すべて</button>
+  <button class="chip" data-st="作業中" aria-pressed="false" title="状態=作業中 のみ表示">作業中</button>
+  <button class="chip" data-st="レビュー中" aria-pressed="false" title="状態=レビュー中 のみ表示">レビュー中</button>
+  <button class="chip" data-st="完了" aria-pressed="false" title="状態=完了 のみ表示">完了</button>
+  <label class="toggle" title="完了したプロジェクトを一覧から隠す"><input type="checkbox" id="hideDone"> 完了を隠す</label>
+  <span class="colmenu" id="toolswrap" hidden><button class="btn" id="toolsbtn" type="button" title="MTを反映・索引キャッシュ作成・TM書き戻し・UI Glossary・ファイル比較・JAバージョンチェック">ツール ▾</button><div id="toolspanel" class="toolspanel" hidden></div></span>
+  <span class="colmenu"><button class="btn" id="colbtn" type="button" title="表示する列の選択（ブラウザに保存）">列 ▾</button><div id="colpanel" hidden></div></span>
+  <button class="btn" id="resetbtn" type="button" title="列幅・表示・並び順を既定に戻す">既定に戻す</button>
+  <button class="btn" id="lockbtn" type="button" aria-pressed="false" title="列の並べ替え/幅変更をロック">固定</button>
+  <button class="themebtn" id="theme" title="ライト/ダークのテーマ切替">◐ テーマ</button>
 </div>
 <div id="newnote" class="note" hidden>新規プロジェクトの作成・実行はランチャー <b>TM-Match-Explorer.bat</b> で行います：メニュー <b>[C]</b> プロジェクト作成＋実行（単一記事・フォルダーいずれも／メイン＋Product＋サブ TM）、または <b>[P]</b> 画面の <b>N=新規作成</b>・<b>G=保存した定義を実行</b>。作成・実行後にこのページを再読み込み（F5）すると一覧へ反映されます。<button class="btn" id="newclose" type="button" style="margin-left:8px">閉じる</button></div>
 <div class="tablewrap"><table id="ptable"><colgroup id="cg"></colgroup>
@@ -1323,11 +1373,11 @@ footer{color:var(--muted);font-size:12px;margin-top:18px}
 </div><!-- /view-projects -->
 <div id="view-terms" hidden>
   <div class="ctl">
-    <button class="btn new" id="termadd" type="button">＋ 用語を追加</button>
-    <input id="tq" type="search" placeholder="用語を検索（ソース・ターゲット・ノート・ドキュメント）…">
-    <button class="btn" id="termextract" type="button">用語を抽出…</button>
-    <span class="colmenu"><button class="btn" id="termexportbtn" type="button">エクスポート ▾</button><div id="termexportpanel" class="toolspanel" hidden></div></span>
-    <span class="termcount" id="termcount"></span>
+    <button class="btn new" id="termadd" type="button" title="用語を新規追加（ソースEN・ターゲットJA・用例・ノート）">＋ 用語を追加</button>
+    <input id="tq" type="search" placeholder="用語を検索（ソース・ターゲット・ノート・ドキュメント）…" title="用語集をソース/ターゲット/ノート/ドキュメントで絞り込み">
+    <button class="btn" id="termextract" type="button" title="ソース/TEP/XLIFF から UI 用語を抽出して登録">用語を抽出…</button>
+    <span class="colmenu"><button class="btn" id="termexportbtn" type="button" title="用語集を TSV/CSV/XLSX で書き出し">エクスポート ▾</button><div id="termexportpanel" class="toolspanel" hidden></div></span>
+    <span class="termcount" id="termcount" title="登録用語数"></span>
   </div>
   <div class="tablewrap"><table id="ttable"><colgroup>
     <col style="width:200px"><col style="width:200px"><col style="width:260px"><col style="width:160px"><col style="width:150px"><col style="width:120px"><col style="width:128px"><col style="width:120px"></colgroup>
@@ -1337,11 +1387,11 @@ footer{color:var(--muted);font-size:12px;margin-top:18px}
 </div><!-- /view-terms -->
 <div id="view-tm" hidden>
   <div class="ctl">
-    <select id="tmsel" title="編集するTMを選択"></select>
-    <input id="tmq" type="search" placeholder="TMを検索（EN・JA 部分一致）…">
-    <button class="btn new" id="tmaddbtn" type="button">＋ エントリ追加</button>
-    <span class="termcount" id="tmcount"></span>
-    <span class="termcount" id="tminfo" style="opacity:.75"></span>
+    <select id="tmsel" title="編集する TM を選択（XTML は読み取り専用）"></select>
+    <input id="tmq" type="search" placeholder="TMを検索（EN・JA 部分一致）…" title="EN/JA を部分一致で絞り込み">
+    <button class="btn new" id="tmaddbtn" type="button" title="選択中の TM にエントリ（EN/JA）を追加">＋ エントリ追加</button>
+    <span class="termcount" id="tmcount" title="表示中のエントリ数"></span>
+    <span class="termcount" id="tminfo" style="opacity:.75" title="選択中TMの編集可否"></span>
   </div>
   <div class="tablewrap"><table id="tmtable"><colgroup>
     <col style="width:44%"><col style="width:44%"><col style="width:132px"><col style="width:120px"></colgroup>
@@ -1349,6 +1399,18 @@ footer{color:var(--muted);font-size:12px;margin-top:18px}
   <tbody id="tmrows"></tbody></table></div>
   <div class="empty" id="tmempty" hidden>エントリがありません（または検索に一致しません）。編集可能なTM（書込可能・XTM以外）を選択してください。</div>
 </div><!-- /view-tm -->
+<div id="view-history" hidden>
+  <div class="ctl">
+    <input id="hq" type="search" placeholder="履歴を検索（作業内容・メモ・プロジェクト）…" title="作業内容・メモ・プロジェクト名で絞り込み">
+    <span class="termcount" id="hcount" title="履歴件数"></span>
+    <button class="btn" id="hrefresh" type="button" title="履歴を再読み込み">更新</button>
+  </div>
+  <div class="tablewrap"><table id="htable"><colgroup>
+    <col style="width:150px"><col style="width:120px"><col style="width:34%"><col style="width:34%"><col style="width:110px"></colgroup>
+  <thead><tr><th>日付</th><th>種別</th><th>作業内容</th><th>メモ</th><th class="act">操作</th></tr></thead>
+  <tbody id="hrows"></tbody></table></div>
+  <div class="empty" id="hempty" hidden>履歴はまだありません。作成・実行・出力などの操作を行うと自動で記録されます。</div>
+</div><!-- /view-history -->
 </div><!-- /ptab-proj -->
 <div id="tepviews"></div>
 <footer>台帳: _projects.json ／ 用語集: _terms.tsv（全プロジェクト共通）／ この一覧は <code>projects.py dashboard</code> で生成。開き直すと最新になります。</footer>
@@ -1782,13 +1844,49 @@ function switchView(v){
   document.getElementById("view-projects").hidden=(v!=="projects");
   document.getElementById("view-terms").hidden=(v!=="terms");
   var vtm=document.getElementById("view-tm");if(vtm)vtm.hidden=(v!=="tm");
+  var vh=document.getElementById("view-history");if(vh)vh.hidden=(v!=="history");
   document.getElementById("tab-projects").setAttribute("aria-pressed",String(v==="projects"));
   document.getElementById("tab-terms").setAttribute("aria-pressed",String(v==="terms"));
   var ttm=document.getElementById("tab-tm");if(ttm)ttm.setAttribute("aria-pressed",String(v==="tm"));
+  var th=document.getElementById("tab-history");if(th)th.setAttribute("aria-pressed",String(v==="history"));
   if(v==="terms")loadTerms();
   if(v==="tm")loadTM();
+  if(v==="history")loadHistory();
 }
 document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>switchView(b.dataset.view)));
+// ===== 履歴タブ: 操作の自動記録（日付・作業内容）＋メモ編集・削除 =====
+var HIST=[];
+function loadHistory(){return api("/api/history").then(function(d){HIST=(d&&d.rows)||[];renderHistory();}).catch(function(){});}
+function renderHistory(){
+  var q=(document.getElementById("hq")||{}).value||"";var ql=q.trim().toLowerCase();
+  var list=HIST.filter(function(r){if(!ql)return true;return ((r.action||"")+" "+(r.detail||"")+" "+(r.memo||"")+" "+(r.project||"")).toLowerCase().indexOf(ql)>=0;});
+  document.getElementById("hcount").textContent=list.length?(list.length+" 件"):"";
+  document.getElementById("hempty").hidden=list.length>0;
+  document.getElementById("hrows").innerHTML=list.map(function(r){
+    var det=(r.detail||"")+(r.project?('　<span class="meta">['+esc(r.project)+']</span>'):"");
+    return '<tr data-id="'+esc(r.id)+'">'
+      +'<td class="meta">'+esc(r.at||"")+'</td>'
+      +'<td>'+esc(r.action||"")+'</td>'
+      +'<td class="ti">'+det+'</td>'
+      +'<td class="memo"><input class="hmemo" value="'+esc(r.memo||"").replace(/"/g,"&quot;")+'" placeholder="メモ"></td>'
+      +'<td class="act"><button class="edit" type="button" data-act="hsave" title="メモを保存">保存</button>'
+      +'<button class="edit" type="button" data-act="hdel" title="この履歴を削除" style="margin-left:4px">削除</button></td></tr>';
+  }).join("");
+}
+(function(){
+  var q=document.getElementById("hq");if(q)q.addEventListener("input",renderHistory);
+  var rf=document.getElementById("hrefresh");if(rf)rf.addEventListener("click",loadHistory);
+  var tb=document.getElementById("hrows");if(tb)tb.addEventListener("click",function(e){
+    var b=e.target.closest("button[data-act]");if(!b)return;var tr=b.closest("tr");if(!tr)return;var id=tr.getAttribute("data-id");
+    if(b.getAttribute("data-act")==="hsave"){
+      var memo=tr.querySelector(".hmemo").value;
+      api("/api/history-save",{method:"POST",body:JSON.stringify({id:id,memo:memo})}).then(function(){toast("メモを保存しました");});
+    }else if(b.getAttribute("data-act")==="hdel"){
+      if(!confirm("この履歴を削除しますか？"))return;
+      api("/api/history-delete",{method:"POST",body:JSON.stringify({id:id})}).then(function(){loadHistory();});
+    }
+  });
+})();
 // ===== TM タブ: TMエントリの一覧/検索/編集(EN+JA)/削除 =====
 var TMLIST=[], TMCUR="";
 function tmDate(d){var m=/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})/.exec(d||"");return m?(m[1]+"-"+m[2]+"-"+m[3]+" "+m[4]+":"+m[5]):(d||"");}
@@ -2581,6 +2679,8 @@ elif a.cmd == "serve":
                     self._send(403, {"error": "forbidden"}); return
                 if u.path == "/api/projects":
                     self._send(200, {"rows": build_rows(load(STORE), served=True)}); return
+                if u.path == "/api/history":
+                    self._send(200, {"rows": list(reversed(load_history(STORE)))}); return
                 if u.path == "/api/details":
                     q = urllib.parse.parse_qs(u.query)
                     self._send(200, project_details(load(STORE), q.get("id", [""])[0])); return
@@ -2712,22 +2812,30 @@ elif a.cmd == "serve":
                                           sub_tms=payload.get("sub_tms", []),
                                           run_mt=payload.get("run_mt", True))
                 save(STORE, projs)
+                log_history(STORE, "プロジェクト作成", "ソース %d 件" % len(payload.get("sources", []) or []), payload.get("name", ""))
                 self._send(200, {"id": pid}); return
             if u.path == "/api/run":
                 projs = load(STORE)
                 res = run_project(projs, STORE, payload.get("id", ""), engine=ENGINE,
                                   template=TEMPLATE, cache_dir=CACHE, log=lambda *x: None,
                                   capture=True)
+                if res.get("ok"):
+                    log_history(STORE, "実行（解析＋Pre-translation）", "生成 %d 件" % (res.get("registered", 0)), res.get("project", ""))
                 self._send(200, res); return
             if u.path == "/api/export":
                 projs = load(STORE)
+                _pn = (find_by_id(projs, payload.get("id", "")) or {}).get("name", "")
                 res = export_project(projs, STORE, payload.get("id", ""),
                                      out_path=payload.get("out_path", ""), cache_dir=CACHE,
                                      mark_missing=bool(payload.get("mark_missing")),
                                      log=lambda *x: None, capture=True)
+                if res.get("ok"):
+                    log_history(STORE, "出力", "%s（適用 %s）" % (res.get("out_dir", ""), res.get("applied", "-")), _pn)
                 self._send(200, res); return
             if u.path == "/api/set-status":
                 projs = load(STORE)
+                _pn = (find_by_row_id(projs, payload.get("id", "")) or {}).get("name", "")
+                log_history(STORE, "状態を変更", "→ %s" % payload.get("status", ""), _pn)
                 self._send(200, update_field(projs, STORE, payload.get("id", ""),
                                              "status", payload.get("status", ""))); return
             if u.path == "/api/set-memo":
@@ -2740,25 +2848,32 @@ elif a.cmd == "serve":
                                              "due", payload.get("due", ""))); return
             if u.path == "/api/remove":
                 projs = load(STORE)
+                _pn = (find_by_row_id(projs, payload.get("id", "")) or {}).get("name", "")
+                log_history(STORE, "プロジェクト削除", ("ファイルも削除" if payload.get("delete_file") else "台帳のみ"), _pn)
                 self._send(200, remove_project(projs, STORE, payload.get("id", ""),
                                                bool(payload.get("delete_file")))); return
             if u.path == "/api/inject":
-                self._send(200, inject_mt_run(payload.get("mode", "single"),
-                                              html=payload.get("html", ""), mt=payload.get("mt", ""),
-                                              combined_todo=payload.get("combined_todo", ""),
-                                              combined_mt=payload.get("combined_mt", ""), capture=True)); return
+                _r = inject_mt_run(payload.get("mode", "single"),
+                                   html=payload.get("html", ""), mt=payload.get("mt", ""),
+                                   combined_todo=payload.get("combined_todo", ""),
+                                   combined_mt=payload.get("combined_mt", ""), capture=True)
+                log_history(STORE, "MTを反映", os.path.basename(payload.get("html", "") or payload.get("combined_todo", "")))
+                self._send(200, _r); return
             if u.path == "/api/prebuild":
                 self._send(200, prebuild_index(payload.get("univ", ""), prod=payload.get("prod", ""),
                                                cache_dir=payload.get("cache_dir", "") or CACHE,
                                                rebuild=bool(payload.get("rebuild")), capture=True)); return
             if u.path == "/api/writeback":
-                self._send(200, writeback_run(xliff=payload.get("xliff", []),
-                                              xliff_dir=payload.get("xliff_dir", ""),
-                                              master=payload.get("master", ""),
-                                              project_tmx=payload.get("project_tmx", ""),
-                                              customer=payload.get("customer", ""),
-                                              dry_run=bool(payload.get("dry_run", True)),
-                                              backup=True, capture=True)); return
+                _wb = writeback_run(xliff=payload.get("xliff", []),
+                                    xliff_dir=payload.get("xliff_dir", ""),
+                                    master=payload.get("master", ""),
+                                    project_tmx=payload.get("project_tmx", ""),
+                                    customer=payload.get("customer", ""),
+                                    dry_run=bool(payload.get("dry_run", True)),
+                                    backup=True, capture=True)
+                if not payload.get("dry_run", True):
+                    log_history(STORE, "TM書き戻し", payload.get("customer", "") or "Master")
+                self._send(200, _wb); return
             if u.path == "/api/glossary":
                 self._send(200, glossary_run(source=payload.get("source", []),
                                              source_dir=payload.get("source_dir", ""),
@@ -2780,11 +2895,14 @@ elif a.cmd == "serve":
                 terms = load_terms(TERMSTORE)
                 rec = term_save(terms, payload)
                 save_terms(TERMSTORE, terms)
+                log_history(STORE, ("用語を編集" if payload.get("id") else "用語を追加"),
+                            "%s → %s" % (payload.get("source", ""), payload.get("target", "")))
                 self._send(200, {"ok": True, "term": rec}); return
             if u.path == "/api/term-delete":
                 terms = load_terms(TERMSTORE)
                 n = term_delete(terms, payload.get("id", ""))
                 save_terms(TERMSTORE, terms)
+                log_history(STORE, "用語を削除", payload.get("id", ""))
                 self._send(200, {"ok": True, "deleted": n}); return
             if u.path in ("/api/tm-save", "/api/tm-delete"):
                 import tm_io
@@ -2800,8 +2918,12 @@ elif a.cmd == "serve":
                     if u.path == "/api/tm-save":
                         res = tm_io.update(ap, payload.get("old_src", ""), payload.get("old_tgt", ""),
                                            payload.get("src", ""), payload.get("tgt", ""))
+                        if res.get("ok"):
+                            log_history(STORE, "TMを編集", "%s: %s → %s" % (row["name"], payload.get("src", ""), payload.get("tgt", "")))
                     else:
                         res = tm_io.delete(ap, payload.get("src", ""), payload.get("tgt", ""))
+                        if res.get("ok"):
+                            log_history(STORE, "TMエントリを削除", "%s: %s" % (row["name"], payload.get("src", "")))
                     self._send(200, res)
                 except Exception as e:
                     self._send(200, {"ok": False, "error": str(e)})
@@ -2819,7 +2941,14 @@ elif a.cmd == "serve":
                                         "ok": r.get("ok"), "count": r.get("count"), "error": r.get("error", "")})
                     except Exception as e:
                         results.append({"path": tm, "name": os.path.basename(tm), "ok": False, "error": str(e)})
+                _okn = [r["name"] for r in results if r.get("ok")]
+                if _okn:
+                    log_history(STORE, "Concordance索引を作成", "、".join(_okn))
                 self._send(200, {"results": results}); return
+            if u.path == "/api/history-save":
+                self._send(200, {"ok": history_update(STORE, payload.get("id", ""), payload)}); return
+            if u.path == "/api/history-delete":
+                self._send(200, {"ok": True, "deleted": history_delete(STORE, payload.get("id", ""))}); return
             if u.path == "/api/term-export":
                 terms = load_terms(TERMSTORE)
                 fmt = (payload.get("fmt") or "tsv").lower()

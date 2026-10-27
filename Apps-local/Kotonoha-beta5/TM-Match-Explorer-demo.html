@@ -296,8 +296,8 @@ body.summaryview #view-summary{flex:1;}
 
 <div class="wrap">
   <div class="vtabs" id="vtabs">
-    <button class="vtab" id="vt-work" data-v="work" aria-pressed="true" type="button">翻訳</button>
-    <button class="vtab" id="vt-summary" data-v="summary" aria-pressed="false" type="button">サマリー</button>
+    <button class="vtab" id="vt-work" data-v="work" aria-pressed="true" type="button" title="翻訳タブ：セグメント表で原文/TM訳/訳文を編集">翻訳</button>
+    <button class="vtab" id="vt-summary" data-v="summary" aria-pressed="false" type="button" title="サマリータブ：ファイル/TM/プロジェクト情報と区分別の件数・統計">サマリー</button>
     <span class="filepill"><span class="dot"></span>DomoStats Connector <span class="demoflag">DEMO</span></span>
     <button class="themebtn" id="winreload" type="button" title="このウィンドウを再読み込み">↻ 再読み込み</button>
     <a class="themebtn" id="winnewtab" href="#" title="別タブで開く">⧉ 別タブで開く</a>
@@ -337,16 +337,16 @@ body.summaryview #view-summary{flex:1;}
       <button data-cat="Added" aria-pressed="false">新規</button>
     </div>
     <div class="chips" id="bandchips" role="group" aria-label="マッチ率バンド"></div>
-    <label class="toggle"><input type="checkbox" id="deltoggle" checked> 削除を表示</label>
-    <label class="toggle"><input type="checkbox" id="editmode"> 編集モード</label>
-    <label class="toggle"><input type="checkbox" id="editedonly"> 編集済みのみ</label>
-    <label class="toggle"><input type="checkbox" id="confirmedonly"> 確定済みのみ</label>
-    <button class="minibtn" id="confirmview" type="button">表示中を一括確定</button>
+    <label class="toggle" title="原文の差分（削除された語）を取り消し線で表示"><input type="checkbox" id="deltoggle" checked> 削除を表示</label>
+    <label class="toggle" title="訳文を直接編集できるモードに切替（タグ挿入パレット・右クリックメニュー有効）"><input type="checkbox" id="editmode"> 編集モード</label>
+    <label class="toggle" title="編集済みのセグメントのみ表示"><input type="checkbox" id="editedonly"> 編集済みのみ</label>
+    <label class="toggle" title="確定済みのセグメントのみ表示"><input type="checkbox" id="confirmedonly"> 確定済みのみ</label>
+    <button class="minibtn" id="confirmview" type="button" title="現在表示中（フィルター後）の、訳文が空でない行をまとめて確定">表示中を一括確定</button>
     <button class="minibtn" id="runmt" type="button" title="履歴ペインに表示されている MT を翻訳欄に反映します" hidden>MTを実行する</button>
     <span class="editcount" id="editcount"></span>
     <span class="confcount" id="confcount"></span>
     <button class="minibtn" id="savewip" type="button" title="編集・確定の途中内容を保存（サーバーモードはサーバーにも保存し、次回開いた時に自動復元）">途中保存</button><span class="savedat" id="savedat" style="font-size:12px;opacity:.7;margin-left:6px"></span>
-<button class="expbtn" id="exportxliff" type="button">XLIFF 書き出し</button>
+<button class="expbtn" id="exportxliff" type="button" title="確定行を中心に XLIFF 1.2 を書き出し（TM書き戻しの入力）">XLIFF 書き出し</button>
   </div>
 
   <div class="count" id="count"></div>
