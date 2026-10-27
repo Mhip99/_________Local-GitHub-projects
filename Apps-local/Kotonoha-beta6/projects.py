@@ -99,6 +99,54 @@ def history_delete(store, hid):
     save_history(store, rows)
     return n - len(rows)
 
+
+# ===== UI 状態のサーバー側保存（_uistate.json）: 別ブラウザでも前回状態を復元 =====
+# クライアントの localStorage("kotonoha-*") をサーバーにミラーする。配信時に window.__UISTATE
+# として注入し、下の SHIM が localStorage を seed＋以後の変更を /api/uistate-set へ同期する。
+def uistate_path(store):
+    return os.path.join(os.path.dirname(os.path.abspath(store)), "_uistate.json")
+
+def load_uistate(store):
+    p = uistate_path(store)
+    if os.path.exists(p):
+        try:
+            return json.load(open(p, encoding="utf-8-sig")) or {}
+        except Exception:
+            return {}
+    return {}
+
+def save_uistate(store, d):
+    json.dump(d, open(uistate_path(store), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+
+def uistate_set(store, key, value):
+    if not key:
+        return
+    d = load_uistate(store)
+    if value is None:
+        d.pop(key, None)
+    else:
+        d[str(key)] = value
+    save_uistate(store, d)
+
+# localStorage("kotonoha-*") を seed し、以後の set/remove をサーバーへ同期する注入スクリプト。
+UISTATE_SHIM = (
+    "<script>(function(){try{var st=window.__UISTATE||{};"
+    "for(var k in st){if(Object.prototype.hasOwnProperty.call(st,k)){try{localStorage.setItem(k,st[k]);}catch(e){}}}}catch(e){}"
+    "try{var _set=localStorage.setItem.bind(localStorage),_rm=localStorage.removeItem.bind(localStorage);"
+    "var q={},t=null;function tok(){return (window.__KT&&window.__KT.token)||'';}"
+    "function flush(){t=null;var it=q;q={};for(var k in it){(function(key,val){try{fetch('/api/uistate-set',{method:'POST',headers:{'X-KT-Token':tok(),'Content-Type':'application/json'},body:JSON.stringify({key:key,value:val})});}catch(e){}})(k,it[k]);}}"
+    "function sc(k,v){q[k]=v;if(!t)t=setTimeout(flush,400);}"
+    "localStorage.setItem=function(k,v){_set(k,v);if(window.__KT&&window.__KT.served&&String(k).indexOf('kotonoha-')===0)sc(k,String(v));};"
+    "localStorage.removeItem=function(k){_rm(k);if(window.__KT&&window.__KT.served&&String(k).indexOf('kotonoha-')===0)sc(k,null);};"
+    "}catch(e){}})();</script>")
+
+def _served_prefix(kt_dict, store):
+    """配信ページ先頭に入れる __KT / __UISTATE / SHIM の塊。"""
+    return ("<script>window.__KT=%s;window.__UISTATE=%s;</script>%s"
+            % (json.dumps(kt_dict, ensure_ascii=False),
+               json.dumps(load_uistate(store), ensure_ascii=False),
+               UISTATE_SHIM))
+
 # ===== 用語管理（termbase）: 全プロジェクト共通の単一 TSV =====
 TERM_COLS = ["id", "source", "target", "example", "note", "doc", "project", "created", "updated"]
 TERM_EXPORT = [("source", "ソース"), ("target", "ターゲット"), ("example", "用例"),
@@ -1201,7 +1249,7 @@ def build_rows(projects, served=False):
 
 projects = load(a.store)
 
-def dashboard_html(projects, served=False, token=""):
+def dashboard_html(projects, served=False, token="", uistate=None):
     cols = [("n", "#", 48), ("title", "タイトル", 260), ("status", "状態", 100),
             ("segmt", "seg / MT", 90), ("due", "期日", 108), ("memo", "メモ", 220),
             ("updated", "更新", 128)]
@@ -1338,7 +1386,8 @@ body:not(.served) .tabs{display:none}
 .termtext{white-space:normal;word-break:break-word}
 footer{color:var(--muted);font-size:12px;margin-top:18px}
 </style><style id="colhide"></style></head><body>
-<script>window.__KT=__KTCFG__;</script>
+<script>window.__KT=__KTCFG__;window.__UISTATE=__UISTATE__;</script>
+__UISTATE_SHIM__
 <div class="wrap">
 <style>
 .ptabs{display:flex;flex-wrap:wrap;gap:2px;margin:2px 0 6px;border-bottom:2px solid var(--hairline);align-items:flex-end}
@@ -1879,8 +1928,12 @@ function switchView(v){
   if(v==="terms")loadTerms();
   if(v==="tm")loadTM();
   if(v==="history")loadHistory();
+  try{localStorage.setItem("kotonoha-subview",v);}catch(e){}
 }
 document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>switchView(b.dataset.view)));
+// サブタブ（プロジェクト/用語/TM/履歴）の前回選択を復元
+(function(){try{var sv=localStorage.getItem("kotonoha-subview");
+  if(sv&&document.getElementById("view-"+sv))switchView(sv);}catch(e){}})();
 // ===== 履歴タブ: 操作の自動記録（日付・作業内容）＋メモ編集・削除 =====
 var HIST=[];
 function loadHistory(){return api("/api/history").then(function(d){HIST=(d&&d.rows)||[];renderHistory();}).catch(function(){});}
@@ -2159,8 +2212,11 @@ function openExportChoice(pid,btn){
 
 if(KT.served){document.body.classList.add("served");var _tw=document.getElementById("toolswrap");if(_tw)_tw.hidden=false;var _tabs=document.getElementById("tabs");if(_tabs)_tabs.hidden=false;refresh();}
 </script></body></html>"""
+    uscfg = json.dumps(uistate or {}, ensure_ascii=False)
+    ushim = UISTATE_SHIM if served else ""
     return (tpl.replace("__DATA__", data).replace("__COLS__", colmeta)
-               .replace("__KTCFG__", ktcfg).replace("__VER__", VERSION))
+               .replace("__KTCFG__", ktcfg).replace("__VER__", VERSION)
+               .replace("__UISTATE__", uscfg).replace("__UISTATE_SHIM__", ushim))
 
 if a.cmd == "add":
     if not a.html:
@@ -2611,9 +2667,7 @@ elif a.cmd == "serve":
                 self._send(404, {"error": str(e)}); return
             kt = {"served": True, "token": TOKEN,
                   "doc": p.get("title", ""), "project": p.get("project", "")}
-            self._send(200, "<script>window.__KT=%s;</script>%s"
-                       % (json.dumps(kt, ensure_ascii=False), content),
-                       "text/html; charset=utf-8")
+            self._send(200, _served_prefix(kt, STORE) + content, "text/html; charset=utf-8")
 
         def _serve_article_path(self, path):
             """生成物（中間生成物）の作業ファイル(HTML)を絶対パスで配信。
@@ -2662,14 +2716,13 @@ elif a.cmd == "serve":
             kt = {"served": True, "token": TOKEN,
                   "doc": pseudo.get("title", ""), "project": pseudo.get("project", ""),
                   "tms": kt_tms}
-            self._send(200, "<script>window.__KT=%s;</script>%s"
-                       % (json.dumps(kt, ensure_ascii=False), content),
-                       "text/html; charset=utf-8")
+            self._send(200, _served_prefix(kt, STORE) + content, "text/html; charset=utf-8")
 
         def do_GET(self):
             u = urllib.parse.urlparse(self.path)
             if u.path in ("/", "/index.html"):
-                self._send(200, dashboard_html(load(STORE), served=True, token=TOKEN),
+                self._send(200, dashboard_html(load(STORE), served=True, token=TOKEN,
+                                               uistate=load_uistate(STORE)),
                            "text/html; charset=utf-8")
                 return
             if u.path == "/article":
@@ -2696,9 +2749,8 @@ elif a.cmd == "serve":
                                   "const META = " + json.dumps(_meta, ensure_ascii=False) + ";  /*__META__*/",
                                   content, count=1)
                 content = content.replace('DomoStats Connector <span class="demoflag">DEMO</span>', "（プロジェクト未選択）")
-                kt = {"served": True, "token": TOKEN, "doc": "", "project": ""}
-                self._send(200, "<script>window.__KT=%s;</script>%s"
-                           % (json.dumps(kt, ensure_ascii=False), content),
+                kt = {"served": True, "token": TOKEN, "doc": "", "project": "", "tms": []}
+                self._send(200, _served_prefix(kt, STORE) + content,
                            "text/html; charset=utf-8")
                 return
             if u.path.startswith("/api/"):
@@ -2972,6 +3024,14 @@ elif a.cmd == "serve":
                 if _okn:
                     log_history(STORE, "Concordance索引を作成", "、".join(_okn))
                 self._send(200, {"results": results}); return
+            if u.path == "/api/uistate-set":
+                # localStorage("kotonoha-*") のサーバー側ミラー（別ブラウザでも状態復元）
+                try:
+                    uistate_set(STORE, payload.get("key", ""), payload.get("value", None))
+                    self._send(200, {"ok": True})
+                except Exception as e:
+                    self._send(200, {"ok": False, "error": str(e)})
+                return
             if u.path == "/api/history-save":
                 self._send(200, {"ok": history_update(STORE, payload.get("id", ""), payload)}); return
             if u.path == "/api/history-delete":
