@@ -193,6 +193,13 @@ td.ja.isconfirmed::after{content:"確定";font-size:10px;color:var(--reuse);marg
 .refpane,.histpane,.termpane{flex:1 1 46%;min-width:200px;height:220px;min-height:110px;overflow:auto;resize:both;
   display:flex;flex-direction:column;
   background:var(--surface);border:1px solid var(--hairline);border-radius:var(--radius);box-shadow:var(--shadow);padding:10px 12px;}
+/* 配置（列数）切替バー＋プリセット */
+.refctl{flex:0 0 100%;display:flex;gap:6px;align-items:center;font-size:11px;color:var(--faint);margin-bottom:-2px;}
+.refctl button{border:1px solid var(--hairline);background:var(--surface);color:inherit;border-radius:6px;padding:2px 9px;font-size:11px;cursor:pointer;}
+.refctl button[aria-pressed="true"]{background:var(--accent,#2b7a78);color:#fff;border-color:transparent;}
+.refbox.cols-1 > .refpane{flex-basis:100%;}
+.refbox.cols-2 > .refpane{flex-basis:46%;}
+.refbox.cols-3 > .refpane{flex-basis:30%;min-width:150px;}
 .refpane.dragover{outline:2px dashed var(--accent,#2b7a78);outline-offset:-3px;}
 .panehd{position:sticky;top:0;background:var(--surface);z-index:1;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin:0 0 10px;font-weight:600;padding-bottom:4px;}
 .refpane .panehd{cursor:grab;}
@@ -365,7 +372,13 @@ body.summaryview #view-summary{flex:1;}
     </table>
     <div class="empty" id="empty" hidden>該当するセグメントはありません。</div>
   </div>
-  <div class="refbox" id="refbox"><!-- Reference ボックス（名称非表示）: 翻訳履歴・用語・Concordance -->
+  <div class="refbox cols-2" id="refbox"><!-- Reference ボックス（名称非表示）: 翻訳履歴・用語・Concordance -->
+    <div class="refctl" id="refctl" title="ペインの配置（列数）を切替。ヘッダーをドラッグで並べ替え、各ペイン右下で個別リサイズ">
+      <span>配置:</span>
+      <button type="button" data-cols="1" title="1列＝縦3段">1列</button>
+      <button type="button" data-cols="2" title="2列（例: 上段2＋下段1）">2列</button>
+      <button type="button" data-cols="3" title="3列＝横3列">3列</button>
+    </div>
     <div class="refpane histpane" id="histpane" data-pane="hist">
       <h3 class="panehd" draggable="true">翻訳履歴<span class="histsrc" id="histsrc"></span></h3>
       <div id="histbody"><div class="histhint">セグメントの行をクリックすると、その原文の過去訳（更新日時付き・新しい順）がここに表示されます。</div></div>
@@ -895,6 +908,15 @@ document.querySelectorAll(".vtab").forEach(b=>b.addEventListener("click",()=>swi
     if(s&&(s.w||s.h)){ if(s.w){p.style.width=s.w;p.style.flex="0 0 auto";} if(s.h)p.style.height=s.h; }
   });
   var tB=null,tP=null;
+  // 配置（列数）プリセット: 1列=縦3段 / 2列 / 3列=横3列
+  var LSC="kotonoha-refcols";
+  function setCols(n,clearPanes){
+    n=([1,2,3].indexOf(n)>=0)?n:2;
+    box.className=box.className.replace(/\bcols-\d\b/g,"").replace(/\s+/g," ").trim()+" cols-"+n;
+    Array.prototype.forEach.call(box.querySelectorAll("#refctl button"),function(b){b.setAttribute("aria-pressed",String(+b.getAttribute("data-cols")===n));});
+    if(clearPanes){Array.prototype.forEach.call(box.querySelectorAll(".refpane"),function(p){p.style.width="";p.style.flex="";});savePanes();}
+    try{localStorage.setItem(LSC,String(n));}catch(e){}
+  }
   function saveBox(){clearTimeout(tB);tB=setTimeout(function(){try{localStorage.setItem(LSB,box.style.height||"");}catch(e){}},300);}
   function savePanes(){clearTimeout(tP);tP=setTimeout(function(){
     var o={};Array.prototype.forEach.call(box.querySelectorAll(".refpane"),function(p){
@@ -908,6 +930,10 @@ document.querySelectorAll(".vtab").forEach(b=>b.addEventListener("click",()=>swi
     var roP=new ResizeObserver(savePanes);
     Array.prototype.forEach.call(box.querySelectorAll(".refpane"),function(p){roP.observe(p);});
   }
+  var cols=2;try{cols=parseInt(localStorage.getItem(LSC)||"2",10)||2;}catch(e){}
+  setCols(cols,false);
+  var ctl=document.getElementById("refctl");
+  if(ctl)ctl.addEventListener("click",function(e){var b=e.target.closest("button[data-cols]");if(b)setCols(+b.getAttribute("data-cols"),true);});
 })();
 /* ===== Concordance search ペイン ===== */
 (function(){

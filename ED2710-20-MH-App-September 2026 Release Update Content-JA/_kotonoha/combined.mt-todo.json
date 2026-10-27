@@ -919,7 +919,7 @@
    "art": "Creating DataFlows in Magic ETL",
    "i": 117,
    "en": "Expand{1} the {2}Utility {3}section on the left.{4}",
-   "pct": 44.4,
+   "pct": 46.2,
    "glossary": [
     {
      "en": "on the",
@@ -928,9 +928,19 @@
    ],
    "tm_candidates": [
     {
+     "ja": "アイコンはマップに表示されます。",
+     "en": "the icon displays on the map.",
+     "pct": 46.2
+    },
+    {
      "ja": "次に",
      "en": "on the",
      "pct": 44.4
+    },
+    {
+     "ja": "都市名のスペルを再チェックします。",
+     "en": "double-check the spelling on the city name.",
+     "pct": 42.9
     },
     {
      "ja": "データはキーで並べ替える必要があります。",
@@ -938,19 +948,9 @@
      "pct": 40.0
     },
     {
-     "ja": "カテゴリーの目盛り上でラベルを非表示または表示",
-     "en": "hide or show the labels on the category scale",
-     "pct": 37.5
-    },
-    {
-     "ja": "値の目盛り上でラベルを非表示または表示",
-     "en": "hide or show the labels on the value scale",
-     "pct": 37.5
-    },
-    {
-     "ja": "最初の行にセクション名だけを表示します。",
-     "en": "only show the section name on the first row.",
-     "pct": 37.5
+     "ja": "上部にタブがあることに{1}注目してください",
+     "en": "notice that there's the tabs on the top.",
+     "pct": 40.0
     }
    ]
   },
