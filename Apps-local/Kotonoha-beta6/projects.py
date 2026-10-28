@@ -1408,6 +1408,9 @@ tr.detrow td{background:var(--bg);padding:0;border-right:none}
 .srvbadge{display:none;font-size:12px;font-weight:600;color:#fff;background:var(--done);border-radius:999px;padding:3px 10px;margin-left:10px;vertical-align:middle}
 body.served .srvbadge{display:inline-block}
 .verbadge{font-size:12px;font-weight:600;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:2px 9px;margin-left:8px;vertical-align:middle}
+.ibtn{float:right;width:28px;height:28px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--muted);font:italic 700 15px Georgia,"Times New Roman",serif;cursor:pointer;line-height:1;padding:0}
+.ibtn:hover{border-color:var(--accent);color:var(--accent)}
+.modal .bd p.infopara{margin:0;font-size:13.5px;line-height:1.7;color:var(--ink)}
 .ovl{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:60;padding:16px}
 .modal{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:12px;max-width:720px;width:100%;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.4)}
 .modal h2{font-size:17px;margin:0;padding:16px 18px;border-bottom:1px solid var(--line)}
@@ -1461,7 +1464,7 @@ __UISTATE_SHIM__
 </style>
 <div class="ptabs" id="ptabs"></div>
 <div id="ptab-proj">
-<h1>Kotonoha プロジェクト一覧 <span class="verbadge">__VER__</span><span class="srvbadge">サーバーモード（作成・実行が有効）</span></h1>
+<h1>Kotonoha プロジェクト一覧 <span class="verbadge">__VER__</span><span class="srvbadge">サーバーモード（作成・実行が有効）</span><button class="ibtn" id="infobtn" type="button" title="このツールについて（使い方・保存場所）" aria-label="情報">i</button></h1>
 <div class="tabs" id="tabs" hidden>
   <button class="tab" id="tab-projects" data-view="projects" aria-pressed="true" type="button" title="プロジェクト一覧。定義行＝実行/出力/編集/詳細">プロジェクト</button>
   <button class="tab" id="tab-terms" data-view="terms" aria-pressed="false" type="button" title="用語集（全プロジェクト共通 _terms.tsv）の管理">用語管理</button>
@@ -1531,7 +1534,6 @@ __UISTATE_SHIM__
 </div><!-- /view-history -->
 </div><!-- /ptab-proj -->
 <div id="tepviews"></div>
-<footer>台帳: _projects.json ／ 用語集: _terms.tsv（全プロジェクト共通）／ この一覧は <code>projects.py dashboard</code> で生成。開き直すと最新になります。</footer>
 </div>
 <script>
 let P = __DATA__;
@@ -1792,6 +1794,15 @@ function openCreate(){
 
 // ===== 全機能GUI化: 行の編集／ツールメニューのダイアログ群 =====
 function modalShell(title){const m=el("div","modal");m.appendChild(el("h2",null,title));const bd=el("div","bd");m.appendChild(bd);const ft=el("div","ft");return {m:m,bd:bd,ft:ft};}
+// i ボタン: 使い方・保存場所の説明をダイアログ表示（説明文はページ上に常設しない＝作業領域確保）
+function openInfo(){
+  const sh=modalShell("このツールについて");
+  sh.bd.appendChild(el("p","infopara","Japanese（Pre-translation）列を編集して TEP（翻訳・編集・校正）し、仕上がった行の「確定」にチェック（編集不要な良い一致もそのまま確定可）してから「XLIFF 書き出し」します。確定した行だけが Live_TM（Master／プロジェクト TM）への書き戻し対象です。TM 行は TM 訳、MT 行は AI 下訳。編集・確定はブラウザに自動保存されます（同一PC・同一ブラウザ）。確定行を編集すると確定は解除され、再確定が必要です。"));
+  sh.bd.appendChild(el("p","infopara","台帳: _projects.json ／ 用語集: _terms.tsv（全プロジェクト共通）／ この一覧は projects.py dashboard で生成。開き直すと最新になります。"));
+  const close=el("button","primary","閉じる");close.onclick=closeOvl;
+  sh.ft.appendChild(close);sh.m.appendChild(sh.ft);overlay(sh.m);
+}
+(function(){var ib=document.getElementById("infobtn");if(ib)ib.addEventListener("click",openInfo);})();
 function textField(label,hint,val,set,ph){const f=el("div","fld");f.appendChild(el("label",null,label));if(hint)f.appendChild(el("div","hint",hint));const i=el("input");i.type="text";if(ph)i.placeholder=ph;if(val!=null)i.value=val;i.oninput=()=>set(i.value);f.appendChild(i);return f;}
 function pathFieldK(label,hint,kind,get,set){const f=el("div","fld");f.appendChild(el("label",null,label));if(hint)f.appendChild(el("div","hint",hint));const row=el("div","row");const v=el("div","pathval");const choose=el("button","mini","選択");const clr=el("button","mini danger","クリア");row.appendChild(v);row.appendChild(choose);row.appendChild(clr);f.appendChild(row);
   function draw(){const val=get();v.textContent=val||"（未選択）";v.classList.toggle("empty",!val);}
