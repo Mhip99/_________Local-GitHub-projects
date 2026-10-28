@@ -129,6 +129,7 @@ td.tm{color:var(--muted);}
 .b-reuse{color:var(--reuse);background:var(--reuse-wash);border-color:var(--reuse);}
 .b-modify{color:var(--modify);background:var(--modify-wash);border-color:var(--modify);}
 .b-new{color:var(--new);background:var(--new-wash);border-color:var(--new);}
+.b-rep{color:var(--reuse);background:var(--reuse-wash);border-color:var(--reuse);}
 .pct{display:block;font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted);margin-top:5px;}
 .cat{display:block;font-size:11px;color:var(--faint);margin-top:2px;}
 ins{background:var(--add-bg);color:var(--add-ink);text-decoration:none;border-radius:3px;padding:0 2px;font-weight:500;}
@@ -463,6 +464,7 @@ function makeChipEl(ph,tags){const d=document.createElement("div");d.innerHTML=c
 function saveJaField(field){const i=+field.getAttribute("data-i");const val=serializeJa(field);
   if(val===autoJa(i))delete edits[i];else edits[i]=val;
   saveEdits();updateEditedCount();
+  if(i in propagated){delete propagated[i];saveProp();}  // 手動編集したら伝播(R)印を解除
   if(i in confirms){delete confirms[i];saveConfirms();updateConfirmCount();}
   const tr=field.closest("tr");if(tr){tr.classList.toggle("edited",i in edits);tr.classList.remove("confirmed");}}
 function insertChipAt(field,ph){const s=SEG[+field.getAttribute("data-i")];field.focus();
@@ -475,6 +477,7 @@ const state={cat:"all",bands:new Set(),q:"",editMode:false,editedOnly:false,conf
 const ART=((document.querySelector(".filepill")||{}).textContent||"export").replace("DEMO","").trim();
 const LSKEY="tmx-edits:"+ART;
 const LSKEY_C="tmx-confirms:"+ART;
+const LSKEY_P="tmx-prop:"+ART;
 // この作業ファイルで「MTを実行する」を押した履歴があれば runMT を true に上書き（翻訳欄へ反映済み）
 try{if(localStorage.getItem("kotonoha-runmt:"+ART)==="1")RUNMT=true;}catch(e){}
 let edits={};
@@ -486,13 +489,17 @@ function updateEditedCount(){const el=document.getElementById("editcount");if(el
 let confirms={};
 try{confirms=JSON.parse(localStorage.getItem(LSKEY_C)||"{}");}catch(e){confirms={};}
 function saveConfirms(){try{localStorage.setItem(LSKEY_C,JSON.stringify(confirms));}catch(e){}scheduleAutoSave();}
+// オートプロパゲーションで訳が挿入されたセグメント（Match列に "R" 表示）。
+let propagated={};
+try{propagated=JSON.parse(localStorage.getItem(LSKEY_P)||"{}");}catch(e){propagated={};}
+function saveProp(){try{localStorage.setItem(LSKEY_P,JSON.stringify(propagated));}catch(e){}scheduleAutoSave();}
 // 作業内容の自動保存（編集・確定のたびにデバウンスでサーバーへ保存。サーバーモードのみ）
 var _autoT=null;
 function scheduleAutoSave(){
   if(!(window.__KT&&window.__KT.served))return;
   if(_autoT)clearTimeout(_autoT);
   _autoT=setTimeout(function(){_autoT=null;
-    apiT("/api/save-edits",{method:"POST",body:JSON.stringify({art:ART,edits:edits,confirms:confirms})})
+    apiT("/api/save-edits",{method:"POST",body:JSON.stringify({art:ART,edits:edits,confirms:confirms,propagated:propagated})})
       .then(function(d){var t=document.getElementById("savedat");if(t)t.textContent=(d&&d.ok)?("自動保存 "+(d.savedAt||"")):"自動保存失敗（ローカルには保存済）";})
       .catch(function(){});
   },1500);
@@ -528,10 +535,10 @@ function propagateFromConfirm(i){
     overwrite=window.confirm("同一原文で異なる既存訳が "+conflict.length+" 件あります。これらも上書きしますか？（キャンセルで保持）");
   }
   var changed=0;
-  fill.forEach(function(j){edits[j]=target;changed++;});        // 伝播先は訳のみ（確定は手動）
-  if(overwrite)conflict.forEach(function(j){edits[j]=target;changed++;});
+  fill.forEach(function(j){edits[j]=target;propagated[j]=1;changed++;});        // 伝播先は訳のみ（確定は手動）・Match列に R
+  if(overwrite)conflict.forEach(function(j){edits[j]=target;propagated[j]=1;changed++;});
   if(changed){
-    saveEdits();updateEditedCount();render();
+    saveEdits();saveProp();updateEditedCount();render();
     _propNotify("同一原文 "+changed+" 件に訳を伝播しました（確定は各自で）");
   }
 }
@@ -601,7 +608,7 @@ function render(){
     const confCell=`<td class="confcol"><input type="checkbox" class="confbox" data-i="${idx}" ${confirmed?'checked':''} ${hasTgt?'':'disabled'} title="${hasTgt?'TEP 確定（Live_TM へ書き戻し対象）':'訳文が空のため確定できません'}"></td>`;
     return `<tr data-i="${idx}" class="${edited?'edited ':''}${confirmed?'confirmed':''}">
       <td class="idx">${idx+1}</td>
-      <td class="matchcell"><span class="bandtag ${cls}">${s.b}</span><span class="pct">${s.pct}%</span><span class="cat">${CATJA[s.cat]}</span>${sttag}</td>
+      <td class="matchcell">${(idx in propagated)?`<span class="bandtag b-rep" title="オートプロパゲーション（同一原文からの自動伝播）">R</span><span class="cat">伝播</span>`:`<span class="bandtag ${cls}">${s.b}</span><span class="pct">${s.pct}%</span><span class="cat">${CATJA[s.cat]}</span>`}${sttag}</td>
       <td>${withChips(diff(s.en),s.tags)}</td>
       <td class="tm">${withChips(esc(s.tm),s.tags)}</td>
       ${jaCell}
@@ -865,7 +872,7 @@ function saveWIP(){
   try{localStorage.setItem(LSKEY,JSON.stringify(edits));localStorage.setItem(LSKEY_C,JSON.stringify(confirms));}catch(e){}
   var tag=document.getElementById("savedat");
   if(KTX.served){
-    return apiT("/api/save-edits",{method:"POST",body:JSON.stringify({art:ART,edits:edits,confirms:confirms})})
+    return apiT("/api/save-edits",{method:"POST",body:JSON.stringify({art:ART,edits:edits,confirms:confirms,propagated:propagated})})
       .then(function(d){if(tag)tag.textContent=(d&&d.ok)?("保存しました "+(d.savedAt||_hm())):"保存失敗（ローカルには保存済）";return d;})
       .catch(function(){if(tag)tag.textContent="保存（ローカルのみ）"+_hm();});
   } else { if(tag)tag.textContent="保存（ローカル）"+_hm(); return Promise.resolve(); }
@@ -926,8 +933,9 @@ if(KTX.served){apiT("/api/load-edits?art="+encodeURIComponent(ART)).then(functio
   if(d&&d.ok){var ch=false;
     if(d.edits){Object.assign(edits,d.edits);ch=true;}
     if(d.confirms){Object.assign(confirms,d.confirms);ch=true;}
+    if(d.propagated){Object.assign(propagated,d.propagated);ch=true;}
     var tag=document.getElementById("savedat");if(tag&&d.savedAt)tag.textContent="前回保存 "+d.savedAt;
-    if(ch){try{localStorage.setItem(LSKEY,JSON.stringify(edits));localStorage.setItem(LSKEY_C,JSON.stringify(confirms));}catch(e){}updateEditedCount();updateConfirmCount();render();}
+    if(ch){try{localStorage.setItem(LSKEY,JSON.stringify(edits));localStorage.setItem(LSKEY_C,JSON.stringify(confirms));localStorage.setItem(LSKEY_P,JSON.stringify(propagated));}catch(e){}updateEditedCount();updateConfirmCount();render();}
   }
 }).catch(function(){});}
 // 翻訳 / サマリー タブ切替

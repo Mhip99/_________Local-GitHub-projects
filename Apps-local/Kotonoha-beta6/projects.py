@@ -2881,10 +2881,11 @@ elif a.cmd == "serve":
                             rec = json.load(open(fp, encoding="utf-8"))
                             self._send(200, {"ok": True, "edits": rec.get("edits", {}),
                                              "confirms": rec.get("confirms", {}),
+                                             "propagated": rec.get("propagated", {}),
                                              "savedAt": rec.get("savedAt", "")}); return
                         except Exception as e:
                             self._send(200, {"ok": False, "error": str(e)}); return
-                    self._send(200, {"ok": True, "edits": {}, "confirms": {}, "savedAt": ""}); return
+                    self._send(200, {"ok": True, "edits": {}, "confirms": {}, "propagated": {}, "savedAt": ""}); return
             self._send(404, {"error": "not found"})
 
         def do_POST(self):
@@ -2910,6 +2911,7 @@ elif a.cmd == "serve":
                     safe = ("".join(("_" if c in '\\/:*?"<>|' else c) for c in art)[:120]) or "untitled"
                     rec = {"art": art, "edits": payload.get("edits", {}) or {},
                            "confirms": payload.get("confirms", {}) or {},
+                           "propagated": payload.get("propagated", {}) or {},
                            "savedAt": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
                     json.dump(rec, open(os.path.join(wipdir, safe + ".json"), "w", encoding="utf-8"),
                               ensure_ascii=False, indent=1)
