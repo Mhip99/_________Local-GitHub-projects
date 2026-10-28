@@ -108,6 +108,7 @@ idx = tm_index.load_or_build(specs, args.cache_dir,
 exact_target = idx.exact_target; ice_ctx = idx.ice_ctx
 inv = idx.inv; keys = idx.keys; product_terms = idx.product_terms
 exact_hist = getattr(idx, "exact_hist", {})   # norm_src -> [{"ja","date"},...] 版履歴（履歴ペイン用）
+src_tm = getattr(idx, "src_tm", {})           # norm_src -> 由来TMX絶対パス（TEP完了の書き戻しルーティング用）
 
 def hist_of(k):
     """Return this source's past translations, newest first, for the editor history pane.
@@ -303,7 +304,7 @@ def analyze(src):
             band = "ICE" if is_ice else "100%"
             rows.append({"b":band,"cat":CAT[band],"pct":"100.0","st":"tm",
                          "en":[["eq", s]],"tm":tgt,"ja":[["eq", tgt]],"hist":hist_of(sn),
-                         "glossary":glossary_hits(sn)})
+                         "glossary":glossary_hits(sn),"srctm":src_tm.get(sn,"")})
         else:
             bestk, r = best_fuzzy(sn)
             band = band_of(r); pct = "%.1f" % (r*100)
@@ -311,13 +312,13 @@ def analyze(src):
                 tgt = append_missing_tags(s, norm_tm_tags(exact_target.get(bestk, "")))
                 rows.append({"b":band,"cat":CAT[band],"pct":pct,"st":"tm",
                              "en":tok_diff(bestk, s),"tm":tgt,"ja":[["eq", tgt]],"hist":hist_of(bestk),
-                             "glossary":glossary_hits(sn)})
+                             "glossary":glossary_hits(sn),"srctm":src_tm.get(bestk,"")})
             else:
                 # \u30de\u30c3\u30c1\u7387 \u226474% \u3067\u3082\u3001TM \u306b\u65e2\u8a33\u304c\u3042\u308c\u3070\u985e\u4f3c\u5ea6\u306e\u9ad8\u3044\u9806\u306b\u5019\u88dc\u3092\u5c65\u6b74\u3078\uff08\u4e0a\u4f4d\u306f UI \u304c5\u4ef6\u305a\u3064\u8868\u793a\uff09\u3002
                 bh = topk_fuzzy(sn, 50)
                 rows.append({"b":"<=74%","cat":"Added","pct":pct if bestk else "0.0","st":"mt",
                              "en":[["add", s]],"tm":"\u2014","ja":[],"hist":bh,
-                             "glossary":glossary_hits(sn)})
+                             "glossary":glossary_hits(sn),"srctm":""})
                 # MT \u3092\u5916\u90e8AI\u3067\u4f5c\u308b\u969b\u3001\u6307\u5b9aTM\u306e\u8a72\u5f53\u65e2\u8a33\uff08\u6700\u3082\u8fd1\u3044\u5019\u88dc\u30fb\u4e0a\u4f4d5\u4ef6\uff09\u3092\u5fc5\u305a\u53c2\u7167\u3067\u304d\u308b\u3088\u3046\u540c\u68b1\u3059\u308b
                 mt_todo.append({"i":i, "en":s, "pct":float(pct if bestk else 0.0),
                                 "glossary":glossary_hits(sn), "tm_candidates":bh[:5]})

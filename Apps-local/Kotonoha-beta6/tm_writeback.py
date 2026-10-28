@@ -19,6 +19,7 @@ does not yet exist, it is not created.
 """
 import argparse, re, sys, io, os, glob, html, time
 import xml.etree.ElementTree as ET
+import tm_writeback_lib  # 蓄積マージの中核（副作用なし・projects.py の TEP完了 と共通）
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 
@@ -103,105 +104,23 @@ if not entries:
     print("nothing confirmed -> nothing to write. (作業者が確定するまで書き戻しません)", flush=True)
     sys.exit(0)
 
-# ---- TMX read / merge / write ----
+# ---- TMX read / merge / write （中核は tm_writeback_lib に集約。CLI 出力は従来どおり） ----
 def load_tmx(path):
-    """Return dict src -> [ {tgt,prev,next,creationdate,changedate}, ... ] from an existing TMX.
-    蓄積型: 同一原文の複数 <tu>（過去訳）をすべて版リストとして保持する（同一 tgt は重複排除）。"""
-    od = {}
-    if not os.path.exists(path):
-        return od
-    try:
-        root = ET.parse(path).getroot()
-    except Exception as e:
-        print("  WARNING: cannot parse existing %s (%s); it will be rewritten fresh" % (os.path.basename(path), e), flush=True)
-        return od
-    for tu in root.iter():
-        if strip(tu.tag) != "tu":
-            continue
-        en = ja = None; prev = nxt = ""
-        cdate = tu.attrib.get("creationdate", ""); chdate = tu.attrib.get("changedate", "")
-        for ch in tu:
-            ct = strip(ch.tag)
-            if ct == "prop":
-                pt = ch.attrib.get("type", "")
-                if pt == "x-previous-source-text": prev = text_of(ch)
-                elif pt == "x-next-source-text": nxt = text_of(ch)
-            elif ct == "tuv":
-                lang = ch.attrib.get("{http://www.w3.org/XML/1998/namespace}lang") or ch.attrib.get("lang") or ""
-                seg = "".join(text_of(s) for s in ch if strip(s.tag) == "seg")
-                if lang.lower().startswith(args.src_lang[:2]): en = seg
-                elif lang.lower().startswith(args.tgt_lang[:2]): ja = seg
-        if en is not None and ja is not None:
-            lst = od.setdefault(en.strip(), [])
-            found = None
-            for v in lst:
-                if v["tgt"] == ja:
-                    found = v; break
-            if found is None:
-                lst.append({"tgt": ja, "prev": prev, "next": nxt,
-                            "creationdate": cdate, "changedate": chdate})
-            else:
-                if chdate > found.get("changedate", ""): found["changedate"] = chdate
-                if prev and not found.get("prev"): found["prev"] = prev
-                if nxt and not found.get("next"): found["next"] = nxt
-    return od
+    return tm_writeback_lib.load_tmx(path, args.src_lang, args.tgt_lang)
 
 def xesc(s):
     return html.escape(s or "", quote=False)
 
 def write_tmx(path, od):
-    now = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
-    lines = ['<?xml version="1.0" encoding="UTF-8"?>',
-             '<tmx version="1.4">',
-             '  <header creationtool="Kotonoha" creationtoolversion="beta2" segtype="sentence" '
-             'o-tmf="Kotonoha" adminlang="en-US" srclang="%s" datatype="plaintext"/>' % args.src_lang,
-             '  <body>']
-    for src, versions in od.items():
-        # 原文ごとに版リストを古い順→新しい順で複数 <tu> として出力（各版が自分の日時を保持）
-        for v in sorted(versions, key=lambda x: (x.get("changedate") or x.get("creationdate") or "")):
-            chdate = v.get("changedate") or now
-            cdate = v.get("creationdate") or chdate
-            lines.append('    <tu creationdate="%s" changedate="%s" creationid="Kotonoha-TEP">' % (cdate, chdate))
-            if v.get("prev"):
-                lines.append('      <prop type="x-previous-source-text">%s</prop>' % xesc(v["prev"]))
-            if v.get("next"):
-                lines.append('      <prop type="x-next-source-text">%s</prop>' % xesc(v["next"]))
-            lines.append('      <tuv xml:lang="%s"><seg>%s</seg></tuv>' % (args.src_lang, xesc(src)))
-            lines.append('      <tuv xml:lang="%s"><seg>%s</seg></tuv>' % (args.tgt_lang, xesc(v["tgt"])))
-            lines.append('    </tu>')
-    lines += ['  </body>', '</tmx>', '']
-    open(path, "w", encoding="utf-8", newline="\n").write("\n".join(lines))
+    return tm_writeback_lib.write_tmx(path, od, args.src_lang, args.tgt_lang)
 
 def merge_into(path, entries, label):
-    existing = os.path.exists(path)
-    now = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
-    od = load_tmx(path)
-    before = sum(len(v) for v in od.values()); added = refreshed = 0
-    for e in entries:
-        src = e["src"]; lst = od.setdefault(src, [])
-        ver = None
-        for v in lst:
-            if v["tgt"] == e["tgt"]:
-                ver = v; break
-        if ver is None:
-            # 既存訳は残したまま、新しい確定訳を版として追記（蓄積・上書きしない）
-            lst.append({"tgt": e["tgt"], "prev": e["prev"], "next": e["next"],
-                        "creationdate": now, "changedate": now})
-            added += 1
-        else:
-            # 同一訳が既にある → 更新日時だけ更新（履歴は増やさない）
-            ver["changedate"] = now
-            if e["prev"] and not ver.get("prev"): ver["prev"] = e["prev"]
-            if e["next"] and not ver.get("next"): ver["next"] = e["next"]
-            refreshed += 1
-    after = sum(len(v) for v in od.values())
-    action = "would write" if args.dry_run else ("update" if existing else "create")
+    r = tm_writeback_lib.merge_entries(path, entries, args.src_lang, args.tgt_lang,
+                                       dry_run=args.dry_run)
     print("  %-9s %-34s TUs %d -> %d (new %d, same %d)"
-          % (label, os.path.basename(path), before, after, added, refreshed), flush=True)
-    if not args.dry_run:
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        write_tmx(path, od)
-    return added, refreshed
+          % (label, os.path.basename(path), r["before"], r["after"],
+             r["added"], r["refreshed"]), flush=True)
+    return r["added"], r["refreshed"]
 
 # ---- targets: Master (always) + project (by customer) ----
 master = args.master or os.path.join(args.live_dir, "Domo_Domo-Master.tmx")

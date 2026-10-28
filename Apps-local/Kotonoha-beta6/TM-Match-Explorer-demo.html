@@ -313,6 +313,7 @@ body.summaryview #view-summary{flex:1;}
     <button class="themebtn" id="winreload" type="button" title="このウィンドウを再読み込み">↻ 再読み込み</button>
     <a class="themebtn" id="winnewtab" href="#" title="別タブで開く">⧉ 別タブで開く</a>
     <button class="themebtn" id="winsaveclose" type="button" hidden title="作業内容を保存してこのタブを閉じる">保存して閉じる ×</button>
+    <button class="themebtn" id="wintepdone" type="button" hidden title="確定した訳をマッチ元のTMへ書き戻し、このプロジェクトを完了にしてタブを閉じる">TEP完了 ✓</button>
     <button class="themebtn" id="themebtn" type="button">◐ テーマ切替</button>
   </div>
   <section class="summary" id="view-summary" hidden>
@@ -838,6 +839,39 @@ function saveWIP(){
       Promise.resolve(saveWIP()).then(function(){
         try{ if(window.parent.closeActiveTEP) window.parent.closeActiveTEP(); }catch(e){}
       });
+    });
+  }
+  // 「TEP完了」: 確定分をマッチ元TMへ個別書き戻し→プロジェクト完了→タブを閉じる
+  var td=document.getElementById("wintepdone");
+  if(td && KTX.served && KTX.doc && window.parent && window.parent!==window){
+    td.hidden=false;
+    td.addEventListener("click",function(){
+      var total=SEG.length, conf=confirmedCount();
+      if(conf===0){ alert("確定済みのセグメントがありません。確定してから TEP完了してください。"); return; }
+      if(conf<total && !confirm("未確定が "+(total-conf)+" 件あります。確定分のみ TM に書き戻して完了します。よろしいですか？")) return;
+      td.disabled=true;
+      Promise.resolve(saveWIP()).then(function(){
+        var entries=[];
+        Object.keys(confirms).forEach(function(k){
+          var i=parseInt(k,10); if(isNaN(i)||!SEG[i])return;
+          var ja=(jaValue(i)||"").trim(); if(!ja)return;
+          entries.push({en:plain(SEG[i].en), ja:ja, srctm:(SEG[i].srctm||""),
+                        prev:(i>0?plain(SEG[i-1].en):""), next:(i+1<SEG.length?plain(SEG[i+1].en):"")});
+        });
+        return apiT("/api/tep-complete",{method:"POST",body:JSON.stringify(
+          {pid:(KTX.pid||""),art:ART,entries:entries,total:total,confirmed:entries.length})});
+      }).then(function(d){
+        if(d&&d.ok){
+          var msg="TEP完了: 確定"+(d.confirmed||0)+"件を "+((d.written||[]).length)+" 本のTMへ書き戻しました";
+          if(d.routed_to_main)msg+="（うち"+d.routed_to_main+"件はメインTMへ）";
+          if(d.skipped)msg+="／スキップ"+d.skipped+"件";
+          try{ if(window.parent && typeof window.parent.toast==="function") window.parent.toast(msg); }catch(e){}
+          try{ if(window.parent.closeActiveTEP) window.parent.closeActiveTEP(); }catch(e){}
+        } else {
+          td.disabled=false;
+          alert("TEP完了に失敗しました："+((d&&d.error)||"不明"));
+        }
+      }).catch(function(err){ td.disabled=false; alert("通信エラー："+err); });
     });
   }
 })();

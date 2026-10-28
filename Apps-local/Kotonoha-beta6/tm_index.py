@@ -14,7 +14,7 @@ import xml.etree.ElementTree as ET
 
 # Bump when the index schema or normalization below changes, to auto-invalidate
 # any cache written by an older build.
-FORMAT_VERSION = "kotonoha-idx-3"
+FORMAT_VERSION = "kotonoha-idx-4"
 
 TOKCAP = 4000
 TERM_MAXTOK = 4            # Product entries with <= this many tokens are UI terms
@@ -53,14 +53,15 @@ def term_ok(k, ja):
 
 class Index:
     """Container for the matching index. Picklable."""
-    __slots__ = ("exact_target", "exact_hist", "ice_ctx", "inv", "keys", "product_terms", "meta")
+    __slots__ = ("exact_target", "exact_hist", "ice_ctx", "inv", "keys", "product_terms", "src_tm", "meta")
     def __init__(self):
         self.exact_target = {}   # norm_src -> target text (newest when multiple versions)
-        self.exact_hist = {}     # norm_src -> [{"ja": target, "date": changedate}, ...] 版履歴
+        self.exact_hist = {}     # norm_src -> [{"ja": target, "date": changedate, "tm": path}, ...] 版履歴
         self.ice_ctx = {}        # norm_src -> set of (prev_hash, next_hash)
         self.inv = {}            # token -> list of key ids (capped)
         self.keys = []           # id -> norm_src
         self.product_terms = {}  # norm_en (<=4 tok) -> {"en": surface, "ja": target}
+        self.src_tm = {}         # norm_src -> 採用された訳の由来TMX絶対パス（TEP完了の書き戻しルーティング用）
         self.meta = {}           # build info (version, tmx list, timing)
 
 # Pin the pickled class to module "tm_index" even when this file is run as a
@@ -72,7 +73,8 @@ Index.__module__ = "tm_index"
 def _index_tmx(idx, path, is_product, log=print):
     exact_target = idx.exact_target; ice_ctx = idx.ice_ctx
     inv = idx.inv; keys = idx.keys; product_terms = idx.product_terms
-    exact_hist = idx.exact_hist
+    exact_hist = idx.exact_hist; src_tm = idx.src_tm
+    abspath = os.path.abspath(path)
     strip = lambda t: t.split("}")[-1]
     n_tu = 0
     context = ET.iterparse(path, events=("end",))
@@ -105,17 +107,17 @@ def _index_tmx(idx, path, is_product, log=print):
                     if r["ja"] == ja:
                         rec = r; break
                 if rec is None:
-                    hist.append({"ja": ja, "date": date})
+                    hist.append({"ja": ja, "date": date, "tm": abspath})
                 elif date > rec["date"]:
-                    rec["date"] = date
+                    rec["date"] = date; rec["tm"] = abspath
                 if k not in exact_target:
-                    exact_target[k] = ja
+                    exact_target[k] = ja; src_tm[k] = abspath
                     kid = len(keys); keys.append(k)
                     for tok in set(k.split()):
                         lst = inv.setdefault(tok, [])
                         if len(lst) < TOKCAP: lst.append(kid)
                 elif is_product and len(k.split()) <= TERM_MAXTOK:
-                    exact_target[k] = ja
+                    exact_target[k] = ja; src_tm[k] = abspath
                 if prev or nxt:
                     ice_ctx.setdefault(k, set()).add((h(norm(prev)), h(norm(nxt))))
                 if is_product:
@@ -157,6 +159,9 @@ def build_index(specs, log=print):
             best = max(hist, key=lambda r: (r.get("date") or ""))
             if best.get("date") and idx.exact_target.get(k) != best["ja"]:
                 idx.exact_target[k] = best["ja"]; multi += 1
+            # 採用された訳の由来TMに src_tm を同期（書き戻しルーティング用）
+            if best.get("tm"):
+                idx.src_tm[k] = best["tm"]
     idx.meta = {
         "version": FORMAT_VERSION,
         "built": time.strftime("%Y-%m-%d %H:%M:%S"),

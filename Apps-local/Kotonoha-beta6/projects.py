@@ -7,14 +7,14 @@ edits/confirms the browser saved in localStorage. The project list is shown in i
 browser tab via a generated dashboard (_projects.html), separate from the work files.
 
 Store: _projects.json next to this script (override with --store). Fields per project:
-  html, title, source, segs, mt, status(作業中/レビュー中/完了), memo, due, created, updated
+  html, title, source, segs, mt, status(作成済/作業中/レビュー中/完了), memo, due, created, updated
 
 Commands:
   add        --html <path>           register one ([1]); title/source/MT from <html>.mt-todo.json
   add-batch  --combined <todo.json>  register every article in a combined mt-todo.json ([2])
   list       [--status S|--active]   numbered list (newest first); --active hides 完了
   get        --index N               print the N-th project's HTML path
-  set-status --index N --status S    作業中 / レビュー中 / 完了
+  set-status --index N --status S    作成済 / 作業中 / レビュー中 / 完了
   set-memo   --index N --memo "..."  set/clear memo
   set-due    --index N --due "..."   set/clear due date
   remove     --index N [--delete-file]  drop from list (optionally delete the HTML + mt-todo)
@@ -29,7 +29,7 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 HERE = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_STORE = os.path.join(HERE, "_projects.json")
 VERSION = "beta6.00"   # 画面バナー / EMPTY_TMX の creationtoolversion などに使用
-STATUSES = ["作業中", "レビュー中", "完了"]
+STATUSES = ["作成済", "作業中", "レビュー中", "完了"]
 
 def load(store):
     if os.path.exists(store):
@@ -474,7 +474,7 @@ def create_project_full(projects, name, sources=None, main_tm="", product_tm="",
     run_mt: 既訳のない(≤74%)セグメントのMTを翻訳欄に反映するか（False=英語のまま・MTは履歴へ）。"""
     pid = make_id(projects)
     projects.append({
-        "id": pid, "type": "project", "name": name or pid, "status": "未解析",
+        "id": pid, "type": "project", "name": name or pid, "status": "作成済",
         "sources": [{"kind": (s.get("kind") or "file"), "path": s.get("path", "")}
                     for s in (sources or []) if s.get("path")],
         "main_tm": main_tm or "", "product_tm": product_tm or "",
@@ -675,7 +675,7 @@ def run_project(projects, store, pid, out_path="", engine="", template="",
             if art.get("title"):
                 produced.append({"title": art.get("title"), "html": htmlp})
     p["artifacts"] = artifacts
-    if p.get("status") in (None, "", "未解析"):
+    if p.get("status") in (None, "", "未解析", "作成済"):
         p["status"] = "作業中"
     p["out_dir"] = out_dir; p["combined"] = combined
     p["last_run"] = now(); p["updated"] = now()
@@ -1107,6 +1107,65 @@ def writeback_run(xliff=None, xliff_dir="", master="", project_tmx="", customer=
     return {"ok": True, "dry_run": bool(dry_run), "backed_up": backed, "log": out}
 
 
+def tep_complete_run(project, entries, backup=True):
+    """TEP完了: 確定セグメントを「マッチ元TM」へ個別に書き戻す（蓄積型・新版TU・書込前バックアップ）。
+    無一致/MTのみ（srctm 空）や、マッチ元が書込不可/対象外のものは メインTM へ fallback。
+    entries = [{en, ja, srctm, prev, next}]。返り値に書込結果・バックアップ・ルーティング内訳。"""
+    import shutil, time as _time
+    import tm_writeback_lib
+    # このプロジェクトの TM（メイン/サブ/Product）と、各々の書込可否を把握
+    main_tm = os.path.abspath(project.get("main_tm", "")) if project.get("main_tm") else ""
+    proj_tms = {}   # abspath.lower() -> abspath
+    for _p in ([project.get("main_tm", ""), project.get("product_tm", "")] + list(project.get("sub_tms") or [])):
+        if _p:
+            ap = os.path.abspath(_p)
+            proj_tms[ap.lower()] = ap
+    def _writable(ap):
+        return bool(ap) and os.path.isfile(ap) and _tm_editable(ap, os.path.getsize(ap))
+    main_ok = _writable(main_tm)
+    # 各 entry を書込先 TM へ振り分け
+    groups = {}     # target abspath -> [ {src,tgt,prev,next} ]
+    routed_to_main = 0; skipped = 0
+    for e in entries:
+        en = (e.get("en") or "").strip(); ja = (e.get("ja") or "").strip()
+        if not en or not ja:
+            skipped += 1; continue
+        src_tm = (e.get("srctm") or "").strip()
+        target = ""
+        if src_tm:
+            sap = os.path.abspath(src_tm)
+            if sap.lower() in proj_tms and _writable(sap):
+                target = sap
+        if not target:
+            if main_ok:
+                target = main_tm
+                if src_tm.lower() != main_tm.lower():
+                    routed_to_main += 1
+            else:
+                skipped += 1; continue
+        groups.setdefault(target, []).append(
+            {"src": en, "tgt": ja, "prev": (e.get("prev") or ""), "next": (e.get("next") or "")})
+    # 書込前バックアップ（各対象TMX）→ 蓄積マージ
+    backed = []; written = []
+    if backup:
+        ts = _time.strftime("%Y%m%d-%H%M%S")
+        for tgt in groups:
+            if os.path.exists(tgt):
+                base, ext = os.path.splitext(tgt)
+                bak = "%s.bak_%s%s" % (base, ts, ext or ".tmx")
+                try:
+                    shutil.copy2(tgt, bak); backed.append(bak)
+                except Exception as ex:
+                    return {"ok": False, "error": "バックアップに失敗したため中止しました: %s" % ex}
+    for tgt, ents in groups.items():
+        r = tm_writeback_lib.merge_entries(tgt, ents)
+        written.append({"tm": tgt, "name": os.path.basename(tgt),
+                        "added": r["added"], "same": r["refreshed"]})
+    return {"ok": True, "written": written, "backed_up": backed,
+            "routed_to_main": routed_to_main, "skipped": skipped,
+            "confirmed": len([e for e in entries if (e.get("en") and e.get("ja"))])}
+
+
 def glossary_run(source=None, source_dir="", html=None, xliff=None, xliff_dir="",
                  confirmed_only=False, tmx="", product_tmx="", cache_dir="", out="", capture=False):
     """UI Glossary を作成（ui_glossary.py）。<out>.csv / <out>.json を出力。"""
@@ -1414,6 +1473,7 @@ __UISTATE_SHIM__
   <button class="btn new" id="newbtn" type="button" title="新規プロジェクトを作成（名前・ソース・メイン/Product/サブTMを指定。作成して実行も可）">＋ 新規作成</button>
   <input id="q" type="search" placeholder="タイトル・メモ・ソースを検索…" title="タイトル・メモ・ソースを部分一致で絞り込み">
   <button class="chip" data-st="all" aria-pressed="true" title="すべての状態を表示">すべて</button>
+  <button class="chip" data-st="作成済" aria-pressed="false" title="状態=作成済 のみ表示">作成済</button>
   <button class="chip" data-st="作業中" aria-pressed="false" title="状態=作業中 のみ表示">作業中</button>
   <button class="chip" data-st="レビュー中" aria-pressed="false" title="状態=レビュー中 のみ表示">レビュー中</button>
   <button class="chip" data-st="完了" aria-pressed="false" title="状態=完了 のみ表示">完了</button>
@@ -1477,7 +1537,7 @@ __UISTATE_SHIM__
 let P = __DATA__;
 const COLS = __COLS__;
 const KT = (window.__KT||{served:false,token:""});
-const BADGE={"未解析":"b-todo","作業中":"b-work","レビュー中":"b-rev","完了":"b-done"};
+const BADGE={"作成済":"b-todo","未解析":"b-todo","作業中":"b-work","レビュー中":"b-rev","完了":"b-done"};
 const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
 const LSW="kotonoha-proj-w",LSH="kotonoha-proj-hidden",LST="kotonoha-proj-theme";
 let widths={},hidden=[];
@@ -1745,9 +1805,9 @@ function busy(btn,on,label){if(on){btn.dataset.old=btn.textContent;btn.textConte
 function showLog(title,log,revealPath){const sh=modalShell(title);const pre=el("div","pre");pre.textContent=log||"(出力なし)";sh.bd.appendChild(pre);const close=el("button","primary","閉じる");close.onclick=closeOvl;if(revealPath){const open=el("button","ghost","出力フォルダを開く");open.onclick=()=>api("/api/reveal",{method:"POST",body:JSON.stringify({path:revealPath})}).then(r=>{if(!(r&&r.ok))toast("フォルダを開けませんでした");});sh.ft.appendChild(open);}sh.ft.appendChild(close);sh.m.appendChild(sh.ft);overlay(sh.m);}
 
 function openEdit(p){
-  const st={status:p.status||"未解析",memo:p.memo||"",due:p.due||""};
+  const st={status:((p.status&&p.status!=="未解析")?p.status:"作成済"),memo:p.memo||"",due:p.due||""};
   const sh=modalShell("編集: "+(p.title||p.id||""));
-  const fs=el("div","fld");fs.appendChild(el("label",null,"状態"));const sel=el("select");["未解析","作業中","レビュー中","完了"].forEach(s=>{const o=el("option",null,s);o.value=s;if(s===st.status)o.selected=true;sel.appendChild(o);});sel.onchange=()=>{st.status=sel.value;};fs.appendChild(sel);sh.bd.appendChild(fs);
+  const fs=el("div","fld");fs.appendChild(el("label",null,"状態"));const sel=el("select");["作成済","作業中","レビュー中","完了"].forEach(s=>{const o=el("option",null,s);o.value=s;if(s===st.status)o.selected=true;sel.appendChild(o);});sel.onchange=()=>{st.status=sel.value;};fs.appendChild(sel);sh.bd.appendChild(fs);
   sh.bd.appendChild(textField("メモ","",st.memo,v=>{st.memo=v;}));
   sh.bd.appendChild(textField("期日 (YYYY-MM-DD)","",st.due,v=>{st.due=v;},"2026-12-31"));
   const del=el("button","ghost","このプロジェクトを削除");del.style.color="#c0392b";let armed=false;
@@ -2245,7 +2305,7 @@ elif a.cmd == "add-batch":
 elif a.cmd == "create":
     pid = make_id(projects)
     projects.append({
-        "id": pid, "type": "project", "name": a.name or pid, "status": "未解析",
+        "id": pid, "type": "project", "name": a.name or pid, "status": "作成済",
         "sources": [], "main_tm": "", "product_tm": "", "sub_tms": [],
         "created": now(), "updated": now(),
     })
@@ -2666,7 +2726,8 @@ elif a.cmd == "serve":
             except Exception as e:
                 self._send(404, {"error": str(e)}); return
             kt = {"served": True, "token": TOKEN,
-                  "doc": p.get("title", ""), "project": p.get("project", "")}
+                  "doc": p.get("title", ""), "project": p.get("project", ""),
+                  "pid": (p.get("id", "") if p else "")}
             self._send(200, _served_prefix(kt, STORE) + content, "text/html; charset=utf-8")
 
         def _serve_article_path(self, path):
@@ -2715,6 +2776,7 @@ elif a.cmd == "serve":
                         kt_tms.append({"path": os.path.abspath(_p), "name": os.path.basename(_p)})
             kt = {"served": True, "token": TOKEN,
                   "doc": pseudo.get("title", ""), "project": pseudo.get("project", ""),
+                  "pid": (owner.get("id", "") if owner else ""),
                   "tms": kt_tms}
             self._send(200, _served_prefix(kt, STORE) + content, "text/html; charset=utf-8")
 
@@ -2749,7 +2811,7 @@ elif a.cmd == "serve":
                                   "const META = " + json.dumps(_meta, ensure_ascii=False) + ";  /*__META__*/",
                                   content, count=1)
                 content = content.replace('DomoStats Connector <span class="demoflag">DEMO</span>', "（プロジェクト未選択）")
-                kt = {"served": True, "token": TOKEN, "doc": "", "project": "", "tms": []}
+                kt = {"served": True, "token": TOKEN, "doc": "", "project": "", "pid": "", "tms": []}
                 self._send(200, _served_prefix(kt, STORE) + content,
                            "text/html; charset=utf-8")
                 return
@@ -2953,6 +3015,22 @@ elif a.cmd == "serve":
                 if not payload.get("dry_run", True):
                     log_history(STORE, "TM書き戻し", payload.get("customer", "") or "Master")
                 self._send(200, _wb); return
+            if u.path == "/api/tep-complete":
+                # TEP完了: 確定分をマッチ元TMへ個別書き戻し→ステータス完了。editor から呼ばれる。
+                projs = load(STORE)
+                proj = find_by_row_id(projs, payload.get("pid", ""))
+                if not proj:
+                    self._send(200, {"ok": False, "error": "プロジェクトが見つかりません"}); return
+                entries = payload.get("entries", []) or []
+                res = tep_complete_run(proj, entries, backup=True)
+                if res.get("ok"):
+                    nm = proj.get("name", "") or proj.get("id", "")
+                    art = payload.get("art", "") or nm
+                    log_history(STORE, "TEP完了",
+                                "%s 確定%d件→TM%d本" % (art, res.get("confirmed", 0), len(res.get("written", []))),
+                                nm)
+                    update_field(projs, STORE, proj.get("id", ""), "status", "完了")
+                self._send(200, res); return
             if u.path == "/api/glossary":
                 self._send(200, glossary_run(source=payload.get("source", []),
                                              source_dir=payload.get("source_dir", ""),
