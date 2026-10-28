@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Kotonoha beta6.00 — Concordance search（TMX横断検索）用の専用キャッシュ＆検索。
+"""Kotonoha beta6.10 — Concordance search（TMX横断検索）用の専用キャッシュ＆検索。
 argparse 非依存。大きな TMX も ET.iterparse + el.clear() で省メモリ解析し、
 原文EN・原文JA・更新日付の平坦リストを pickle キャッシュ（指紋=path+size+mtime）。
 検索は EN/JA/両方・大小区別・複数キーワード AND/OR・正規表現に対応。"""

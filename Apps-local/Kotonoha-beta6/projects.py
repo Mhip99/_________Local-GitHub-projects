@@ -28,7 +28,7 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_STORE = os.path.join(HERE, "_projects.json")
-VERSION = "beta6.00"   # 画面バナー / EMPTY_TMX の creationtoolversion などに使用
+VERSION = "beta6.10"   # 画面バナー / EMPTY_TMX の creationtoolversion などに使用
 STATUSES = ["作成済", "作業中", "レビュー中", "完了"]
 
 def load(store):

@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
-"""Kotonoha beta6.00 — スタンドアロンの TMX 入出力（argparse 非依存）。
+"""Kotonoha beta6.10 — スタンドアロンの TMX 入出力（argparse 非依存）。
 ダッシュボードの「TM」タブ（TMエントリの一覧/検索/編集/削除）から使う。
 蓄積型（同一原文の複数版）を保持する点は tm_writeback.load_tmx/write_tmx と同じ。
 編集対象は書込可能TM（小さめ・XTM 読み取り専用は対象外）を想定。書込前に日付きバックアップ。"""
 import os, time, html
 import xml.etree.ElementTree as ET
 
-VERSION = "beta6.00"
+VERSION = "beta6.10"
 
 
 def _strip(tag):
