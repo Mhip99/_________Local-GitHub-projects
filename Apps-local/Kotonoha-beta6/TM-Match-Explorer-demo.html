@@ -353,6 +353,7 @@ body.summaryview #view-summary{flex:1;}
     <label class="toggle" title="訳文を直接編集できるモードに切替（タグ挿入パレット・右クリックメニュー有効）"><input type="checkbox" id="editmode"> 編集モード</label>
     <label class="toggle" title="編集済みのセグメントのみ表示"><input type="checkbox" id="editedonly"> 編集済みのみ</label>
     <label class="toggle" title="確定済みのセグメントのみ表示"><input type="checkbox" id="confirmedonly"> 確定済みのみ</label>
+    <label class="toggle" title="セグメントを確定したとき、同一原文（完全一致）の他セグメントへ同じ訳を自動で流し込む（確定は手動）"><input type="checkbox" id="autoprop"> 自動伝播</label>
     <button class="minibtn" id="confirmview" type="button" title="現在表示中（フィルター後）の、訳文が空でない行をまとめて確定">表示中を一括確定</button>
     <button class="minibtn" id="runmt" type="button" title="履歴ペインに表示されている MT を翻訳欄に反映します" hidden>MTを実行する</button>
     <span class="editcount" id="editcount"></span>
@@ -500,6 +501,41 @@ function confirmedCount(){return Object.keys(confirms).length;}
 function updateConfirmCount(){const el=document.getElementById("confcount");if(el)el.textContent=confirmedCount()?`確定 ${confirmedCount()} 件`:"";}
 function jaValue(i){return (i in edits)?edits[i]:autoJa(i);}
 
+// ===== オートプロパゲーション: 確定時、同一原文（完全一致）の他セグメントへ訳を流し込む =====
+// 既定ON。localStorage(kotonoha-autoprop) で保持（uistate シムでサーバー同期＝別ブラウザでも維持）。
+let AUTOPROP=true;
+try{if(localStorage.getItem("kotonoha-autoprop")==="0")AUTOPROP=false;}catch(e){}
+function _propNotify(msg){
+  try{ if(window.parent&&window.parent!==window&&typeof window.parent.toast==="function"){window.parent.toast(msg);return;} }catch(e){}
+  var t=document.getElementById("savedat");if(t)t.textContent=msg;
+}
+function propagateFromConfirm(i){
+  if(!AUTOPROP)return;
+  if(!SEG[i])return;
+  var src=plain(SEG[i].en), target=(jaValue(i)||"").trim();
+  if(!target)return;
+  var fill=[], conflict=[];
+  for(var j=0;j<SEG.length;j++){
+    if(j===i||!SEG[j])continue;
+    if(plain(SEG[j].en)!==src)continue;              // 完全一致（タグ含む）のみ
+    if((jaValue(j)||"").trim()===target)continue;    // 既に同じ＝何もしない
+    if(!(j in edits)&&!(j in confirms))fill.push(j);  // 未編集・未確定＝埋める
+    else conflict.push(j);                            // 既存の異なる訳＝競合
+  }
+  if(!fill.length&&!conflict.length)return;
+  var overwrite=false;
+  if(conflict.length){
+    overwrite=window.confirm("同一原文で異なる既存訳が "+conflict.length+" 件あります。これらも上書きしますか？（キャンセルで保持）");
+  }
+  var changed=0;
+  fill.forEach(function(j){edits[j]=target;changed++;});        // 伝播先は訳のみ（確定は手動）
+  if(overwrite)conflict.forEach(function(j){edits[j]=target;changed++;});
+  if(changed){
+    saveEdits();updateEditedCount();render();
+    _propNotify("同一原文 "+changed+" 件に訳を伝播しました（確定は各自で）");
+  }
+}
+
 function computeSummary(){
   const total=SEG.length;
   const byCat={Reused:0,Modified:0,Added:0};
@@ -619,10 +655,18 @@ document.getElementById("rows").addEventListener("click",e=>{
 document.getElementById("rows").addEventListener("change",e=>{
   const cb=e.target.closest(".confbox");if(!cb)return;
   const i=+cb.dataset.i;
-  if(cb.checked&&jaValue(i).trim())confirms[i]=1;else delete confirms[i];
+  const justConfirmed=cb.checked&&jaValue(i).trim();
+  if(justConfirmed)confirms[i]=1;else delete confirms[i];
   saveConfirms();updateConfirmCount();
   cb.closest("tr").classList.toggle("confirmed",i in confirms);
+  if(justConfirmed)propagateFromConfirm(i);   // 同一原文へ自動伝播（確定時のみ）
 });
+// 自動伝播トグル（既定ON・localStorage に保持）
+(function(){var a=document.getElementById("autoprop");if(!a)return;
+  a.checked=AUTOPROP;
+  a.addEventListener("change",function(){AUTOPROP=a.checked;
+    try{localStorage.setItem("kotonoha-autoprop",AUTOPROP?"1":"0");}catch(e){}});
+})();
 // ===== 翻訳履歴ペイン（行クリックで、その原文の過去訳＋更新日時を表示） =====
 function fmtDate(d){
   if(!d)return "日時不明";
