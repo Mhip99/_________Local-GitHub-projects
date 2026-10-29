@@ -12,5 +12,8 @@ _history.json
 # UI 状態のサーバー側保存（環境依存・自動生成）
 _uistate.json
 
+# TM バックアップ設定（環境依存・自動生成）
+_backup.json
+
 # 生成物（解析/Pre-translation 出力・再実行で再生成可）
 Kotonoha-out/

@@ -14,7 +14,7 @@ import xml.etree.ElementTree as ET
 
 # Bump when the index schema or normalization below changes, to auto-invalidate
 # any cache written by an older build.
-FORMAT_VERSION = "kotonoha-idx-4"
+FORMAT_VERSION = "kotonoha-idx-5"
 
 TOKCAP = 4000
 TERM_MAXTOK = 4            # Product entries with <= this many tokens are UI terms
@@ -53,15 +53,16 @@ def term_ok(k, ja):
 
 class Index:
     """Container for the matching index. Picklable."""
-    __slots__ = ("exact_target", "exact_hist", "ice_ctx", "inv", "keys", "product_terms", "src_tm", "meta")
+    __slots__ = ("exact_target", "exact_hist", "ice_ctx", "inv", "keys", "product_terms", "src_tm", "src_status", "meta")
     def __init__(self):
         self.exact_target = {}   # norm_src -> target text (newest when multiple versions)
-        self.exact_hist = {}     # norm_src -> [{"ja": target, "date": changedate, "tm": path}, ...] 版履歴
+        self.exact_hist = {}     # norm_src -> [{"ja": target, "date": changedate, "tm": path, "status": s}, ...] 版履歴
         self.ice_ctx = {}        # norm_src -> set of (prev_hash, next_hash)
         self.inv = {}            # token -> list of key ids (capped)
         self.keys = []           # id -> norm_src
         self.product_terms = {}  # norm_en (<=4 tok) -> {"en": surface, "ja": target}
         self.src_tm = {}         # norm_src -> 採用された訳の由来TMX絶対パス（TEP完了の書き戻しルーティング用）
+        self.src_status = {}     # norm_src -> 採用訳の x-xtm-status（approved/notapproved/""）＝信頼度表示用
         self.meta = {}           # build info (version, tmx list, timing)
 
 # Pin the pickled class to module "tm_index" even when this file is run as a
@@ -70,10 +71,10 @@ class Index:
 Index.__module__ = "tm_index"
 
 
-def _index_tmx(idx, path, is_product, log=print):
+def _index_tmx(idx, path, is_product, use_notapproved=True, log=print):
     exact_target = idx.exact_target; ice_ctx = idx.ice_ctx
     inv = idx.inv; keys = idx.keys; product_terms = idx.product_terms
-    exact_hist = idx.exact_hist; src_tm = idx.src_tm
+    exact_hist = idx.exact_hist; src_tm = idx.src_tm; src_status = idx.src_status
     abspath = os.path.abspath(path)
     strip = lambda t: t.split("}")[-1]
     n_tu = 0
@@ -83,7 +84,7 @@ def _index_tmx(idx, path, is_product, log=print):
         if tag != "tu":
             continue
         n_tu += 1
-        en = ja = None; prev = nxt = ""
+        en = ja = None; prev = nxt = ""; status = ""
         date = el.attrib.get("changedate") or el.attrib.get("creationdate") or ""
         for ch in el:
             ct = strip(ch.tag)
@@ -91,11 +92,15 @@ def _index_tmx(idx, path, is_product, log=print):
                 pt = ch.attrib.get("type", "")
                 if pt == "x-previous-source-text": prev = ch.text or ""
                 elif pt == "x-next-source-text": nxt = ch.text or ""
+                elif pt == "x-xtm-status": status = (ch.text or "").strip()
             elif ct == "tuv":
                 lang = ch.attrib.get("{http://www.w3.org/XML/1998/namespace}lang") or ch.attrib.get("lang") or ""
                 seg = "".join("".join(s.itertext()) for s in ch if strip(s.tag) == "seg")
                 if lang.lower().startswith("en"): en = seg
                 elif lang.lower().startswith("ja"): ja = seg
+        # 「未承認も使用」OFF のとき、notapproved の TU は索引に入れない（下訳候補から除外）
+        if (not use_notapproved) and status == "notapproved":
+            el.clear(); continue
         if en is not None and ja is not None:
             k = norm(en)
             if k:
@@ -107,17 +112,17 @@ def _index_tmx(idx, path, is_product, log=print):
                     if r["ja"] == ja:
                         rec = r; break
                 if rec is None:
-                    hist.append({"ja": ja, "date": date, "tm": abspath})
+                    hist.append({"ja": ja, "date": date, "tm": abspath, "status": status})
                 elif date > rec["date"]:
-                    rec["date"] = date; rec["tm"] = abspath
+                    rec["date"] = date; rec["tm"] = abspath; rec["status"] = status
                 if k not in exact_target:
-                    exact_target[k] = ja; src_tm[k] = abspath
+                    exact_target[k] = ja; src_tm[k] = abspath; src_status[k] = status
                     kid = len(keys); keys.append(k)
                     for tok in set(k.split()):
                         lst = inv.setdefault(tok, [])
                         if len(lst) < TOKCAP: lst.append(kid)
                 elif is_product and len(k.split()) <= TERM_MAXTOK:
-                    exact_target[k] = ja; src_tm[k] = abspath
+                    exact_target[k] = ja; src_tm[k] = abspath; src_status[k] = status
                 if prev or nxt:
                     ice_ctx.setdefault(k, set()).add((h(norm(prev)), h(norm(nxt))))
                 if is_product:
@@ -131,10 +136,11 @@ def _index_tmx(idx, path, is_product, log=print):
     return n_tu
 
 
-def _spec_fingerprint(specs):
+def _spec_fingerprint(specs, use_notapproved=True):
     """specs = list of (path, is_product). Fingerprint = version + each file's
-    abspath + size + mtime_ns + role. Any TMX change -> different fingerprint."""
-    parts = [FORMAT_VERSION]
+    abspath + size + mtime_ns + role + use_notapproved flag.
+    Any TMX change or flag change -> different fingerprint（ON/OFF で別キャッシュ）。"""
+    parts = [FORMAT_VERSION, "unapp=%d" % int(bool(use_notapproved))]
     for path, is_product in specs:
         st = os.stat(path)
         parts.append("%s|%d|%d|%d" % (os.path.abspath(path).lower(),
@@ -143,14 +149,14 @@ def _spec_fingerprint(specs):
     return hashlib.md5(blob.encode("utf-8")).hexdigest()[:16]
 
 
-def build_index(specs, log=print):
+def build_index(specs, use_notapproved=True, log=print):
     """Build a fresh Index from specs = list of (path, is_product)."""
     idx = Index()
     t0 = time.time()
     for path, is_product in specs:
         role = "Product" if is_product else "primary"
         log("indexing %s TMX (streaming): %s" % (role, os.path.basename(path)))
-        _index_tmx(idx, path, is_product, log=log)
+        _index_tmx(idx, path, is_product, use_notapproved=use_notapproved, log=log)
     # 複数版が蓄積した原文は、最新 date の訳を exact_target に採用（newest-wins）。
     # 単一版キー（大多数）は従来どおり（先勝ち/Product上書き）で無改修。
     multi = 0
@@ -159,9 +165,10 @@ def build_index(specs, log=print):
             best = max(hist, key=lambda r: (r.get("date") or ""))
             if best.get("date") and idx.exact_target.get(k) != best["ja"]:
                 idx.exact_target[k] = best["ja"]; multi += 1
-            # 採用された訳の由来TMに src_tm を同期（書き戻しルーティング用）
+            # 採用された訳の由来TM・status を同期（書き戻しルーティング／信頼度表示用）
             if best.get("tm"):
                 idx.src_tm[k] = best["tm"]
+            idx.src_status[k] = best.get("status", "")
     idx.meta = {
         "version": FORMAT_VERSION,
         "built": time.strftime("%Y-%m-%d %H:%M:%S"),
@@ -175,18 +182,19 @@ def build_index(specs, log=print):
     return idx
 
 
-def load_or_build(specs, cache_dir, no_cache=False, rebuild=False, log=print):
+def load_or_build(specs, cache_dir, no_cache=False, rebuild=False, use_notapproved=True, log=print):
     """Return an Index for specs, using the on-disk cache when possible.
 
-    specs      : list of (path, is_product)
-    cache_dir  : folder holding idx_<fp>.pkl (+ .json sidecar)
-    no_cache   : build in memory, do not read or write the cache
-    rebuild    : ignore any existing cache entry and rebuild (then save)
+    specs           : list of (path, is_product)
+    cache_dir       : folder holding idx_<fp>.pkl (+ .json sidecar)
+    no_cache        : build in memory, do not read or write the cache
+    rebuild         : ignore any existing cache entry and rebuild (then save)
+    use_notapproved : False のとき notapproved TU を索引から除外（ON/OFF で別キャッシュ）
     """
-    fp = _spec_fingerprint(specs)
+    fp = _spec_fingerprint(specs, use_notapproved)
     if no_cache:
         log("cache: disabled (--no-cache); building in memory")
-        return build_index(specs, log=log)
+        return build_index(specs, use_notapproved=use_notapproved, log=log)
 
     os.makedirs(cache_dir, exist_ok=True)
     pkl = os.path.join(cache_dir, "idx_%s.pkl" % fp)
@@ -207,7 +215,7 @@ def load_or_build(specs, cache_dir, no_cache=False, rebuild=False, log=print):
             log("cache unreadable (%s); rebuilding" % e)
 
     log("cache MISS: building index for fingerprint %s" % fp)
-    idx = build_index(specs, log=log)
+    idx = build_index(specs, use_notapproved=use_notapproved, log=log)
     try:
         t0 = time.time()
         with open(pkl, "wb") as f:

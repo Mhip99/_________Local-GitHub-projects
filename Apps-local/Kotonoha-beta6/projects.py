@@ -21,14 +21,14 @@ Commands:
   dashboard  [--out _projects.html]  (re)generate the browser dashboard
 Indices match the numbers shown by `list` / the dashboard.
 """
-import argparse, sys, io, os, json, datetime, html as _html
+import argparse, sys, io, os, json, datetime, html as _html, threading
 from pathlib import Path
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_STORE = os.path.join(HERE, "_projects.json")
-VERSION = "beta6.10"   # 画面バナー / EMPTY_TMX の creationtoolversion などに使用
+VERSION = "beta6.20"   # 画面バナー / EMPTY_TMX の creationtoolversion などに使用
 STATUSES = ["作成済", "作業中", "レビュー中", "完了"]
 
 def load(store):
@@ -469,9 +469,10 @@ sys.stdout.write(res or "")
 
 
 def create_project_full(projects, name, sources=None, main_tm="", product_tm="", sub_tms=None,
-                         run_mt=True):
+                         run_mt=True, use_notapproved=True):
     """Create a definition in one shot (used by the serve API). Caller saves.
-    run_mt: 既訳のない(≤74%)セグメントのMTを翻訳欄に反映するか（False=英語のまま・MTは履歴へ）。"""
+    run_mt: 既訳のない(≤74%)セグメントのMTを翻訳欄に反映するか（False=英語のまま・MTは履歴へ）。
+    use_notapproved: 未承認(notapproved)のTUも Pre-translation 候補に使うか（False=approvedのみ）。"""
     pid = make_id(projects)
     projects.append({
         "id": pid, "type": "project", "name": name or pid, "status": "作成済",
@@ -480,6 +481,7 @@ def create_project_full(projects, name, sources=None, main_tm="", product_tm="",
         "main_tm": main_tm or "", "product_tm": product_tm or "",
         "sub_tms": [t for t in (sub_tms or []) if t],
         "run_mt": bool(run_mt),
+        "use_notapproved": bool(use_notapproved),
         "created": now(), "updated": now(),
     })
     return pid
@@ -614,7 +616,8 @@ def run_project(projects, store, pid, out_path="", engine="", template="",
     cmd = [sys.executable, engine, "--tmx", main_tm,
            "--source-manifest", manifest, "--template", template,
            "--out-dir", out_dir, "--combined-todo", combined,
-           "--run-mt", ("1" if p.get("run_mt", True) else "0")]
+           "--run-mt", ("1" if p.get("run_mt", True) else "0"),
+           "--use-notapproved", ("1" if p.get("use_notapproved", True) else "0")]
     product_tm = p.get("product_tm", "")
     if product_tm:
         if os.path.exists(product_tm):
@@ -938,6 +941,75 @@ def _conc_cache_dir():
                         r"\TM manaegment\TM\___Working", "Kotonoha", "Index")
 
 
+# ===== TM バックアップ（手動確認式・自動書き込みはしない。XTM追記のリスク緩和） =====
+_BACKUP_FREQS = ("once", "daily", "weekly", "monthly", "never")
+
+def backup_cfg_path(store):
+    return os.path.join(os.path.dirname(os.path.abspath(store)), "_backup.json")
+
+def load_backup_cfg(store):
+    p = backup_cfg_path(store)
+    d = {"enabled": False, "freq": "never", "last": "", "dir": ""}
+    if os.path.exists(p):
+        try:
+            d.update(json.load(open(p, encoding="utf-8-sig")) or {})
+        except Exception:
+            pass
+    return d
+
+def save_backup_cfg(store, d):
+    json.dump(d, open(backup_cfg_path(store), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+
+def backup_targets(projects):
+    """バックアップ対象＝Kotonoha が書き込む TM（Main-TM＋プロジェクト参照の XTM 等）。実在のみ。"""
+    return [{"path": r["path"], "name": r["name"], "size": r["size"]}
+            for r in tm_list_rows(projects, with_count=False) if r.get("exists")]
+
+def backup_due(cfg):
+    """freq と last から、起動時に作成を促すべきか判定。"""
+    if not cfg.get("enabled") or cfg.get("freq") in ("", "never"):
+        return False
+    last = cfg.get("last", "")
+    if not last:
+        return True
+    try:
+        lt = datetime.datetime.strptime(last[:19], "%Y-%m-%d %H:%M:%S")
+    except Exception:
+        return True
+    nowdt = datetime.datetime.now()
+    freq = cfg.get("freq")
+    if freq == "once":
+        return False                      # once は一度作成したら以後促さない
+    if freq == "daily":
+        return lt.date() < nowdt.date()
+    if freq == "weekly":
+        return (nowdt - lt).days >= 7
+    if freq == "monthly":
+        return (nowdt - lt).days >= 28
+    return False
+
+def backup_run(store, projects, dst_dir):
+    """対象TMを <dst_dir>\\Kotonoha-TM-backup_YYYYMMDD-HHMMSS\\<name> へコピー。last/dir を更新。"""
+    import shutil
+    if not dst_dir or not os.path.isdir(dst_dir):
+        return {"ok": False, "error": "保存先フォルダーが無効です"}
+    ts = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    folder = os.path.join(dst_dir, "Kotonoha-TM-backup_" + ts)
+    os.makedirs(folder, exist_ok=True)
+    copied = []; errors = []
+    for t in backup_targets(projects):
+        try:
+            shutil.copy2(t["path"], os.path.join(folder, t["name"]))
+            copied.append({"name": t["name"], "size": t["size"]})
+        except Exception as ex:
+            errors.append({"name": t["name"], "error": str(ex)})
+    cfg = load_backup_cfg(store)
+    cfg["last"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    cfg["dir"] = dst_dir
+    save_backup_cfg(store, cfg)
+    return {"ok": True, "folder": folder, "copied": copied, "errors": errors, "last": cfg["last"]}
+
+
 # ===== 台帳フィールド操作（pid ベース・serve API 用。CLI は --index 版を別に持つ） =====
 def update_field(projects, store, pid, field, value):
     """Set one ledger field (status/memo/due) on the project with this id, then save."""
@@ -1107,13 +1179,25 @@ def writeback_run(xliff=None, xliff_dir="", master="", project_tmx="", customer=
     return {"ok": True, "dry_run": bool(dry_run), "backed_up": backed, "log": out}
 
 
+def _tm_appendable(path):
+    """巨大/読み取り扱いの TMX でも末尾追記は許す（XTM への append 用）。
+    実在する .tmx であればよい（ルーティング側でプロジェクトTMに限定する）。"""
+    p = (path or "")
+    return bool(p) and os.path.isfile(p) and p.lower().endswith(".tmx")
+
+
+# TM 書き込みの排他ロック（同一サーバー内の複数タブ/ブラウザを直列化）
+_TM_WRITE_LOCK = threading.Lock()
+
+
 def tep_complete_run(project, entries, backup=True):
-    """TEP完了: 確定セグメントを「マッチ元TM」へ個別に書き戻す（蓄積型・新版TU・書込前バックアップ）。
-    無一致/MTのみ（srctm 空）や、マッチ元が書込不可/対象外のものは メインTM へ fallback。
-    entries = [{en, ja, srctm, prev, next}]。返り値に書込結果・バックアップ・ルーティング内訳。"""
+    """TEP完了: 全セグメントを「マッチ元TM」へ書き戻す（蓄積型・新版TU）。
+    各 entry に status（approved/notapproved）を付与し <prop type="x-xtm-status"> として記録。
+    マッチ元が書込可能な小TM→蓄積マージ(dedup)、XTM(大)→末尾 append(重複許容)、
+    無一致/MT・対象外→メインTM へ fallback。書き込み全体を _TM_WRITE_LOCK で直列化。
+    entries = [{en, ja, srctm, prev, next, status}]。"""
     import shutil, time as _time
     import tm_writeback_lib
-    # このプロジェクトの TM（メイン/サブ/Product）と、各々の書込可否を把握
     main_tm = os.path.abspath(project.get("main_tm", "")) if project.get("main_tm") else ""
     proj_tms = {}   # abspath.lower() -> abspath
     for _p in ([project.get("main_tm", ""), project.get("product_tm", "")] + list(project.get("sub_tms") or [])):
@@ -1122,48 +1206,58 @@ def tep_complete_run(project, entries, backup=True):
             proj_tms[ap.lower()] = ap
     def _writable(ap):
         return bool(ap) and os.path.isfile(ap) and _tm_editable(ap, os.path.getsize(ap))
-    main_ok = _writable(main_tm)
-    # 各 entry を書込先 TM へ振り分け
-    groups = {}     # target abspath -> [ {src,tgt,prev,next} ]
+    main_mode = "merge" if _writable(main_tm) else ("append" if _tm_appendable(main_tm) else "")
+    # 各 entry を書込先 TM・方式へ振り分け
+    merge_groups = {}; append_groups = {}   # target abspath -> [ {src,tgt,prev,next,status} ]
     routed_to_main = 0; skipped = 0
     for e in entries:
         en = (e.get("en") or "").strip(); ja = (e.get("ja") or "").strip()
         if not en or not ja:
             skipped += 1; continue
         src_tm = (e.get("srctm") or "").strip()
-        target = ""
+        target = ""; mode = ""
         if src_tm:
             sap = os.path.abspath(src_tm)
-            if sap.lower() in proj_tms and _writable(sap):
-                target = sap
+            if sap.lower() in proj_tms:
+                if _writable(sap): target, mode = sap, "merge"
+                elif _tm_appendable(sap): target, mode = sap, "append"
         if not target:
-            if main_ok:
-                target = main_tm
+            if main_mode:
+                target, mode = main_tm, main_mode
                 if src_tm.lower() != main_tm.lower():
                     routed_to_main += 1
             else:
                 skipped += 1; continue
-        groups.setdefault(target, []).append(
-            {"src": en, "tgt": ja, "prev": (e.get("prev") or ""), "next": (e.get("next") or "")})
-    # 書込前バックアップ（各対象TMX）→ 蓄積マージ
+        rec = {"src": en, "tgt": ja, "prev": (e.get("prev") or ""), "next": (e.get("next") or ""),
+               "status": (e.get("status") or "")}
+        (merge_groups if mode == "merge" else append_groups).setdefault(target, []).append(rec)
     backed = []; written = []
-    if backup:
-        ts = _time.strftime("%Y%m%d-%H%M%S")
-        for tgt in groups:
-            if os.path.exists(tgt):
-                base, ext = os.path.splitext(tgt)
-                bak = "%s.bak_%s%s" % (base, ts, ext or ".tmx")
-                try:
-                    shutil.copy2(tgt, bak); backed.append(bak)
-                except Exception as ex:
-                    return {"ok": False, "error": "バックアップに失敗したため中止しました: %s" % ex}
-    for tgt, ents in groups.items():
-        r = tm_writeback_lib.merge_entries(tgt, ents)
-        written.append({"tm": tgt, "name": os.path.basename(tgt),
-                        "added": r["added"], "same": r["refreshed"]})
+    with _TM_WRITE_LOCK:
+        # 書込前バックアップは「小TM(merge)」のみ（XTM は巨大なので全コピーしない）
+        if backup:
+            ts = _time.strftime("%Y%m%d-%H%M%S")
+            for tgt in merge_groups:
+                if os.path.exists(tgt):
+                    base, ext = os.path.splitext(tgt)
+                    bak = "%s.bak_%s%s" % (base, ts, ext or ".tmx")
+                    try:
+                        shutil.copy2(tgt, bak); backed.append(bak)
+                    except Exception as ex:
+                        return {"ok": False, "error": "バックアップに失敗したため中止しました: %s" % ex}
+        for tgt, ents in merge_groups.items():
+            r = tm_writeback_lib.merge_entries(tgt, ents)
+            written.append({"tm": tgt, "name": os.path.basename(tgt),
+                            "added": r["added"], "same": r["refreshed"], "mode": "merge"})
+        for tgt, ents in append_groups.items():
+            r = tm_writeback_lib.append_tus(tgt, ents)
+            written.append({"tm": tgt, "name": os.path.basename(tgt),
+                            "added": r["added"], "same": 0, "mode": "append"})
+    approved = len([e for e in entries if e.get("en") and e.get("ja") and e.get("status") == "approved"])
+    notapproved = len([e for e in entries if e.get("en") and e.get("ja") and e.get("status") == "notapproved"])
     return {"ok": True, "written": written, "backed_up": backed,
             "routed_to_main": routed_to_main, "skipped": skipped,
-            "confirmed": len([e for e in entries if (e.get("en") and e.get("ja"))])}
+            "approved": approved, "notapproved": notapproved,
+            "confirmed": approved}
 
 
 def glossary_run(source=None, source_dir="", html=None, xliff=None, xliff_dir="",
@@ -1514,6 +1608,16 @@ __UISTATE_SHIM__
     <span class="termcount" id="tmcount" title="表示中のエントリ数"></span>
     <span class="termcount" id="tminfo" style="opacity:.75" title="選択中TMの編集可否"></span>
   </div>
+  <div class="ctl" id="bkctl">
+    <label class="toggle" title="TM のバックアップを有効化（起動時に頻度に応じて作成を確認）"><input type="checkbox" id="bkon"> TMバックアップを作成</label>
+    <select id="bkfreq" title="バックアップを促す頻度（自動では作成せず、起動時に確認）">
+      <option value="once">一度だけ</option><option value="daily">毎日</option>
+      <option value="weekly">毎週</option><option value="monthly">毎月</option>
+      <option value="never">しない</option>
+    </select>
+    <button class="btn" id="bknow" type="button" title="いま対象TM（Kotonohaが書き込むTM）を指定フォルダーへバックアップ">今すぐバックアップ</button>
+    <span class="termcount" id="bklast" style="opacity:.75" title="最終バックアップ日時・対象TM"></span>
+  </div>
   <div class="tablewrap"><table id="tmtable"><colgroup>
     <col style="width:44%"><col style="width:44%"><col style="width:132px"><col style="width:120px"></colgroup>
   <thead><tr><th>EN（原文）</th><th>JA（訳）</th><th>更新</th><th class="act">操作</th></tr></thead>
@@ -1737,7 +1841,8 @@ function openBrowser(kind,startDir,onPick){
 }
 function openCreate(){
   let runmtDefault=true;try{runmtDefault=(localStorage.getItem("kotonoha-proj-runmt")!=="0");}catch(e){}
-  const st={name:"",sources:[],main_tm:"",product_tm:"",sub_tms:[],run_mt:runmtDefault};
+  let unappDefault=true;try{unappDefault=(localStorage.getItem("kotonoha-proj-useunapp")!=="0");}catch(e){}
+  const st={name:"",sources:[],main_tm:"",product_tm:"",sub_tms:[],run_mt:runmtDefault,use_notapproved:unappDefault};
   const m=el("div","modal");m.appendChild(el("h2",null,"新規プロジェクトの作成"));
   const bd=el("div","bd");
   bd.appendChild(el("div","hint","ソース・TM は Windows の「ファイルを開く」ダイアログで選択します（ダイアログが前面に出ます）。"));
@@ -1777,6 +1882,14 @@ function openCreate(){
   fmt.appendChild(el("div","hint","OFF にすると翻訳欄は英語のまま表示し、MT の結果は翻訳履歴ペインに「MT」として表示します（作業ファイルで後から「MTを実行する」ボタンでも反映できます）。この選択は次回の作成時にも引き継がれます。"));
   mtcb.onchange=()=>{st.run_mt=mtcb.checked;try{localStorage.setItem("kotonoha-proj-runmt",mtcb.checked?"1":"0");}catch(e){}};
   bd.appendChild(fmt);
+  // 未承認も使用（notapproved の TU も Pre-translation 候補に使う／OFF なら approved のみ）
+  const fun=el("div","fld");
+  const unlab=el("label","toggle2");const uncb=el("input");uncb.type="checkbox";uncb.checked=!!st.use_notapproved;
+  unlab.appendChild(uncb);unlab.appendChild(document.createTextNode(" 未承認のセグメントも使用（Pre-translation に notapproved も使う）"));
+  fun.appendChild(unlab);
+  fun.appendChild(el("div","hint","OFF にすると承認済み(approved)の既訳だけで下訳します（notapproved を除外）。TM の信頼度を重視する場合に OFF。この選択は次回の作成時にも引き継がれます。※切替時は初回の解析で索引を作り直します。"));
+  uncb.onchange=()=>{st.use_notapproved=uncb.checked;try{localStorage.setItem("kotonoha-proj-useunapp",uncb.checked?"1":"0");}catch(e){}};
+  bd.appendChild(fun);
   m.appendChild(bd);
   // フッター
   const ft=el("div","ft");const run=el("button","primary","作成して実行");const mk=el("button","primary","保存");const cancel=el("button","ghost","キャンセル");
@@ -1997,7 +2110,7 @@ function switchView(v){
   var ttm=document.getElementById("tab-tm");if(ttm)ttm.setAttribute("aria-pressed",String(v==="tm"));
   var th=document.getElementById("tab-history");if(th)th.setAttribute("aria-pressed",String(v==="history"));
   if(v==="terms")loadTerms();
-  if(v==="tm")loadTM();
+  if(v==="tm"){loadTM();bkLoad();}
   if(v==="history")loadHistory();
   try{localStorage.setItem("kotonoha-subview",v);}catch(e){}
 }
@@ -2281,7 +2394,54 @@ function openExportChoice(pid,btn){
   showPTab(act);
 })();
 
-if(KT.served){document.body.classList.add("served");var _tw=document.getElementById("toolswrap");if(_tw)_tw.hidden=false;var _tabs=document.getElementById("tabs");if(_tabs)_tabs.hidden=false;refresh();}
+// ===== TM バックアップ（手動確認式・自動書き込みなし） =====
+var BKCFG={enabled:false,freq:"never",last:"",dir:""}, BKTARGETS=[];
+function bkLoad(){
+  if(!KT.served)return;
+  api("/api/backup-config").then(function(r){
+    if(!r||!r.ok)return;
+    BKCFG=r.cfg||BKCFG; BKTARGETS=r.targets||[];
+    var on=document.getElementById("bkon");if(on)on.checked=!!BKCFG.enabled;
+    var fq=document.getElementById("bkfreq");if(fq)fq.value=BKCFG.freq||"never";
+    var ls=document.getElementById("bklast");if(ls)ls.textContent=(BKCFG.last?("最終: "+BKCFG.last):"未実施")+"／対象 "+BKTARGETS.length+" 本";
+  }).catch(function(){});
+}
+function bkSaveCfg(){
+  var on=document.getElementById("bkon"), fq=document.getElementById("bkfreq");
+  api("/api/backup-config",{method:"POST",body:JSON.stringify({enabled:!!(on&&on.checked),freq:(fq?fq.value:"never")})})
+    .then(function(r){if(r&&r.ok){BKCFG=r.cfg;bkLoad();}}).catch(function(){});
+}
+function bkRunPick(){
+  // 保存先をネイティブダイアログで確認（既定＝前回フォルダー）→ バックアップ実行
+  pick("dir",false).then(function(r){
+    var dir="";
+    if(r&&r.available===false){toast("サーバーモードでのみ利用できます");return;}
+    if(r&&r.paths&&r.paths.length)dir=r.paths[0];
+    if(!dir)return;
+    toast("バックアップ中…（対象 "+BKTARGETS.length+" 本）");
+    api("/api/backup-run",{method:"POST",body:JSON.stringify({dir:dir})}).then(function(d){
+      if(d&&d.ok){toast("バックアップ完了: "+(d.copied||[]).length+" 本 → "+d.folder);bkLoad();}
+      else{toast("バックアップ失敗："+((d&&d.error)||"不明"));}
+    }).catch(function(err){toast("通信エラー: "+err);});
+  }).catch(function(err){toast("選択エラー: "+err);});
+}
+(function(){
+  var on=document.getElementById("bkon");if(on)on.addEventListener("change",bkSaveCfg);
+  var fq=document.getElementById("bkfreq");if(fq)fq.addEventListener("change",bkSaveCfg);
+  var nb=document.getElementById("bknow");if(nb)nb.addEventListener("click",bkRunPick);
+})();
+// 起動時: 期限到来なら作成を確認（自動では作成しない）
+function bkMaybePrompt(){
+  if(!KT.served)return;
+  api("/api/backup-config").then(function(r){
+    if(!r||!r.ok||!r.due)return;
+    BKCFG=r.cfg||BKCFG; BKTARGETS=r.targets||[];
+    if(confirm("TMバックアップの時期です（前回: "+(BKCFG.last||"未実施")+"）。\n対象 "+BKTARGETS.length+" 本を今すぐバックアップしますか？\n（保存先を次のダイアログで選びます）"))
+      bkRunPick();
+  }).catch(function(){});
+}
+
+if(KT.served){document.body.classList.add("served");var _tw=document.getElementById("toolswrap");if(_tw)_tw.hidden=false;var _tabs=document.getElementById("tabs");if(_tabs)_tabs.hidden=false;refresh();bkMaybePrompt();}
 </script></body></html>"""
     uscfg = json.dumps(uistate or {}, ensure_ascii=False)
     ushim = UISTATE_SHIM if served else ""
@@ -2817,7 +2977,8 @@ elif a.cmd == "serve":
                 # デモデータを空に（SEG=[]・最小META）＝空の翻訳/サマリーを表示
                 content = _re.sub(r"const SEG = \[[\s\S]*?\n\];", "const SEG = [];", content, count=1)
                 _meta = {"source": {"name": "", "path": ""}, "output": {"name": "", "path": ""},
-                         "tms": [], "project": {"name": "", "detail": ""}, "generated": "", "runMT": True}
+                         "tms": [], "project": {"name": "", "detail": ""}, "generated": "", "runMT": True,
+                         "useNotapproved": True}
                 content = _re.sub(r"const META = [\s\S]*?;\s*/\*__META__\*/",
                                   "const META = " + json.dumps(_meta, ensure_ascii=False) + ";  /*__META__*/",
                                   content, count=1)
@@ -2897,6 +3058,11 @@ elif a.cmd == "serve":
                         except Exception as e:
                             self._send(200, {"ok": False, "error": str(e)}); return
                     self._send(200, {"ok": True, "edits": {}, "confirms": {}, "propagated": {}, "savedAt": ""}); return
+                if u.path == "/api/backup-config":
+                    cfg = load_backup_cfg(STORE)
+                    self._send(200, {"ok": True, "cfg": cfg, "freqs": list(_BACKUP_FREQS),
+                                     "targets": backup_targets(load(STORE)),
+                                     "due": backup_due(cfg)}); return
             self._send(404, {"error": "not found"})
 
         def do_POST(self):
@@ -2964,7 +3130,8 @@ elif a.cmd == "serve":
                                           main_tm=payload.get("main_tm", ""),
                                           product_tm=payload.get("product_tm", ""),
                                           sub_tms=payload.get("sub_tms", []),
-                                          run_mt=payload.get("run_mt", True))
+                                          run_mt=payload.get("run_mt", True),
+                                          use_notapproved=payload.get("use_notapproved", True))
                 save(STORE, projs)
                 log_history(STORE, "プロジェクト作成", "ソース %d 件" % len(payload.get("sources", []) or []), payload.get("name", ""))
                 self._send(200, {"id": pid}); return
@@ -3044,6 +3211,25 @@ elif a.cmd == "serve":
                                 nm)
                     update_field(projs, STORE, proj.get("id", ""), "status", "完了")
                 self._send(200, res); return
+            if u.path == "/api/backup-config":
+                cfg = load_backup_cfg(STORE)
+                freq = payload.get("freq", cfg.get("freq", "never"))
+                if freq not in _BACKUP_FREQS:
+                    freq = "never"
+                cfg["enabled"] = bool(payload.get("enabled", cfg.get("enabled", False)))
+                cfg["freq"] = freq
+                save_backup_cfg(STORE, cfg)
+                self._send(200, {"ok": True, "cfg": cfg}); return
+            if u.path == "/api/backup-run":
+                try:
+                    res = backup_run(STORE, load(STORE), payload.get("dir", ""))
+                    if res.get("ok"):
+                        log_history(STORE, "TMバックアップ",
+                                    "%d 件 → %s" % (len(res.get("copied", [])), res.get("folder", "")))
+                    self._send(200, res)
+                except Exception as e:
+                    self._send(200, {"ok": False, "error": str(e)})
+                return
             if u.path == "/api/glossary":
                 self._send(200, glossary_run(source=payload.get("source", []),
                                              source_dir=payload.get("source_dir", ""),

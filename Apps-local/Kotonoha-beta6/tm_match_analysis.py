@@ -48,6 +48,8 @@ ap.add_argument("--project-name", dest="project_name", default="", help="サマ�
 ap.add_argument("--project-detail", dest="project_detail", default="", help="サマリーのメタ情報に表示するプロジェクト詳細")
 ap.add_argument("--run-mt", dest="run_mt", default="1",
                 help="1: MT(≤74%)を翻訳欄に反映する前提 / 0: MTは履歴ペインに表示し翻訳欄は英語のまま（META.runMT に記録）")
+ap.add_argument("--use-notapproved", dest="use_notapproved", default="1",
+                help="1: 未承認(notapproved)のTUもPre-translation候補に使う / 0: approvedのみ使う（notapprovedを索引から除外）")
 ap.add_argument("--cache-dir", dest="cache_dir", default=DEFAULT_CACHE,
                 help="index cache folder (default: %(default)s)")
 ap.add_argument("--no-cache", dest="no_cache", action="store_true", help="do not read/write the index cache")
@@ -102,13 +104,16 @@ for s in (args.sub_tmx or []):
         specs.append((s, False))
 if args.product_tmx:
     specs.append((args.product_tmx, True))
+_USE_UNAPP = str(args.use_notapproved).strip() not in ("0", "false", "False", "")
 idx = tm_index.load_or_build(specs, args.cache_dir,
                              no_cache=args.no_cache, rebuild=args.rebuild_cache,
+                             use_notapproved=_USE_UNAPP,
                              log=lambda *a: print(*a, flush=True))
 exact_target = idx.exact_target; ice_ctx = idx.ice_ctx
 inv = idx.inv; keys = idx.keys; product_terms = idx.product_terms
 exact_hist = getattr(idx, "exact_hist", {})   # norm_src -> [{"ja","date"},...] 版履歴（履歴ペイン用）
 src_tm = getattr(idx, "src_tm", {})           # norm_src -> 由来TMX絶対パス（TEP完了の書き戻しルーティング用）
+src_status = getattr(idx, "src_status", {})   # norm_src -> 採用訳の x-xtm-status（approved/notapproved/""）
 
 def hist_of(k):
     """Return this source's past translations, newest first, for the editor history pane.
@@ -304,7 +309,7 @@ def analyze(src):
             band = "ICE" if is_ice else "100%"
             rows.append({"b":band,"cat":CAT[band],"pct":"100.0","st":"tm",
                          "en":[["eq", s]],"tm":tgt,"ja":[["eq", tgt]],"hist":hist_of(sn),
-                         "glossary":glossary_hits(sn),"srctm":src_tm.get(sn,"")})
+                         "glossary":glossary_hits(sn),"srctm":src_tm.get(sn,""),"status":src_status.get(sn,"")})
         else:
             bestk, r = best_fuzzy(sn)
             band = band_of(r); pct = "%.1f" % (r*100)
@@ -312,13 +317,13 @@ def analyze(src):
                 tgt = append_missing_tags(s, norm_tm_tags(exact_target.get(bestk, "")))
                 rows.append({"b":band,"cat":CAT[band],"pct":pct,"st":"tm",
                              "en":tok_diff(bestk, s),"tm":tgt,"ja":[["eq", tgt]],"hist":hist_of(bestk),
-                             "glossary":glossary_hits(sn),"srctm":src_tm.get(bestk,"")})
+                             "glossary":glossary_hits(sn),"srctm":src_tm.get(bestk,""),"status":src_status.get(bestk,"")})
             else:
                 # \u30de\u30c3\u30c1\u7387 \u226474% \u3067\u3082\u3001TM \u306b\u65e2\u8a33\u304c\u3042\u308c\u3070\u985e\u4f3c\u5ea6\u306e\u9ad8\u3044\u9806\u306b\u5019\u88dc\u3092\u5c65\u6b74\u3078\uff08\u4e0a\u4f4d\u306f UI \u304c5\u4ef6\u305a\u3064\u8868\u793a\uff09\u3002
                 bh = topk_fuzzy(sn, 50)
                 rows.append({"b":"<=74%","cat":"Added","pct":pct if bestk else "0.0","st":"mt",
                              "en":[["add", s]],"tm":"\u2014","ja":[],"hist":bh,
-                             "glossary":glossary_hits(sn),"srctm":""})
+                             "glossary":glossary_hits(sn),"srctm":"","status":""})
                 # MT \u3092\u5916\u90e8AI\u3067\u4f5c\u308b\u969b\u3001\u6307\u5b9aTM\u306e\u8a72\u5f53\u65e2\u8a33\uff08\u6700\u3082\u8fd1\u3044\u5019\u88dc\u30fb\u4e0a\u4f4d5\u4ef6\uff09\u3092\u5fc5\u305a\u53c2\u7167\u3067\u304d\u308b\u3088\u3046\u540c\u68b1\u3059\u308b
                 mt_todo.append({"i":i, "en":s, "pct":float(pct if bestk else 0.0),
                                 "glossary":glossary_hits(sn), "tm_candidates":bh[:5]})
@@ -408,6 +413,7 @@ for si, sp in enumerate(srcs):
         "project": {"name": (args.project_name or title or ""), "detail": args.project_detail or ""},
         "generated": time.strftime("%Y-%m-%d %H:%M"),
         "runMT": str(args.run_mt).strip() not in ("0", "false", "False", ""),
+        "useNotapproved": _USE_UNAPP,
     }
     open(outp, "w", encoding="utf-8", newline="\n").write(render(rows, title, meta))
     print("  saved:", outp, flush=True)

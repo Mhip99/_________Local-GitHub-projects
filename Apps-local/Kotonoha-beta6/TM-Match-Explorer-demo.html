@@ -151,6 +151,10 @@ td.ja.isedited::after{content:"編集済";font-size:10px;color:var(--accent);mar
 .sttag{display:inline-block;font-family:"IBM Plex Mono",monospace;font-size:10px;font-weight:600;padding:1px 5px;border-radius:4px;margin-top:5px;letter-spacing:.02em;}
 .st-mt{color:var(--new);background:var(--new-wash);border:1px solid var(--new);}
 .st-tm{color:var(--muted);background:var(--surface-2);border:1px solid var(--hairline-strong);}
+.st-unapp{color:#9a6700;background:#fff6e0;border:1px solid #e3b23c;margin-left:4px;}
+.qa-warn{color:#b3261e;background:#fdecea;border:1px solid #e0a1a1;margin-left:4px;}
+.qacount{color:#b3261e;font-weight:700;}
+@media (prefers-color-scheme:dark){.st-unapp{color:#f0c674;background:#3a2f12;border-color:#7a5c16;}.qa-warn{color:#f3a6a0;background:#3a1a18;border-color:#7a2a24;}}
 .japlaceholder{color:var(--faint);font-style:italic;}
 /* インライン保護タグ（チップ） */
 .tag{display:inline-block;background:var(--accent-wash);color:var(--accent-ink);border:1px solid var(--accent);
@@ -354,6 +358,7 @@ body.summaryview #view-summary{flex:1;}
     <label class="toggle" title="訳文を直接編集できるモードに切替（タグ挿入パレット・右クリックメニュー有効）"><input type="checkbox" id="editmode"> 編集モード</label>
     <label class="toggle" title="編集済みのセグメントのみ表示"><input type="checkbox" id="editedonly"> 編集済みのみ</label>
     <label class="toggle" title="確定済みのセグメントのみ表示"><input type="checkbox" id="confirmedonly"> 確定済みのみ</label>
+    <label class="toggle" title="原文と訳で数値/タグが食い違う「要確認」行のみ表示"><input type="checkbox" id="qaonly"> 要確認のみ<span id="qacount" class="qacount"></span></label>
     <label class="toggle" title="セグメントを確定したとき、同一原文（完全一致）の他セグメントへ同じ訳を自動で流し込む（確定は手動）"><input type="checkbox" id="autoprop"> 自動伝播</label>
     <button class="minibtn" id="confirmview" type="button" title="現在表示中（フィルター後）の、訳文が空でない行をまとめて確定">表示中を一括確定</button>
     <button class="minibtn" id="runmt" type="button" title="履歴ペインに表示されている MT を翻訳欄に反映します" hidden>MTを実行する</button>
@@ -469,7 +474,7 @@ function insertChipAt(field,ph){const s=SEG[+field.getAttribute("data-i")];field
   else{field.appendChild(chip);}
   saveJaField(field);}
 
-const state={cat:"all",bands:new Set(),q:"",editMode:false,editedOnly:false,confirmedOnly:false};
+const state={cat:"all",bands:new Set(),q:"",editMode:false,editedOnly:false,confirmedOnly:false,qaOnly:false};
 const ART=((document.querySelector(".filepill")||{}).textContent||"export").replace("DEMO","").trim();
 const LSKEY="tmx-edits:"+ART;
 const LSKEY_C="tmx-confirms:"+ART;
@@ -503,6 +508,25 @@ function scheduleAutoSave(){
 function confirmedCount(){return Object.keys(confirms).length;}
 function updateConfirmCount(){const el=document.getElementById("confcount");if(el)el.textContent=confirmedCount()?`確定 ${confirmedCount()} 件`:"";}
 function jaValue(i){return (i in edits)?edits[i]:autoJa(i);}
+
+// ===== QA: 原文と訳で数値/タグが食い違う行を「⚠要確認」として検出（非ブロッキングの疑い）=====
+function _nums(s){
+  s=(s||"").replace(/[０-９]/g,function(c){return String.fromCharCode(c.charCodeAt(0)-0xFEE0);}).replace(/．/g,".");
+  return (s.match(/[0-9]+(?:[.,][0-9]+)?/g)||[]);
+}
+function _bag(arr){var m={};arr.forEach(function(x){m[x]=(m[x]||0)+1;});return m;}
+function _bagEq(a,b){var ka=Object.keys(a);if(ka.length!==Object.keys(b).length)return false;
+  for(var i=0;i<ka.length;i++){if(a[ka[i]]!==b[ka[i]])return false;}return true;}
+function _tags(s){return (String(s).match(/\{\d+\}/g)||[]);}
+function qaFlag(i){var s=SEG[i];if(!s)return false;
+  var src=plain(s.en), tgt=(jaValue(i)||"");
+  if(!tgt.trim())return false;
+  if(!_bagEq(_bag(_nums(src)),_bag(_nums(tgt))))return true;          // 数値不一致
+  var st=_tags(src),tt={};_tags(tgt).forEach(function(x){tt[x]=1;});  // タグ欠落
+  for(var j=0;j<st.length;j++){if(!tt[st[j]])return true;}
+  return false;
+}
+function qaCount(){var n=0;for(var i=0;i<SEG.length;i++){if(qaFlag(i))n++;}return n;}
 
 // ===== オートプロパゲーション: 確定時、同一原文（完全一致）の他セグメントへ訳を流し込む =====
 // 既定ON。localStorage(kotonoha-autoprop) で保持（uistate シムでサーバー同期＝別ブラウザでも維持）。
@@ -581,11 +605,13 @@ function render(){
     if(state.bands.size&&!state.bands.has(s.b))return false;
     if(state.editedOnly&&!(idx in edits))return false;
     if(state.confirmedOnly&&!(idx in confirms))return false;
+    if(state.qaOnly&&!qaFlag(idx))return false;
     if(q){const hay=(plain(s.en)+" "+s.tm+" "+plain(s.ja)).toLowerCase();if(!hay.includes(q))return false;}
     return true;
   });
   document.getElementById("count").textContent=`${list.length} / ${SEG.length} セグメント`;
   document.getElementById("empty").hidden=list.length>0;
+  (function(){var qc=document.getElementById("qacount");if(qc){var n=qaCount();qc.textContent=n?(" "+n):"";}})();
   rows.innerHTML=list.map(s=>{
     const cls=CATCLS[s.cat];
     const idx=SEG.indexOf(s);
@@ -600,11 +626,13 @@ function render(){
       ? `<td class="ja">${paletteHTML(s)}<div class="jaedit" contenteditable="true" data-i="${idx}">${withChips(esc(jaCur),s.tags)}</div></td>`
       : `<td class="ja${edited?' isedited':''}${confirmed?' isconfirmed':''}">${jaView}</td>`;
     const sttag=s.st==="mt"?'<span class="sttag st-mt">MT</span>':'<span class="sttag st-tm">TM</span>';
+    const statustag=(s.status==="notapproved")?'<span class="sttag st-unapp" title="未承認（信頼度低・XTM由来）">未承認</span>':'';
+    const qatag=qaFlag(idx)?'<span class="sttag qa-warn" title="原文と訳で数値またはタグが一致しません（要確認）">⚠要確認</span>':'';
     const hasTgt=!!jaCur.trim();
     const confCell=`<td class="confcol"><input type="checkbox" class="confbox" data-i="${idx}" ${confirmed?'checked':''} ${hasTgt?'':'disabled'} title="${hasTgt?'TEP 確定（Live_TM へ書き戻し対象）':'訳文が空のため確定できません'}"></td>`;
     return `<tr data-i="${idx}" class="${edited?'edited ':''}${confirmed?'confirmed':''}">
       <td class="idx">${idx+1}</td>
-      <td class="matchcell">${(idx in propagated)?`<span class="bandtag b-rep" title="オートプロパゲーション（同一原文からの自動伝播）">R</span><span class="cat">伝播</span>`:`<span class="bandtag ${cls}">${s.b}</span><span class="pct">${s.pct}%</span><span class="cat">${CATJA[s.cat]}</span>`}${sttag}</td>
+      <td class="matchcell">${(idx in propagated)?`<span class="bandtag b-rep" title="オートプロパゲーション（同一原文からの自動伝播）">R</span><span class="cat">伝播</span>`:`<span class="bandtag ${cls}">${s.b}</span><span class="pct">${s.pct}%</span><span class="cat">${CATJA[s.cat]}</span>`}${sttag}${statustag}${qatag}</td>
       <td>${withChips(diff(s.en),s.tags)}</td>
       <td class="tm">${withChips(esc(s.tm),s.tags)}</td>
       ${jaCell}
@@ -643,6 +671,7 @@ document.getElementById("themebtn").addEventListener("click",()=>{
 document.getElementById("editmode").addEventListener("change",e=>{state.editMode=e.target.checked;document.body.classList.toggle("editing",state.editMode);render();});
 document.getElementById("editedonly").addEventListener("change",e=>{state.editedOnly=e.target.checked;render();});
 document.getElementById("confirmedonly").addEventListener("change",e=>{state.confirmedOnly=e.target.checked;render();});
+document.getElementById("qaonly").addEventListener("change",e=>{state.qaOnly=e.target.checked;render();});
 // 訳欄（contenteditable）の編集 → {n} 込みで保存
 document.getElementById("rows").addEventListener("input",e=>{
   const field=e.target.closest(".jaedit");if(!field)return;
@@ -893,26 +922,32 @@ function saveWIP(){
   if(td && KTX.served && KTX.doc && window.parent && window.parent!==window){
     td.hidden=false;
     td.addEventListener("click",function(){
-      var total=SEG.length, conf=confirmedCount();
-      if(conf===0){ alert("確定済みのセグメントがありません。確定してから TEP完了してください。"); return; }
-      if(conf<total && !confirm("未確定が "+(total-conf)+" 件あります。確定分のみ TM に書き戻して完了します。よろしいですか？")) return;
+      var total=SEG.length;
+      if(total===0){ alert("セグメントがありません。"); return; }
+      var conf=confirmedCount(), unconf=total-conf, qa=qaCount();
+      var msg="全 "+total+" セグメントを TM に書き戻します（確定 "+conf+"=approved／未確定 "+unconf+"=notapproved）。";
+      if(qa)msg+="\n⚠ 数値/タグ不一致の疑いが "+qa+" 件あります（notapproved でも混在します）。";
+      msg+="\n続行してプロジェクトを完了にしますか？";
+      if(!confirm(msg)) return;
       td.disabled=true;
       Promise.resolve(saveWIP()).then(function(){
         var entries=[];
-        Object.keys(confirms).forEach(function(k){
-          var i=parseInt(k,10); if(isNaN(i)||!SEG[i])return;
-          var ja=(jaValue(i)||"").trim(); if(!ja)return;
+        for(var i=0;i<SEG.length;i++){
+          if(!SEG[i])continue;
+          var ja=(jaValue(i)||"").trim(); if(!ja)continue;   // 空は書かない
           entries.push({en:plain(SEG[i].en), ja:ja, srctm:(SEG[i].srctm||""),
+                        status:((i in confirms)?"approved":"notapproved"),
                         prev:(i>0?plain(SEG[i-1].en):""), next:(i+1<SEG.length?plain(SEG[i+1].en):"")});
-        });
+        }
         return apiT("/api/tep-complete",{method:"POST",body:JSON.stringify(
-          {pid:(KTX.pid||""),art:ART,entries:entries,total:total,confirmed:entries.length})});
+          {pid:(KTX.pid||""),art:ART,entries:entries,total:total})});
       }).then(function(d){
         if(d&&d.ok){
-          var msg="TEP完了: 確定"+(d.confirmed||0)+"件を "+((d.written||[]).length)+" 本のTMへ書き戻しました";
-          if(d.routed_to_main)msg+="（うち"+d.routed_to_main+"件はメインTMへ）";
-          if(d.skipped)msg+="／スキップ"+d.skipped+"件";
-          try{ if(window.parent && typeof window.parent.toast==="function") window.parent.toast(msg); }catch(e){}
+          var m2="TEP完了: approved "+(d.approved||0)+" / notapproved "+(d.notapproved||0)+" を "+((d.written||[]).length)+" 本のTMへ";
+          if(d.routed_to_main)m2+="（うち"+d.routed_to_main+"件はメインTMへ）";
+          if(d.skipped)m2+="／スキップ"+d.skipped;
+          if(qa)m2+="／⚠要確認"+qa+"件";
+          try{ if(window.parent && typeof window.parent.toast==="function") window.parent.toast(m2); }catch(e){}
           try{ if(window.parent.closeActiveTEP) window.parent.closeActiveTEP(); }catch(e){}
         } else {
           td.disabled=false;
