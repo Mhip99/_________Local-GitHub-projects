@@ -1931,7 +1931,12 @@ function showLog(title,log,revealPath){const sh=modalShell(title);const pre=el("
 function openEdit(p){
   const st={status:((p.status&&p.status!=="未解析")?p.status:"作成済"),memo:p.memo||"",due:p.due||""};
   const sh=modalShell("編集: "+(p.title||p.id||""));
-  const fs=el("div","fld");fs.appendChild(el("label",null,"状態"));const sel=el("select");["作成済","作業中","レビュー中","完了"].forEach(s=>{const o=el("option",null,s);o.value=s;if(s===st.status)o.selected=true;sel.appendChild(o);});sel.onchange=()=>{st.status=sel.value;};fs.appendChild(sel);sh.bd.appendChild(fs);
+  const fs=el("div","fld");fs.appendChild(el("label",null,"状態"));const sel=el("select");
+  // 「完了」は手動選択不可（TEP完了＝TMへの書き戻しで自動設定）。現在完了の行のみ表示し復帰は可。
+  const _opts=["作成済","作業中","レビュー中"];if(st.status==="完了")_opts.push("完了");
+  _opts.forEach(s=>{const o=el("option",null,s);o.value=s;if(s===st.status)o.selected=true;sel.appendChild(o);});sel.onchange=()=>{st.status=sel.value;};fs.appendChild(sel);
+  fs.appendChild(el("div","hint","「完了」は編集画面の <b>TEP完了</b>（確定訳を TM へ書き戻し）で自動設定されます。ここでは手動で完了にできません。"));
+  sh.bd.appendChild(fs);
   sh.bd.appendChild(textField("メモ","",st.memo,v=>{st.memo=v;}));
   sh.bd.appendChild(textField("期日 (YYYY-MM-DD)","",st.due,v=>{st.due=v;},"2026-12-31"));
   const del=el("button","ghost","このプロジェクトを削除");del.style.color="#c0392b";let armed=false;
@@ -3155,10 +3160,16 @@ elif a.cmd == "serve":
                 self._send(200, res); return
             if u.path == "/api/set-status":
                 projs = load(STORE)
-                _pn = (find_by_row_id(projs, payload.get("id", "")) or {}).get("name", "")
-                log_history(STORE, "状態を変更", "→ %s" % payload.get("status", ""), _pn)
+                _p = find_by_row_id(projs, payload.get("id", ""))
+                _pn = (_p or {}).get("name", "")
+                _new = payload.get("status", "")
+                # 「完了」は TEP完了（TMへの書き戻し）経由でのみ設定可。手動の非完了→完了は拒否。
+                if _new == "完了" and (not _p or _p.get("status") != "完了"):
+                    self._send(200, {"ok": False, "error":
+                        "「完了」は TEP完了（確定訳を TM へ書き戻し）で設定されます。編集画面で TEP完了 を実行してください。"}); return
+                log_history(STORE, "状態を変更", "→ %s" % _new, _pn)
                 self._send(200, update_field(projs, STORE, payload.get("id", ""),
-                                             "status", payload.get("status", ""))); return
+                                             "status", _new)); return
             if u.path == "/api/set-memo":
                 projs = load(STORE)
                 self._send(200, update_field(projs, STORE, payload.get("id", ""),
