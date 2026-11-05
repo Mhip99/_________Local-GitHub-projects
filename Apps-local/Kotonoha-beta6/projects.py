@@ -28,7 +28,7 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_STORE = os.path.join(HERE, "_projects.json")
-VERSION = "beta6.20"   # 画面バナー / EMPTY_TMX の creationtoolversion などに使用
+VERSION = "beta6.30"   # 画面バナー / EMPTY_TMX の creationtoolversion などに使用
 STATUSES = ["作成済", "作業中", "レビュー中", "完了"]
 
 def load(store):
@@ -1010,6 +1010,75 @@ def backup_run(store, projects, dst_dir):
     return {"ok": True, "folder": folder, "copied": copied, "errors": errors, "last": cfg["last"]}
 
 
+# ===== クラウド(OneDrive)TM: 指定フォルダーへ TM をコピー保存/読込（フォルダー単位可） =====
+def cloud_cfg_path(store):
+    return os.path.join(os.path.dirname(os.path.abspath(store)), "_cloud.json")
+
+def load_cloud_cfg(store):
+    p = cloud_cfg_path(store)
+    d = {"cloud_dir": "", "last": ""}
+    if os.path.exists(p):
+        try:
+            d.update(json.load(open(p, encoding="utf-8-sig")) or {})
+        except Exception:
+            pass
+    return d
+
+def save_cloud_cfg(store, d):
+    json.dump(d, open(cloud_cfg_path(store), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+
+def cloud_tmx_list(cloud_dir):
+    """クラウドフォルダー内の .tmx 一覧（存在すれば）。"""
+    out = []
+    if cloud_dir and os.path.isdir(cloud_dir):
+        for n in sorted(os.listdir(cloud_dir)):
+            if n.lower().endswith(".tmx"):
+                fp = os.path.join(cloud_dir, n)
+                if os.path.isfile(fp):
+                    out.append({"name": n, "path": os.path.abspath(fp), "size": os.path.getsize(fp)})
+    return out
+
+def tm_copy_run(src, dst_dir, folder=False):
+    """TM を src → dst_dir へコピー（既存は上書き＝最新優先）。
+    folder=True: src フォルダー内の全 *.tmx を dst_dir へ。folder=False: 単一ファイル src→dst_dir。"""
+    import shutil
+    if not dst_dir:
+        return {"ok": False, "error": "コピー先フォルダーが未指定です"}
+    os.makedirs(dst_dir, exist_ok=True)
+    copied = []; errors = []
+    if folder:
+        if not src or not os.path.isdir(src):
+            return {"ok": False, "error": "コピー元フォルダーが無効です"}
+        names = [n for n in sorted(os.listdir(src)) if n.lower().endswith(".tmx")
+                 and os.path.isfile(os.path.join(src, n))]
+        if not names:
+            return {"ok": False, "error": "コピー元に .tmx がありません"}
+        for n in names:
+            try:
+                d = os.path.join(dst_dir, n)
+                if os.path.abspath(os.path.join(src, n)).lower() == os.path.abspath(d).lower():
+                    continue   # 同一パスはスキップ
+                shutil.copy2(os.path.join(src, n), d)
+                copied.append({"name": n, "size": os.path.getsize(d)})
+            except Exception as ex:
+                errors.append({"name": n, "error": str(ex)})
+    else:
+        if not src or not os.path.isfile(src):
+            return {"ok": False, "error": "コピー元ファイルが無効です"}
+        if not src.lower().endswith(".tmx"):
+            return {"ok": False, "error": ".tmx ファイルを指定してください"}
+        name = os.path.basename(src)
+        d = os.path.join(dst_dir, name)
+        if os.path.abspath(src).lower() == os.path.abspath(d).lower():
+            return {"ok": False, "error": "コピー元と先が同じです"}
+        try:
+            shutil.copy2(src, d)
+            copied.append({"name": name, "size": os.path.getsize(d)})
+        except Exception as ex:
+            errors.append({"name": name, "error": str(ex)})
+    return {"ok": True, "dst_dir": os.path.abspath(dst_dir), "copied": copied, "errors": errors}
+
+
 # ===== 台帳フィールド操作（pid ベース・serve API 用。CLI は --index 版を別に持つ） =====
 def update_field(projects, store, pid, field, value):
     """Set one ledger field (status/memo/due) on the project with this id, then save."""
@@ -1618,6 +1687,12 @@ __UISTATE_SHIM__
     <button class="btn" id="bknow" type="button" title="いま対象TM（Kotonohaが書き込むTM）を指定フォルダーへバックアップ">今すぐバックアップ</button>
     <span class="termcount" id="bklast" style="opacity:.75" title="最終バックアップ日時・対象TM"></span>
   </div>
+  <div class="ctl" id="cloudctl">
+    <span class="termcount" style="opacity:.85">クラウドTMフォルダー:</span>
+    <span class="termcount" id="clouddir" style="opacity:.75" title="共有用 OneDrive フォルダー">（未設定）</span>
+    <button class="btn" id="cloudset" type="button" title="OneDrive 上の共有TMフォルダーを指定">変更</button>
+    <button class="btn" id="cloudbtn" type="button" title="TM をクラウド(OneDrive指定フォルダー)へ保存／から読込（ファイル・フォルダー単位）">クラウド操作 ▾</button>
+  </div>
   <div class="tablewrap"><table id="tmtable"><colgroup>
     <col style="width:44%"><col style="width:44%"><col style="width:132px"><col style="width:120px"></colgroup>
   <thead><tr><th>EN（原文）</th><th>JA（訳）</th><th>更新</th><th class="act">操作</th></tr></thead>
@@ -1859,21 +1934,24 @@ function openCreate(){
   addD.onclick=()=>pick("dir",false).then(r=>{if(r&&r.available===false){openBrowser("dir","",p=>{st.sources.push({kind:"dir",path:p});drawSrc();});return;}(r&&r.paths||[]).forEach(p=>st.sources.push({kind:"dir",path:p}));drawSrc();}).catch(err=>toast("選択エラー: "+err));
   drawSrc();
   // メイン TM / Product TM
-  function pathField(label,hint,get,set){const f=el("div","fld");f.appendChild(el("label",null,label));if(hint)f.appendChild(el("div","hint",hint));const row=el("div","row");const v=el("div","pathval");const choose=el("button","mini","選択");const clr=el("button","mini danger","クリア");row.appendChild(v);row.appendChild(choose);row.appendChild(clr);f.appendChild(row);
+  function pathField(label,hint,get,set){const f=el("div","fld");f.appendChild(el("label",null,label));if(hint)f.appendChild(el("div","hint",hint));const row=el("div","row");const v=el("div","pathval");const choose=el("button","mini","選択");const cloud=el("button","mini","クラウドから");const clr=el("button","mini danger","クリア");row.appendChild(v);row.appendChild(choose);row.appendChild(cloud);row.appendChild(clr);f.appendChild(row);const cbox=el("div");cbox.style.marginTop="4px";f.appendChild(cbox);
     function draw(){const val=get();v.textContent=val||"（未選択）";v.classList.toggle("empty",!val);}
     choose.onclick=()=>pick("tmx",false).then(r=>{if(r&&r.available===false){openBrowser("tmx","",p=>{set(p);draw();});return;}if((r&&r.paths||[]).length){set(r.paths[0]);draw();}}).catch(err=>toast("選択エラー: "+err));
+    cloud.onclick=()=>cloudInline(cbox,p=>{set(p);draw();});
     clr.onclick=()=>{set("");draw();};draw();return f;}
-  function newTmxField(label,hint,get,set){const f=el("div","fld");f.appendChild(el("label",null,label));if(hint)f.appendChild(el("div","hint",hint));const row=el("div","row");const v=el("div","pathval");const choose=el("button","mini","選択");const mk=el("button","mini","＋ 新規作成");const clr=el("button","mini danger","クリア");row.appendChild(v);row.appendChild(choose);row.appendChild(mk);row.appendChild(clr);f.appendChild(row);
+  function newTmxField(label,hint,get,set){const f=el("div","fld");f.appendChild(el("label",null,label));if(hint)f.appendChild(el("div","hint",hint));const row=el("div","row");const v=el("div","pathval");const choose=el("button","mini","選択");const cloud=el("button","mini","クラウドから");const mk=el("button","mini","＋ 新規作成");const clr=el("button","mini danger","クリア");row.appendChild(v);row.appendChild(choose);row.appendChild(cloud);row.appendChild(mk);row.appendChild(clr);f.appendChild(row);const cbox=el("div");cbox.style.marginTop="4px";f.appendChild(cbox);
     function draw(){const val=get();v.textContent=val||"（未選択）";v.classList.toggle("empty",!val);}
     choose.onclick=()=>pick("tmx",false).then(r=>{if(r&&r.available===false){openBrowser("tmx","",p=>{set(p);draw();});return;}if((r&&r.paths||[]).length){set(r.paths[0]);draw();}}).catch(err=>toast("選択エラー: "+err));
+    cloud.onclick=()=>cloudInline(cbox,p=>{set(p);draw();});
     mk.onclick=()=>{mk.disabled=true;api("/api/new-tmx",{method:"POST",body:JSON.stringify({})}).then(r=>{mk.disabled=false;if(!r||r.available===false){toast("新規作成はサーバーモードでのみ利用できます");return;}if(r.ok&&r.path){set(r.path);draw();toast("空のメイン TM を作成しました");}else if(!r.path){/*キャンセル*/}else{toast("作成失敗："+(r.error||"不明"));}}).catch(err=>{mk.disabled=false;toast("通信エラー: "+err);});};
     clr.onclick=()=>{set("");draw();};draw();return f;}
   bd.appendChild(newTmxField("メイン TM（.tmx・1つ・必須／マッチ用）","既存の .tmx を選択、または「＋ 新規作成」で空の TM を作成できます。",()=>st.main_tm,x=>{st.main_tm=x;}));
   bd.appendChild(pathField("Product TM（.tmx・任意／用語集ヒント）","UI 用語の一致＋AI 翻訳の用語集ヒントに使います。",()=>st.product_tm,x=>{st.product_tm=x;}));
   // サブ TM（複数）
-  const fsub=el("div","fld");fsub.appendChild(el("label",null,"サブ TM（.tmx・任意・複数可／マッチ用）"));const subList=el("div");fsub.appendChild(subList);const addSub=el("button","mini","＋ サブ TM 追加");fsub.appendChild(addSub);bd.appendChild(fsub);
+  const fsub=el("div","fld");fsub.appendChild(el("label",null,"サブ TM（.tmx・任意・複数可／マッチ用）"));const subList=el("div");fsub.appendChild(subList);const addSub=el("button","mini","＋ サブ TM 追加");const addSubC=el("button","mini","＋ クラウドから追加");fsub.appendChild(addSub);fsub.appendChild(addSubC);const subcbox=el("div");subcbox.style.marginTop="4px";fsub.appendChild(subcbox);bd.appendChild(fsub);
   function drawSub(){subList.innerHTML="";if(!st.sub_tms.length){subList.appendChild(el("div","hint","（未追加）"));}st.sub_tms.forEach((t,i)=>{const r=el("div","srcitem");r.appendChild(el("span","p",t));const x=el("button","mini danger","削除");x.onclick=()=>{st.sub_tms.splice(i,1);drawSub();};r.appendChild(x);subList.appendChild(r);});}
-  addSub.onclick=()=>pick("tmx",true).then(r=>{if(r&&r.available===false){openBrowser("tmx","",p=>{st.sub_tms.push(p);drawSub();});return;}(r&&r.paths||[]).forEach(p=>st.sub_tms.push(p));drawSub();}).catch(err=>toast("選択エラー: "+err));drawSub();
+  addSub.onclick=()=>pick("tmx",true).then(r=>{if(r&&r.available===false){openBrowser("tmx","",p=>{st.sub_tms.push(p);drawSub();});return;}(r&&r.paths||[]).forEach(p=>st.sub_tms.push(p));drawSub();}).catch(err=>toast("選択エラー: "+err));
+  addSubC.onclick=()=>cloudInline(subcbox,p=>{if(st.sub_tms.indexOf(p)<0)st.sub_tms.push(p);drawSub();});drawSub();
   // MTを実行（既訳のない≤74%セグメントのMTを翻訳欄に反映する／OFFなら翻訳欄は英語のまま・MTは履歴ペインに表示）
   const fmt=el("div","fld");
   const mtlab=el("label","toggle2");const mtcb=el("input");mtcb.type="checkbox";mtcb.checked=!!st.run_mt;
@@ -1929,7 +2007,8 @@ function busy(btn,on,label){if(on){btn.dataset.old=btn.textContent;btn.textConte
 function showLog(title,log,revealPath){const sh=modalShell(title);const pre=el("div","pre");pre.textContent=log||"(出力なし)";sh.bd.appendChild(pre);const close=el("button","primary","閉じる");close.onclick=closeOvl;if(revealPath){const open=el("button","ghost","出力フォルダを開く");open.onclick=()=>api("/api/reveal",{method:"POST",body:JSON.stringify({path:revealPath})}).then(r=>{if(!(r&&r.ok))toast("フォルダを開けませんでした");});sh.ft.appendChild(open);}sh.ft.appendChild(close);sh.m.appendChild(sh.ft);overlay(sh.m);}
 
 function openEdit(p){
-  const st={status:((p.status&&p.status!=="未解析")?p.status:"作成済"),memo:p.memo||"",due:p.due||""};
+  const st={status:((p.status&&p.status!=="未解析")?p.status:"作成済"),memo:p.memo||"",due:p.due||"",
+            main_tm:(p.main_tm||""),product_tm:(p.product_tm||""),sub_tms:((p.sub_tms||[]).slice())};
   const sh=modalShell("編集: "+(p.title||p.id||""));
   const fs=el("div","fld");fs.appendChild(el("label",null,"状態"));const sel=el("select");
   // 「完了」は手動選択不可（TEP完了＝TMへの書き戻しで自動設定）。現在完了の行のみ表示し復帰は可。
@@ -1939,13 +2018,26 @@ function openEdit(p){
   sh.bd.appendChild(fs);
   sh.bd.appendChild(textField("メモ","",st.memo,v=>{st.memo=v;}));
   sh.bd.appendChild(textField("期日 (YYYY-MM-DD)","",st.due,v=>{st.due=v;},"2026-12-31"));
+  // TM の変更（選択 / クラウドから）。保存で /api/set-tms に反映。
+  function etmField(label,hint,get,set){const f=el("div","fld");f.appendChild(el("label",null,label));if(hint)f.appendChild(el("div","hint",hint));const row=el("div","row");const v=el("div","pathval");const choose=el("button","mini","選択");const cloud=el("button","mini","クラウドから");const clr=el("button","mini danger","クリア");row.appendChild(v);row.appendChild(choose);row.appendChild(cloud);row.appendChild(clr);f.appendChild(row);const cbox=el("div");cbox.style.marginTop="4px";f.appendChild(cbox);
+    function draw(){const val=get();v.textContent=val||"（未選択）";v.classList.toggle("empty",!val);}
+    choose.onclick=()=>pick("tmx",false).then(r=>{if(r&&r.available===false){openBrowser("tmx","",pp=>{set(pp);draw();});return;}if((r&&r.paths||[]).length){set(r.paths[0]);draw();}}).catch(err=>toast("選択エラー: "+err));
+    cloud.onclick=()=>cloudInline(cbox,pp=>{set(pp);draw();});
+    clr.onclick=()=>{set("");draw();};draw();return f;}
+  sh.bd.appendChild(etmField("メイン TM（.tmx／マッチ用）","",()=>st.main_tm,x=>{st.main_tm=x;}));
+  sh.bd.appendChild(etmField("Product TM（.tmx・任意）","",()=>st.product_tm,x=>{st.product_tm=x;}));
+  const fsub=el("div","fld");fsub.appendChild(el("label",null,"サブ TM（.tmx・任意・複数可）"));const subList=el("div");fsub.appendChild(subList);const addSub=el("button","mini","＋ 選択して追加");const addSubC=el("button","mini","＋ クラウドから追加");fsub.appendChild(addSub);fsub.appendChild(addSubC);const subcbox=el("div");subcbox.style.marginTop="4px";fsub.appendChild(subcbox);sh.bd.appendChild(fsub);
+  function drawESub(){subList.innerHTML="";if(!st.sub_tms.length){subList.appendChild(el("div","hint","（未追加）"));}st.sub_tms.forEach((t,i)=>{const r=el("div","srcitem");r.appendChild(el("span","p",t));const x=el("button","mini danger","削除");x.onclick=()=>{st.sub_tms.splice(i,1);drawESub();};r.appendChild(x);subList.appendChild(r);});}
+  addSub.onclick=()=>pick("tmx",true).then(r=>{if(r&&r.available===false){openBrowser("tmx","",pp=>{st.sub_tms.push(pp);drawESub();});return;}(r&&r.paths||[]).forEach(pp=>st.sub_tms.push(pp));drawESub();}).catch(err=>toast("選択エラー: "+err));
+  addSubC.onclick=()=>cloudInline(subcbox,pp=>{if(st.sub_tms.indexOf(pp)<0)st.sub_tms.push(pp);drawESub();});drawESub();
   const del=el("button","ghost","このプロジェクトを削除");del.style.color="#c0392b";let armed=false;
   del.onclick=()=>{if(!armed){armed=true;del.textContent="本当に削除？（もう一度クリックで確定）";return;}busy(del,true,"削除中…");api("/api/remove",{method:"POST",body:JSON.stringify({id:p.id,delete_file:false})}).then(r=>{closeOvl();toast(r&&r.ok?"削除しました":("削除失敗："+((r&&r.error)||"不明")));refresh();}).catch(err=>{busy(del,false);toast("通信エラー: "+err);});};
   const save=el("button","primary","保存");const cancel=el("button","ghost","キャンセル");cancel.onclick=closeOvl;
   save.onclick=()=>{busy(save,true,"保存中…");Promise.all([
       api("/api/set-status",{method:"POST",body:JSON.stringify({id:p.id,status:st.status})}),
       api("/api/set-memo",{method:"POST",body:JSON.stringify({id:p.id,memo:st.memo})}),
-      api("/api/set-due",{method:"POST",body:JSON.stringify({id:p.id,due:st.due})})
+      api("/api/set-due",{method:"POST",body:JSON.stringify({id:p.id,due:st.due})}),
+      api("/api/set-tms",{method:"POST",body:JSON.stringify({id:p.id,main_tm:st.main_tm,product_tm:st.product_tm,sub_tms:st.sub_tms})})
     ]).then(()=>{closeOvl();toast("更新しました");refresh();}).catch(err=>{busy(save,false);toast("通信エラー: "+err);});};
   sh.ft.appendChild(del);sh.ft.appendChild(cancel);sh.ft.appendChild(save);sh.m.appendChild(sh.ft);overlay(sh.m);
 }
@@ -2115,7 +2207,7 @@ function switchView(v){
   var ttm=document.getElementById("tab-tm");if(ttm)ttm.setAttribute("aria-pressed",String(v==="tm"));
   var th=document.getElementById("tab-history");if(th)th.setAttribute("aria-pressed",String(v==="history"));
   if(v==="terms")loadTerms();
-  if(v==="tm"){loadTM();bkLoad();}
+  if(v==="tm"){loadTM();bkLoad();cloudLoad();}
   if(v==="history")loadHistory();
   try{localStorage.setItem("kotonoha-subview",v);}catch(e){}
 }
@@ -2445,6 +2537,75 @@ function bkMaybePrompt(){
       bkRunPick();
   }).catch(function(){});
 }
+
+// ===== クラウド(OneDrive)TM: 指定フォルダーへ保存/から読込（ファイル・フォルダー単位） =====
+var CLOUDDIR="", CLOUDTMX=[];
+// 作成/編集ダイアログ用: クラウドフォルダーの .tmx をインライン select で選ばせ、onPick(path) で返す
+function cloudInline(cbox,onPick){
+  api("/api/cloud-config").then(function(r){
+    if(!r||!r.ok||!r.cloud_dir){toast("クラウドTMフォルダー未設定（TMタブで設定してください）");return;}
+    var list=r.tmx||[];if(!list.length){toast("クラウドに .tmx がありません");return;}
+    cbox.innerHTML="";var sel=el("select");var o0=el("option",null,"（クラウドから選択）");o0.value="";sel.appendChild(o0);
+    list.forEach(function(t){var o=el("option",null,t.name);o.value=t.path;sel.appendChild(o);});
+    sel.onchange=function(){if(sel.value)onPick(sel.value);};
+    cbox.appendChild(sel);
+  }).catch(function(e){toast("通信エラー: "+e);});
+}
+function cloudLoad(){
+  if(!KT.served)return;
+  api("/api/cloud-config").then(function(r){
+    if(!r||!r.ok)return;
+    CLOUDDIR=r.cloud_dir||""; CLOUDTMX=r.tmx||[];
+    var e=document.getElementById("clouddir");if(e)e.textContent=CLOUDDIR?(CLOUDDIR+"（"+CLOUDTMX.length+" 本）"):"（未設定）";
+  }).catch(function(){});
+}
+function cloudSetDir(){
+  pick("dir",false).then(function(r){
+    if(r&&r.available===false){toast("サーバーモードでのみ利用できます");return;}
+    var dir=(r&&r.paths&&r.paths.length)?r.paths[0]:"";if(!dir)return;
+    api("/api/cloud-config",{method:"POST",body:JSON.stringify({cloud_dir:dir})}).then(function(d){
+      if(d&&d.ok){toast("クラウドTMフォルダーを設定しました");cloudLoad();}
+      else{toast("設定失敗："+((d&&d.error)||"不明"));}
+    }).catch(function(err){toast("通信エラー: "+err);});
+  }).catch(function(err){toast("選択エラー: "+err);});
+}
+function cloudCopy(src,dst,folder,label,after){
+  api("/api/tm-copy",{method:"POST",body:JSON.stringify({src:src,dst_dir:dst,folder:!!folder,label:label})}).then(function(d){
+    if(d&&d.ok){toast("クラウド"+label+"完了: "+(d.copied||[]).length+" 本");cloudLoad();if(after)after();}
+    else{toast("クラウド"+label+"失敗："+((d&&d.error)||"不明"));}
+  }).catch(function(err){toast("通信エラー: "+err);});
+}
+function openCloud(){
+  if(!CLOUDDIR){toast("先に「変更」でクラウドTMフォルダーを指定してください");return;}
+  const sh=modalShell("クラウドTM 操作");
+  sh.bd.appendChild(el("div","hint","クラウドTMフォルダー: "+CLOUDDIR+"（OneDrive の共有フォルダーを想定。同期は OneDrive 任せ）"));
+  function row(label,hint,fn){const f=el("div","fld");const b=el("button","primary",label);b.style.alignSelf="flex-start";b.onclick=fn;f.appendChild(b);if(hint)f.appendChild(el("div","hint",hint));return f;}
+  // 保存: 選択中TM → クラウド
+  sh.bd.appendChild(row("選択中の TM をクラウドへ保存","TMタブで選択中の TM（"+((window.TMCUR&&TMCUR.split(/[\\\\/]/).pop())||"未選択")+"）をクラウドフォルダーへコピー（上書き）。",function(){
+    if(!window.TMCUR){toast("TMタブで TM を選択してください");return;}
+    cloudCopy(TMCUR, CLOUDDIR, false, "保存");
+  }));
+  // 保存: ローカルフォルダー → クラウド（フォルダー単位）
+  sh.bd.appendChild(row("フォルダーごとクラウドへ保存","選ぶフォルダー内の全 .tmx をクラウドへコピー（上書き）。",function(){
+    pick("dir",false).then(function(r){var dir=(r&&r.paths&&r.paths.length)?r.paths[0]:"";if(!dir)return;cloudCopy(dir, CLOUDDIR, true, "保存");}).catch(function(err){toast("選択エラー: "+err);});
+  }));
+  // 読込: クラウドの .tmx → ローカルフォルダー
+  const lf=el("div","fld");lf.appendChild(el("label",null,"クラウドから読込（.tmx を選択 → 保存先フォルダーへコピー）"));
+  const sel=el("select");(CLOUDTMX.length?CLOUDTMX:[{name:"（クラウドに .tmx がありません）",path:""}]).forEach(function(t){const o=el("option",null,t.name);o.value=t.path;sel.appendChild(o);});lf.appendChild(sel);
+  const rb=el("button","primary","このファイルを読込");rb.style.alignSelf="flex-start";
+  rb.onclick=function(){const sp=sel.value;if(!sp){toast("クラウドに .tmx がありません");return;}pick("dir",false).then(function(r){var dir=(r&&r.paths&&r.paths.length)?r.paths[0]:"";if(!dir)return;cloudCopy(sp, dir, false, "読込");}).catch(function(err){toast("選択エラー: "+err);});};
+  lf.appendChild(rb);sh.bd.appendChild(lf);
+  // 読込: クラウドのフォルダー全体 → ローカルフォルダー
+  sh.bd.appendChild(row("フォルダーごと読込","クラウドフォルダー内の全 .tmx を、選ぶローカルフォルダーへコピー。",function(){
+    pick("dir",false).then(function(r){var dir=(r&&r.paths&&r.paths.length)?r.paths[0]:"";if(!dir)return;cloudCopy(CLOUDDIR, dir, true, "読込");}).catch(function(err){toast("選択エラー: "+err);});
+  }));
+  const close=el("button","ghost","閉じる");close.onclick=closeOvl;
+  sh.ft.appendChild(close);sh.m.appendChild(sh.ft);overlay(sh.m);
+}
+(function(){
+  var cs=document.getElementById("cloudset");if(cs)cs.addEventListener("click",cloudSetDir);
+  var cb=document.getElementById("cloudbtn");if(cb)cb.addEventListener("click",openCloud);
+})();
 
 if(KT.served){document.body.classList.add("served");var _tw=document.getElementById("toolswrap");if(_tw)_tw.hidden=false;var _tabs=document.getElementById("tabs");if(_tabs)_tabs.hidden=false;refresh();bkMaybePrompt();}
 </script></body></html>"""
@@ -3068,6 +3229,12 @@ elif a.cmd == "serve":
                     self._send(200, {"ok": True, "cfg": cfg, "freqs": list(_BACKUP_FREQS),
                                      "targets": backup_targets(load(STORE)),
                                      "due": backup_due(cfg)}); return
+                if u.path == "/api/cloud-config":
+                    cfg = load_cloud_cfg(STORE)
+                    cd = cfg.get("cloud_dir", "")
+                    self._send(200, {"ok": True, "cloud_dir": cd,
+                                     "exists": bool(cd and os.path.isdir(cd)),
+                                     "tmx": cloud_tmx_list(cd)}); return
             self._send(404, {"error": "not found"})
 
         def do_POST(self):
@@ -3241,6 +3408,42 @@ elif a.cmd == "serve":
                 except Exception as e:
                     self._send(200, {"ok": False, "error": str(e)})
                 return
+            if u.path == "/api/cloud-config":
+                cfg = load_cloud_cfg(STORE)
+                cd = payload.get("cloud_dir", cfg.get("cloud_dir", ""))
+                if cd and not os.path.isdir(cd):
+                    self._send(200, {"ok": False, "error": "フォルダーが見つかりません"}); return
+                cfg["cloud_dir"] = cd
+                save_cloud_cfg(STORE, cfg)
+                self._send(200, {"ok": True, "cloud_dir": cd, "tmx": cloud_tmx_list(cd)}); return
+            if u.path == "/api/tm-copy":
+                try:
+                    res = tm_copy_run(payload.get("src", ""), payload.get("dst_dir", ""),
+                                      folder=bool(payload.get("folder")))
+                    if res.get("ok"):
+                        _lbl = payload.get("label", "コピー")
+                        log_history(STORE, "TMクラウド" + _lbl,
+                                    "%d 件 → %s" % (len(res.get("copied", [])), res.get("dst_dir", "")))
+                        cfg = load_cloud_cfg(STORE)
+                        cfg["last"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        save_cloud_cfg(STORE, cfg)
+                    self._send(200, res)
+                except Exception as e:
+                    self._send(200, {"ok": False, "error": str(e)})
+                return
+            if u.path == "/api/set-tms":
+                projs = load(STORE)
+                proj = find_by_row_id(projs, payload.get("id", ""))
+                if not proj:
+                    self._send(200, {"ok": False, "error": "プロジェクトが見つかりません"}); return
+                if "main_tm" in payload:    proj["main_tm"] = payload.get("main_tm", "") or ""
+                if "product_tm" in payload: proj["product_tm"] = payload.get("product_tm", "") or ""
+                if "sub_tms" in payload:    proj["sub_tms"] = [t for t in (payload.get("sub_tms") or []) if t]
+                proj["updated"] = now()
+                save(STORE, projs)
+                log_history(STORE, "TM変更", os.path.basename(proj.get("main_tm", "") or ""), proj.get("name", ""))
+                self._send(200, {"ok": True, "main_tm": proj.get("main_tm", ""),
+                                 "product_tm": proj.get("product_tm", ""), "sub_tms": proj.get("sub_tms", [])}); return
             if u.path == "/api/glossary":
                 self._send(200, glossary_run(source=payload.get("source", []),
                                              source_dir=payload.get("source_dir", ""),

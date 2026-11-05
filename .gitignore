@@ -15,5 +15,8 @@ _uistate.json
 # TM バックアップ設定（環境依存・自動生成）
 _backup.json
 
+# クラウドTM設定（環境依存・自動生成）
+_cloud.json
+
 # 生成物（解析/Pre-translation 出力・再実行で再生成可）
 Kotonoha-out/
