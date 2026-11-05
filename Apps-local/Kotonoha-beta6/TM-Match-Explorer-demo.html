@@ -902,7 +902,41 @@ function saveWIP(){
       .catch(function(){if(tag)tag.textContent="保存（ローカルのみ）"+_hm();});
   } else { if(tag)tag.textContent="保存（ローカル）"+_hm(); return Promise.resolve(); }
 }
-(function(){var b=document.getElementById("savewip");if(b)b.addEventListener("click",saveWIP);})();
+// TM書き戻し用 entry 収集（confirmedOnly=true で確定のみ・approved）
+function collectTepEntries(confirmedOnly){
+  var entries=[];
+  for(var i=0;i<SEG.length;i++){
+    if(!SEG[i])continue;
+    var isConf=(i in confirms);
+    if(confirmedOnly && !isConf)continue;
+    var ja=(jaValue(i)||"").trim(); if(!ja)continue;
+    entries.push({en:plain(SEG[i].en), ja:ja, srctm:(SEG[i].srctm||""),
+      status:(isConf?"approved":"notapproved"),
+      prev:(i>0?plain(SEG[i-1].en):""), next:(i+1<SEG.length?plain(SEG[i+1].en):"")});
+  }
+  return entries;
+}
+// 途中保存/保存して閉じる用: 編集or確定があれば「TMに変更内容を保存しますか？」を尋ね、
+// 「はい」なら確定分のみ(approved)をマッチ元TMへ書き戻す（完了にはしない）。その後 after() を実行。
+function maybeWriteTMThen(after){
+  function done(){ if(after)after(); }
+  if(!(KTX.served && KTX.doc && window.parent && window.parent!==window)){ done(); return; }
+  if(!(editedCount()>0 || confirmedCount()>0)){ done(); return; }   // TEP作業なし＝尋ねない
+  if(!window.confirm("TMに変更内容を保存しますか？\n（確定した訳をマッチ元TMへ書き戻します。未確定は書き戻しません）")){ done(); return; }
+  var entries=collectTepEntries(true);
+  if(!entries.length){
+    try{ if(window.parent&&typeof window.parent.toast==="function") window.parent.toast("確定済みのセグメントが無いため、TMへは書き戻しませんでした"); }catch(e){}
+    done(); return;
+  }
+  apiT("/api/tep-complete",{method:"POST",body:JSON.stringify({pid:(KTX.pid||""),art:ART,entries:entries,complete:false})})
+    .then(function(d){
+      if(d&&d.ok){var m="TMへ書き戻し: approved "+(d.approved||0)+" を "+((d.written||[]).length)+" 本へ";if(d.routed_to_main)m+="（うち"+d.routed_to_main+"件メインTM）";
+        try{ if(window.parent&&typeof window.parent.toast==="function") window.parent.toast(m); }catch(e){}}
+      else{ alert("TM書き戻し失敗："+((d&&d.error)||"不明")); }
+      done();
+    }).catch(function(err){ alert("通信エラー："+err); done(); });
+}
+(function(){var b=document.getElementById("savewip");if(b)b.addEventListener("click",function(){maybeWriteTMThen(function(){saveWIP();});});})();
 // TEPウィンドウ ヘッダー: 再読み込み / 別タブで開く / 保存して閉じる
 (function(){
   var rl=document.getElementById("winreload");if(rl)rl.addEventListener("click",function(){location.reload();});
@@ -912,8 +946,10 @@ function saveWIP(){
   if(sc && KTX.served && KTX.doc && window.parent && window.parent!==window){
     sc.hidden=false;
     sc.addEventListener("click",function(){
-      Promise.resolve(saveWIP()).then(function(){
-        try{ if(window.parent.closeActiveTEP) window.parent.closeActiveTEP(); }catch(e){}
+      maybeWriteTMThen(function(){
+        Promise.resolve(saveWIP()).then(function(){
+          try{ if(window.parent.closeActiveTEP) window.parent.closeActiveTEP(); }catch(e){}
+        });
       });
     });
   }

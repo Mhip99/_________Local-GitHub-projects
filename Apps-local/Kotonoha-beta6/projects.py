@@ -3374,20 +3374,32 @@ elif a.cmd == "serve":
                     log_history(STORE, "TM書き戻し", payload.get("customer", "") or "Master")
                 self._send(200, _wb); return
             if u.path == "/api/tep-complete":
-                # TEP完了: 確定分をマッチ元TMへ個別書き戻し→ステータス完了。editor から呼ばれる。
+                # 確定分（＋TEP完了時は未確定も）をマッチ元TMへ個別書き戻し。editor から呼ばれる。
+                # complete=True（TEP完了ボタン）→ステータスを完了に。
+                # complete=False（途中保存/保存して閉じるの「はい」）→書き戻すだけ・完了にしない。
                 projs = load(STORE)
                 proj = find_by_row_id(projs, payload.get("pid", ""))
                 if not proj:
                     self._send(200, {"ok": False, "error": "プロジェクトが見つかりません"}); return
                 entries = payload.get("entries", []) or []
-                res = tep_complete_run(proj, entries, backup=True)
+                _complete = payload.get("complete", True)
+                try:
+                    res = tep_complete_run(proj, entries, backup=True)
+                except Exception as e:
+                    import traceback; traceback.print_exc()
+                    self._send(200, {"ok": False, "error": "書き戻し中にエラー: %s" % e}); return
                 if res.get("ok"):
                     nm = proj.get("name", "") or proj.get("id", "")
                     art = payload.get("art", "") or nm
-                    log_history(STORE, "TEP完了",
-                                "%s 確定%d件→TM%d本" % (art, res.get("confirmed", 0), len(res.get("written", []))),
-                                nm)
-                    update_field(projs, STORE, proj.get("id", ""), "status", "完了")
+                    if _complete:
+                        log_history(STORE, "TEP完了",
+                                    "%s 確定%d件→TM%d本" % (art, res.get("confirmed", 0), len(res.get("written", []))),
+                                    nm)
+                        update_field(projs, STORE, proj.get("id", ""), "status", "完了")
+                    else:
+                        log_history(STORE, "TM書き戻し(途中)",
+                                    "%s approved%d件→TM%d本" % (art, res.get("approved", 0), len(res.get("written", []))),
+                                    nm)
                 self._send(200, res); return
             if u.path == "/api/backup-config":
                 cfg = load_backup_cfg(STORE)
