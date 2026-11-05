@@ -1,13 +1,14 @@
 <!doctype html><html lang="ja"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Kotonoha プロジェクト一覧</title>
+<title>Kotonoha プロジェクト一覧 (beta6.30)</title>
 <style>
 :root{--bg:#F5F6F8;--card:#fff;--ink:#1B1F27;--muted:#5C6470;--line:#E4E7EC;--accent:#146C82;
 --work:#B77C1F;--work-bg:#F6ECD8;--rev:#146C82;--rev-bg:#E4F0F3;--done:#2E9E6B;--done-bg:#E4F3EC;}
 @media(prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#101319;--card:#191D25;--ink:#E9EBEF;--muted:#9BA3AF;--line:#2A303A;--accent:#48AEC6;--work:#D6A24A;--work-bg:#33280f80;--rev:#48AEC6;--rev-bg:#17303880;--done:#4CB985;--done-bg:#15302480;}}
 :root[data-theme=dark]{--bg:#101319;--card:#191D25;--ink:#E9EBEF;--muted:#9BA3AF;--line:#2A303A;--accent:#48AEC6;--work:#D6A24A;--work-bg:#33280f80;--rev:#48AEC6;--rev-bg:#17303880;--done:#4CB985;--done-bg:#15302480;}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI","Noto Sans JP",system-ui,sans-serif;line-height:1.5}
-.wrap{max-width:none;margin:0;padding:24px clamp(16px,2.5vw,48px) 60px}
+.wrap{max-width:none;margin:0;padding:8px clamp(8px,1.2vw,16px) 36px}
+body.served .wrap{padding-top:4px}
 h1{font-size:22px;margin:.2em 0}.sub{color:var(--muted);font-size:13px;margin-bottom:16px}
 .ctl{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:14px 0}
 .ctl input[type=search]{flex:1;min-width:180px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink)}
@@ -58,13 +59,41 @@ th .rz:hover{background:var(--accent);opacity:.35}
 .open{display:inline-block;background:var(--accent);color:#fff;text-decoration:none;padding:6px 12px;border-radius:8px;font-size:13px;font-weight:600;white-space:nowrap}
 .run{display:inline-block;background:transparent;color:var(--accent);border:1px solid var(--accent);padding:5px 11px;border-radius:8px;font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer}
 .run:hover{background:var(--accent);color:#fff}
-.run:disabled,.exp:disabled{opacity:.55;cursor:default}
+.run:disabled,.exp:disabled,.resume:disabled{opacity:.55;cursor:default}
+.resume{display:inline-block;background:var(--accent);color:#fff;border:1px solid var(--accent);padding:5px 11px;border-radius:8px;font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer}
+.resume:hover{filter:brightness(1.08)}
+.run.reana{margin-left:5px;padding:5px 9px;font-size:12px;opacity:.85}
 .exp{display:inline-block;margin-left:5px;background:transparent;color:var(--done);border:1px solid var(--done);padding:5px 10px;border-radius:8px;font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer}
 .exp:hover{background:var(--done);color:#fff}
+.det{display:inline-block;margin-left:5px;background:transparent;color:var(--muted);border:1px solid var(--line);padding:5px 10px;border-radius:8px;font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer}
+.det:hover{border-color:var(--accent);color:var(--accent)}
+.det[aria-pressed=true]{background:var(--accent);color:#fff;border-color:var(--accent)}
+tr.detrow td{background:var(--bg);padding:0;border-right:none}
+.detpanel{white-space:normal;padding:14px 16px;font-size:13px;color:var(--ink)}
+.detpanel h3{font-size:14px;margin:0 0 8px}
+.detpanel .sumline{color:var(--muted);margin:0 0 12px;line-height:1.7}
+.detpanel .sumline b{color:var(--ink);font-weight:600}
+.detpanel .dpath{font-family:Consolas,"Courier New",monospace;font-size:12px;color:var(--muted);word-break:break-all}
+.detpanel .flist{border:1px solid var(--line);border-radius:8px;background:var(--card);overflow:hidden}
+.detpanel .frow{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--line)}
+.detpanel .frow:last-child{border-bottom:none}
+.detpanel .frow .fn{flex:1;min-width:0;word-break:break-all}
+.detpanel .frow .fm{color:var(--muted);font-size:12px;white-space:nowrap}
+.detpanel .frow .tep{color:var(--accent);font-weight:600;cursor:pointer;text-decoration:none}
+.detpanel .frow .reveal{color:var(--muted);cursor:pointer;text-decoration:none;font-size:12px;white-space:nowrap}
+.detpanel .frow .tep:hover,.detpanel .frow .reveal:hover{text-decoration:underline;color:var(--accent)}
+.detpanel .ebar{display:flex;gap:8px;align-items:center;margin:0 0 10px;flex-wrap:wrap}
+.detpanel .ebar button{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;padding:5px 11px;font-size:13px;cursor:pointer}
+.detpanel .ebar button:hover{border-color:var(--accent);color:var(--accent)}
+.detpanel .empty{color:var(--muted);padding:10px 0}
 #toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(12px);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:13px;max-width:min(92vw,640px);box-shadow:0 8px 24px rgba(0,0,0,.3);opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;z-index:50}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .srvbadge{display:none;font-size:12px;font-weight:600;color:#fff;background:var(--done);border-radius:999px;padding:3px 10px;margin-left:10px;vertical-align:middle}
 body.served .srvbadge{display:inline-block}
+.verbadge{font-size:12px;font-weight:600;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:2px 9px;margin-left:8px;vertical-align:middle}
+.ibtn{float:right;width:28px;height:28px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--muted);font:italic 700 15px Georgia,"Times New Roman",serif;cursor:pointer;line-height:1;padding:0}
+.ibtn:hover{border-color:var(--accent);color:var(--accent)}
+.modal .bd p.infopara{margin:0;font-size:13.5px;line-height:1.7;color:var(--ink)}
 .ovl{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:60;padding:16px}
 .modal{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:12px;max-width:720px;width:100%;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.4)}
 .modal h2{font-size:17px;margin:0;padding:16px 18px;border-bottom:1px solid var(--line)}
@@ -94,37 +123,122 @@ body.served .srvbadge{display:inline-block}
 .hint{font-size:12px;color:var(--muted)}
 .memo{color:var(--muted);font-size:13px}.due{white-space:nowrap}.meta{color:var(--muted);font-size:12px}
 .empty{padding:40px;text-align:center;color:var(--muted)}
+.tabs{display:flex;gap:6px;margin:12px 0 0;border-bottom:1px solid var(--line)}
+.tab{background:transparent;border:1px solid transparent;border-bottom:none;color:var(--muted);border-radius:8px 8px 0 0;padding:8px 16px;font-size:14px;font-weight:600;cursor:pointer}
+.tab[aria-pressed=true]{background:var(--card);border-color:var(--line);color:var(--ink)}
+body:not(.served) .tabs{display:none}
+.termcount{color:var(--muted);font-size:12.5px;margin-left:auto}
+.termtext{white-space:normal;word-break:break-word}
 footer{color:var(--muted);font-size:12px;margin-top:18px}
 </style><style id="colhide"></style></head><body>
-<script>window.__KT={"served": false, "token": ""};</script>
+<script>window.__KT={"served": false, "token": ""};window.__UISTATE={};</script>
+
 <div class="wrap">
-<h1>Kotonoha プロジェクト一覧<span class="srvbadge">サーバーモード（作成・実行が有効）</span></h1>
-<div class="sub">記事行は「開く」で TEP 作業を<b>別タブ</b>で再開。定義行は「<b>実行</b>」で解析＋Pre-translation、「<b>出力</b>」で元形式の翻訳版を出力。各行の「<b>編集</b>」で状態・メモ・期日・削除。ツールバーの「<b>ツール ▾</b>」から MT注入・索引キャッシュ作成・TM書き戻し・UI Glossary を実行できます（<b>サーバーモード</b>時）。静的表示（file://）では「実行」はコマンドをコピーします。列ヘッダー右端をドラッグで<b>幅調整</b>、<b>列 ▾</b>で<b>表示/非表示</b>（ブラウザに保存）。</div>
+<style>
+.ptabs{display:flex;flex-wrap:wrap;gap:2px;margin:2px 0 6px;border-bottom:2px solid var(--hairline);align-items:flex-end}
+.ptab{appearance:none;border:1px solid var(--hairline);border-bottom:none;background:var(--surface);color:inherit;padding:5px 8px;border-radius:9px 9px 0 0;font-weight:700;font-size:13px;cursor:pointer;margin-bottom:-2px;max-width:280px;display:flex;align-items:center;gap:6px;text-align:left}
+.ptab[aria-pressed="true"]{background:var(--accent,#2563eb);color:#fff;border-color:transparent}
+.ptab .lbl{flex:1 1 auto;min-width:0;line-height:1.25;max-height:2.9em;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word}
+.ptab .x{flex:0 0 auto;margin-left:2px;opacity:.7;font-weight:700;font-size:15px;line-height:1;cursor:pointer;border-radius:4px;padding:0 3px}
+.ptab .x:hover{opacity:1;background:rgba(127,127,127,.25)}
+.tepbar{display:flex;align-items:center;gap:10px;margin:2px 0 8px}
+.tepbar .tephint{color:var(--muted);font-size:13px}
+.tepframe{display:block;width:100%;height:calc(100vh - 84px);min-height:460px;border:1px solid var(--hairline);border-radius:8px;background:var(--surface)}
+</style>
+<div class="ptabs" id="ptabs"></div>
+<div id="ptab-proj">
+<h1>Kotonoha プロジェクト一覧 <span class="verbadge">beta6.30</span><span class="srvbadge">サーバーモード（作成・実行が有効）</span><button class="ibtn" id="infobtn" type="button" title="このツールについて（使い方・保存場所）" aria-label="情報">i</button></h1>
+<div class="tabs" id="tabs" hidden>
+  <button class="tab" id="tab-projects" data-view="projects" aria-pressed="true" type="button" title="プロジェクト一覧。定義行＝実行/出力/編集/詳細">プロジェクト</button>
+  <button class="tab" id="tab-terms" data-view="terms" aria-pressed="false" type="button" title="用語集（全プロジェクト共通 _terms.tsv）の管理">用語管理</button>
+  <button class="tab" id="tab-tm" data-view="tm" aria-pressed="false" type="button" title="TM（翻訳メモリ）エントリの一覧/検索/編集/削除">TM</button>
+  <button class="tab" id="tab-history" data-view="history" aria-pressed="false" type="button" title="操作の履歴（日付・作業内容）。メモ追加・編集・削除可">履歴</button>
+</div>
+<div id="view-projects">
 <div class="ctl">
-  <button class="btn new" id="newbtn" type="button">＋ 新規作成</button>
-  <input id="q" type="search" placeholder="タイトル・メモ・ソースを検索…">
-  <button class="chip" data-st="all" aria-pressed="true">すべて</button>
-  <button class="chip" data-st="作業中" aria-pressed="false">作業中</button>
-  <button class="chip" data-st="レビュー中" aria-pressed="false">レビュー中</button>
-  <button class="chip" data-st="完了" aria-pressed="false">完了</button>
-  <label class="toggle"><input type="checkbox" id="hideDone"> 完了を隠す</label>
-  <span class="colmenu" id="toolswrap" hidden><button class="btn" id="toolsbtn" type="button">ツール ▾</button><div id="toolspanel" class="toolspanel" hidden></div></span>
-  <span class="colmenu"><button class="btn" id="colbtn" type="button">列 ▾</button><div id="colpanel" hidden></div></span>
-  <button class="btn" id="resetbtn" type="button">既定に戻す</button>
-  <button class="btn" id="lockbtn" type="button" aria-pressed="false">固定</button>
-  <button class="themebtn" id="theme">◐ テーマ</button>
+  <button class="btn new" id="newbtn" type="button" title="新規プロジェクトを作成（名前・ソース・メイン/Product/サブTMを指定。作成して実行も可）">＋ 新規作成</button>
+  <input id="q" type="search" placeholder="タイトル・メモ・ソースを検索…" title="タイトル・メモ・ソースを部分一致で絞り込み">
+  <button class="chip" data-st="all" aria-pressed="true" title="すべての状態を表示">すべて</button>
+  <button class="chip" data-st="作成済" aria-pressed="false" title="状態=作成済 のみ表示">作成済</button>
+  <button class="chip" data-st="作業中" aria-pressed="false" title="状態=作業中 のみ表示">作業中</button>
+  <button class="chip" data-st="レビュー中" aria-pressed="false" title="状態=レビュー中 のみ表示">レビュー中</button>
+  <button class="chip" data-st="完了" aria-pressed="false" title="状態=完了 のみ表示">完了</button>
+  <label class="toggle" title="完了したプロジェクトを一覧から隠す"><input type="checkbox" id="hideDone"> 完了を隠す</label>
+  <span class="colmenu" id="toolswrap" hidden><button class="btn" id="toolsbtn" type="button" title="MTを反映・索引キャッシュ作成・TM書き戻し・UI Glossary・ファイル比較・JAバージョンチェック">ツール ▾</button><div id="toolspanel" class="toolspanel" hidden></div></span>
+  <span class="colmenu"><button class="btn" id="colbtn" type="button" title="表示する列の選択（ブラウザに保存）">列 ▾</button><div id="colpanel" hidden></div></span>
+  <button class="btn" id="resetbtn" type="button" title="列幅・表示・並び順を既定に戻す">既定に戻す</button>
+  <button class="btn" id="lockbtn" type="button" aria-pressed="false" title="列の並べ替え/幅変更をロック">固定</button>
+  <button class="themebtn" id="theme" title="ライト/ダークのテーマ切替">◐ テーマ</button>
 </div>
 <div id="newnote" class="note" hidden>新規プロジェクトの作成・実行はランチャー <b>TM-Match-Explorer.bat</b> で行います：メニュー <b>[C]</b> プロジェクト作成＋実行（単一記事・フォルダーいずれも／メイン＋Product＋サブ TM）、または <b>[P]</b> 画面の <b>N=新規作成</b>・<b>G=保存した定義を実行</b>。作成・実行後にこのページを再読み込み（F5）すると一覧へ反映されます。<button class="btn" id="newclose" type="button" style="margin-left:8px">閉じる</button></div>
 <div class="tablewrap"><table id="ptable"><colgroup id="cg"></colgroup>
 <thead><tr id="thr"></tr></thead><tbody id="rows"></tbody></table></div>
 <div class="empty" id="empty" hidden>該当するプロジェクトはありません。</div>
-<footer>台帳: _projects.json ／ この一覧は <code>projects.py dashboard</code> で生成。開き直すと最新になります。</footer>
+</div><!-- /view-projects -->
+<div id="view-terms" hidden>
+  <div class="ctl">
+    <button class="btn new" id="termadd" type="button" title="用語を新規追加（ソースEN・ターゲットJA・用例・ノート）">＋ 用語を追加</button>
+    <input id="tq" type="search" placeholder="用語を検索（ソース・ターゲット・ノート・ドキュメント）…" title="用語集をソース/ターゲット/ノート/ドキュメントで絞り込み">
+    <button class="btn" id="termextract" type="button" title="ソース/TEP/XLIFF から UI 用語を抽出して登録">用語を抽出…</button>
+    <span class="colmenu"><button class="btn" id="termexportbtn" type="button" title="用語集を TSV/CSV/XLSX で書き出し">エクスポート ▾</button><div id="termexportpanel" class="toolspanel" hidden></div></span>
+    <span class="termcount" id="termcount" title="登録用語数"></span>
+  </div>
+  <div class="tablewrap"><table id="ttable"><colgroup>
+    <col style="width:200px"><col style="width:200px"><col style="width:260px"><col style="width:160px"><col style="width:150px"><col style="width:120px"><col style="width:128px"><col style="width:120px"></colgroup>
+  <thead><tr><th>ソース</th><th>ターゲット</th><th>用例</th><th>ノート</th><th>ドキュメント</th><th>プロジェクト</th><th>更新</th><th class="act">操作</th></tr></thead>
+  <tbody id="trows"></tbody></table></div>
+  <div class="empty" id="tempty" hidden>用語がありません。「＋ 用語を追加」または「用語を抽出…」で登録してください。</div>
+</div><!-- /view-terms -->
+<div id="view-tm" hidden>
+  <div class="ctl">
+    <select id="tmsel" title="編集する TM を選択（XTML は読み取り専用）"></select>
+    <input id="tmq" type="search" placeholder="TMを検索（EN・JA 部分一致）…" title="EN/JA を部分一致で絞り込み">
+    <button class="btn new" id="tmaddbtn" type="button" title="選択中の TM にエントリ（EN/JA）を追加">＋ エントリ追加</button>
+    <span class="termcount" id="tmcount" title="表示中のエントリ数"></span>
+    <span class="termcount" id="tminfo" style="opacity:.75" title="選択中TMの編集可否"></span>
+  </div>
+  <div class="ctl" id="bkctl">
+    <label class="toggle" title="TM のバックアップを有効化（起動時に頻度に応じて作成を確認）"><input type="checkbox" id="bkon"> TMバックアップを作成</label>
+    <select id="bkfreq" title="バックアップを促す頻度（自動では作成せず、起動時に確認）">
+      <option value="once">一度だけ</option><option value="daily">毎日</option>
+      <option value="weekly">毎週</option><option value="monthly">毎月</option>
+      <option value="never">しない</option>
+    </select>
+    <button class="btn" id="bknow" type="button" title="いま対象TM（Kotonohaが書き込むTM）を指定フォルダーへバックアップ">今すぐバックアップ</button>
+    <span class="termcount" id="bklast" style="opacity:.75" title="最終バックアップ日時・対象TM"></span>
+  </div>
+  <div class="ctl" id="cloudctl">
+    <span class="termcount" style="opacity:.85">クラウドTMフォルダー:</span>
+    <span class="termcount" id="clouddir" style="opacity:.75" title="共有用 OneDrive フォルダー">（未設定）</span>
+    <button class="btn" id="cloudset" type="button" title="OneDrive 上の共有TMフォルダーを指定">変更</button>
+    <button class="btn" id="cloudbtn" type="button" title="TM をクラウド(OneDrive指定フォルダー)へ保存／から読込（ファイル・フォルダー単位）">クラウド操作 ▾</button>
+  </div>
+  <div class="tablewrap"><table id="tmtable"><colgroup>
+    <col style="width:44%"><col style="width:44%"><col style="width:132px"><col style="width:120px"></colgroup>
+  <thead><tr><th>EN（原文）</th><th>JA（訳）</th><th>更新</th><th class="act">操作</th></tr></thead>
+  <tbody id="tmrows"></tbody></table></div>
+  <div class="empty" id="tmempty" hidden>エントリがありません（または検索に一致しません）。編集可能なTM（書込可能・XTM以外）を選択してください。</div>
+</div><!-- /view-tm -->
+<div id="view-history" hidden>
+  <div class="ctl">
+    <input id="hq" type="search" placeholder="履歴を検索（作業内容・メモ・プロジェクト）…" title="作業内容・メモ・プロジェクト名で絞り込み">
+    <span class="termcount" id="hcount" title="履歴件数"></span>
+    <button class="btn" id="hrefresh" type="button" title="履歴を再読み込み">更新</button>
+  </div>
+  <div class="tablewrap"><table id="htable"><colgroup>
+    <col style="width:150px"><col style="width:120px"><col style="width:34%"><col style="width:34%"><col style="width:110px"></colgroup>
+  <thead><tr><th>日付</th><th>種別</th><th>作業内容</th><th>メモ</th><th class="act">操作</th></tr></thead>
+  <tbody id="hrows"></tbody></table></div>
+  <div class="empty" id="hempty" hidden>履歴はまだありません。作成・実行・出力などの操作を行うと自動で記録されます。</div>
+</div><!-- /view-history -->
+</div><!-- /ptab-proj -->
+<div id="tepviews"></div>
 </div>
 <script>
-let P = [{"n": 1, "title": "Changes in Account Configuration Requirements for Connectors", "status": "作業中", "segs": null, "mt": 0, "memo": "", "due": "", "updated": "2026-10-08 16:23", "source": "C:\\Users\\Masaaki.Hori\\OneDrive - Domo Inc\\________GitHub-production\\___Test Projects\\EN source\\000005214\\000005214.mdx", "uri": "file:///C:/Users/Masaaki.Hori/OneDrive%20-%20Domo%20Inc/________GitHub-production/CAT%20tool/CAT/TM-Match-Explorer-Changes%20in%20Account%20Configuration%20Requirements%20for%20Connectors.html", "id": "", "pid": "", "cmd": ""}, {"n": 2, "title": "Test 001 - 1007", "status": "未解析", "segs": null, "mt": null, "memo": "", "due": "", "updated": "2026-10-07 16:43", "source": "ソース 0 件 ／ メインTM 未設定 ／ Product 無 ／ サブTM 0 件", "uri": "", "id": "proj-20261007-164351", "pid": "proj-20261007-164351", "cmd": "python \"C:\\Users\\Masaaki.Hori\\OneDrive - Domo Inc\\________GitHub-production\\CAT tool\\CAT\\Kotonoha-beta6\\projects.py\" run --id proj-20261007-164351"}, {"n": 3, "title": "DomoStats Connector", "status": "作業中", "segs": null, "mt": 1090, "memo": "", "due": "", "updated": "2026-10-07 15:26", "source": "C:\\Users\\Masaaki.Hori\\OneDrive - Domo Inc\\________GitHub-production\\Analysis and Translation\\Sample\\ED2708-03-MH-KB-mdx-DomoStats Connector-JA\\1_en\\360043433813.mdx", "uri": "file:///C:/Users/Masaaki.Hori/OneDrive%20-%20Domo%20Inc/________GitHub-production/CAT%20tool/CAT/TM-Match-Explorer-DomoStats%20Connector.html", "id": "", "pid": "", "cmd": ""}];
+let P = [{"n": 1, "title": "ED2710-20-MH-App-September 2026 Release Update Content-JA", "status": "作業中", "project": "", "segs": null, "mt": null, "memo": "", "due": "", "updated": "2026-10-27 16:26", "source": "ソース 1 件 ／ メインTM Main-TM.tmx ／ Product 有 ／ サブTM 1 件", "uri": "", "id": "proj-20261021-163537", "pid": "proj-20261021-163537", "cmd": "python \"C:\\Users\\Masaaki.Hori\\OneDrive - Domo Inc\\_________Local-GitHub-projects\\Apps-local\\Kotonoha-beta6\\projects.py\" run --id proj-20261021-163537", "produced": [{"title": "Creating DataFlows in Magic ETL", "html": "C:\\Users\\Masaaki.Hori\\OneDrive - Domo Inc\\_________Local-GitHub-projects\\ED2710-20-MH-App-September 2026 Release Update Content-JA\\_kotonoha\\Creating DataFlows in Magic ETL.html"}], "ran": true}];
 const COLS = [{"id": "n", "label": "#", "w": 48}, {"id": "title", "label": "タイトル", "w": 260}, {"id": "status", "label": "状態", "w": 100}, {"id": "segmt", "label": "seg / MT", "w": 90}, {"id": "due", "label": "期日", "w": 108}, {"id": "memo", "label": "メモ", "w": 220}, {"id": "updated", "label": "更新", "w": 128}];
 const KT = (window.__KT||{served:false,token:""});
-const BADGE={"未解析":"b-todo","作業中":"b-work","レビュー中":"b-rev","完了":"b-done"};
+const BADGE={"作成済":"b-todo","未解析":"b-todo","作業中":"b-work","レビュー中":"b-rev","完了":"b-done"};
 const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
 const LSW="kotonoha-proj-w",LSH="kotonoha-proj-hidden",LST="kotonoha-proj-theme";
 let widths={},hidden=[];
@@ -204,11 +318,25 @@ function render(){
   document.getElementById("empty").hidden=list.length>0;
   document.getElementById("rows").innerHTML=list.map(p=>{
     let inner="";
-    if(p.uri){inner='<a class="open" href="'+esc(p.uri)+'" target="_blank" rel="noopener">開く</a>';}
-    else if(p.pid){inner='<button class="run" type="button" data-pid="'+esc(p.pid)+'" data-cmd="'+esc(p.cmd)+'" data-n="'+p.n+'" title="'+(KT.served?'クリックで解析＋Pre-translation を実行':'クリックで実行コマンドをコピー ／ またはランチャー [P] で G → 番号 '+p.n)+'">実行</button>';
-      if(KT.served){inner+='<button class="exp" type="button" data-pid="'+esc(p.pid)+'" title="TM を適用して元の形式で翻訳版を出力（解析→翻訳→TEP確定→書き戻しの後に実行）">出力</button>';}}
+    if(p.pid){
+      if(KT.served){
+        if(p.ran){
+          inner='<button class="resume" type="button" data-pid="'+esc(p.pid)+'" title="既存の作業ファイル（TEPウィンドウ）を開く。再解析はしないので編集はそのまま">再開</button>';
+          inner+='<button class="run reana" type="button" data-pid="'+esc(p.pid)+'" data-n="'+p.n+'" title="解析＋Pre-translation をやり直す（MTは保存済みを自動再反映）">再解析</button>';
+        } else {
+          inner='<button class="run" type="button" data-pid="'+esc(p.pid)+'" data-cmd="'+esc(p.cmd)+'" data-n="'+p.n+'" title="クリックで解析＋Pre-translation を実行（結果はプロジェクト名タブに表示）">実行</button>';
+        }
+        inner+='<button class="exp" type="button" data-pid="'+esc(p.pid)+'" title="TM を適用して元の形式で翻訳版を出力（.json/.docx/.xlsx 等。TEP確定→TM書き戻しの後に実行）">出力</button>';
+      } else {
+        inner='<button class="run" type="button" data-pid="'+esc(p.pid)+'" data-cmd="'+esc(p.cmd)+'" data-n="'+p.n+'" title="クリックで実行コマンドをコピー ／ またはランチャー [P] で G → 番号 '+p.n+'">実行</button>';
+      }
+    }
+    else if(p.uri){inner='<a class="open" href="'+esc(p.uri)+'" data-title="'+esc(p.project||p.title||p.name||"")+'" target="_blank" rel="noopener">開く</a>';}
     if(KT.served&&p.id){inner+='<button class="edit" type="button" data-id="'+esc(p.id)+'" title="状態・メモ・期日・削除">編集</button>';}
-    return "<tr>"+COLS.map(c=>cell(p,c.id)).join("")+'<td class="act">'+inner+'</td></tr>';
+    if(KT.served&&p.pid){inner+='<button class="det" type="button" data-pid="'+esc(p.pid)+'" aria-pressed="false" title="作業サマリーと中間生成物（_Details フォルダー）を表示">詳細</button>';}
+    var main="<tr>"+COLS.map(c=>cell(p,c.id)).join("")+'<td class="act">'+inner+'</td></tr>';
+    if(KT.served&&p.pid){main+='<tr class="detrow" id="detrow-'+esc(p.pid)+'" hidden><td colspan="'+(COLS.length+1)+'"><div class="detpanel" id="detpanel-'+esc(p.pid)+'"></div></td></tr>';}
+    return main;
   }).join("");
 }
 // clipboard copy (file:// では navigator.clipboard が無い場合があるので execCommand に退避)
@@ -217,15 +345,23 @@ function copyText(t){return (navigator.clipboard&&navigator.clipboard.writeText)
 let toastT=null;
 function toast(msg){let el=document.getElementById("toast");if(!el){el=document.createElement("div");el.id="toast";document.body.appendChild(el);}el.textContent=msg;el.classList.add("show");clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove("show"),3000);}
 document.getElementById("rows").addEventListener("click",e=>{
+  const tep=e.target.closest("a.tep[data-path]");
+  if(tep&&KT.served){e.preventDefault();openTEPbyPath(tep.getAttribute("data-path"),tep.textContent.replace(/（.*/,"").trim());return;}
+  const rv=e.target.closest("[data-reveal]");
+  if(rv&&KT.served){e.preventDefault();api("/api/open",{method:"POST",body:JSON.stringify({path:rv.getAttribute("data-reveal")})}).then(r=>toast(r&&r.ok?"保存場所を開きました":("開けませんでした："+((r&&r.error)||""))));return;}
+  const dopen=e.target.closest("button.detopen");
+  if(dopen&&KT.served){api("/api/open",{method:"POST",body:JSON.stringify({path:dopen.getAttribute("data-path")})}).then(r=>toast(r&&r.ok?"フォルダーを開きました":("開けませんでした："+((r&&r.error)||""))));return;}
   const eb=e.target.closest("button.edit");
   if(eb&&KT.served){const id=eb.getAttribute("data-id");const row=P.find(x=>x.id===id);if(row)openEdit(row);return;}
+  const db=e.target.closest("button.det");
+  if(db&&KT.served){toggleDetails(db.getAttribute("data-pid"),db);return;}
   const xb=e.target.closest("button.exp");
-  if(xb&&KT.served){
-    const pid=xb.getAttribute("data-pid");xb.disabled=true;const oldx=xb.textContent;xb.textContent="出力中…";
-    api("/api/export",{method:"POST",body:JSON.stringify({id:pid})}).then(r=>{
-      xb.disabled=false;xb.textContent=oldx;
-      toast(r&&r.ok?("元形式で出力しました: "+(r.out_dir||"")):("出力失敗："+((r&&r.error)||"不明なエラー")));
-    }).catch(err=>{xb.disabled=false;xb.textContent=oldx;toast("通信エラー: "+err);});
+  if(xb&&KT.served){openExportChoice(xb.getAttribute("data-pid"),xb);return;}
+  const rz=e.target.closest("button.resume");
+  if(rz&&KT.served){
+    const pid=rz.getAttribute("data-pid");const row=P.find(x=>x.pid===pid);
+    if(row&&row.produced&&row.produced.length){openProduced(row.title||row.project||row.name||"",row.produced);}
+    else{toast("作業ファイルが見つかりません。『再解析』で生成してください。");}
     return;
   }
   const b=e.target.closest("button.run");if(!b)return;
@@ -234,8 +370,8 @@ document.getElementById("rows").addEventListener("click",e=>{
     b.disabled=true;const old=b.textContent;b.textContent="実行中…";
     api("/api/run",{method:"POST",body:JSON.stringify({id:pid})}).then(r=>{
       b.disabled=false;b.textContent=old;
-      toast(r&&r.ok?("実行完了："+(r.registered||0)+" 記事を登録しました"):("実行失敗："+((r&&r.error)||"不明なエラー")));
-      refresh();
+      toast(r&&r.ok?("実行完了（生成 "+(r.registered||0)+" 件）"):("実行失敗："+((r&&r.error)||"不明なエラー")));
+      refresh().then(function(){if(r&&r.ok&&r.produced)openProduced(r.project,r.produced);});
     }).catch(err=>{b.disabled=false;b.textContent=old;toast("通信エラー: "+err);});
     return;
   }
@@ -299,7 +435,9 @@ function openBrowser(kind,startDir,onPick){
   overlay(m);load(startDir||"");
 }
 function openCreate(){
-  const st={name:"",sources:[],main_tm:"",product_tm:"",sub_tms:[]};
+  let runmtDefault=true;try{runmtDefault=(localStorage.getItem("kotonoha-proj-runmt")!=="0");}catch(e){}
+  let unappDefault=true;try{unappDefault=(localStorage.getItem("kotonoha-proj-useunapp")!=="0");}catch(e){}
+  const st={name:"",sources:[],main_tm:"",product_tm:"",sub_tms:[],run_mt:runmtDefault,use_notapproved:unappDefault};
   const m=el("div","modal");m.appendChild(el("h2",null,"新規プロジェクトの作成"));
   const bd=el("div","bd");
   bd.appendChild(el("div","hint","ソース・TM は Windows の「ファイルを開く」ダイアログで選択します（ダイアログが前面に出ます）。"));
@@ -316,25 +454,49 @@ function openCreate(){
   addD.onclick=()=>pick("dir",false).then(r=>{if(r&&r.available===false){openBrowser("dir","",p=>{st.sources.push({kind:"dir",path:p});drawSrc();});return;}(r&&r.paths||[]).forEach(p=>st.sources.push({kind:"dir",path:p}));drawSrc();}).catch(err=>toast("選択エラー: "+err));
   drawSrc();
   // メイン TM / Product TM
-  function pathField(label,hint,get,set){const f=el("div","fld");f.appendChild(el("label",null,label));if(hint)f.appendChild(el("div","hint",hint));const row=el("div","row");const v=el("div","pathval");const choose=el("button","mini","選択");const clr=el("button","mini danger","クリア");row.appendChild(v);row.appendChild(choose);row.appendChild(clr);f.appendChild(row);
+  function pathField(label,hint,get,set){const f=el("div","fld");f.appendChild(el("label",null,label));if(hint)f.appendChild(el("div","hint",hint));const row=el("div","row");const v=el("div","pathval");const choose=el("button","mini","選択");const cloud=el("button","mini","クラウドから");const clr=el("button","mini danger","クリア");row.appendChild(v);row.appendChild(choose);row.appendChild(cloud);row.appendChild(clr);f.appendChild(row);const cbox=el("div");cbox.style.marginTop="4px";f.appendChild(cbox);
     function draw(){const val=get();v.textContent=val||"（未選択）";v.classList.toggle("empty",!val);}
     choose.onclick=()=>pick("tmx",false).then(r=>{if(r&&r.available===false){openBrowser("tmx","",p=>{set(p);draw();});return;}if((r&&r.paths||[]).length){set(r.paths[0]);draw();}}).catch(err=>toast("選択エラー: "+err));
+    cloud.onclick=()=>cloudInline(cbox,p=>{set(p);draw();});
     clr.onclick=()=>{set("");draw();};draw();return f;}
-  bd.appendChild(pathField("メイン TM（.tmx・1つ・必須／マッチ用）","",()=>st.main_tm,x=>{st.main_tm=x;}));
+  function newTmxField(label,hint,get,set){const f=el("div","fld");f.appendChild(el("label",null,label));if(hint)f.appendChild(el("div","hint",hint));const row=el("div","row");const v=el("div","pathval");const choose=el("button","mini","選択");const cloud=el("button","mini","クラウドから");const mk=el("button","mini","＋ 新規作成");const clr=el("button","mini danger","クリア");row.appendChild(v);row.appendChild(choose);row.appendChild(cloud);row.appendChild(mk);row.appendChild(clr);f.appendChild(row);const cbox=el("div");cbox.style.marginTop="4px";f.appendChild(cbox);
+    function draw(){const val=get();v.textContent=val||"（未選択）";v.classList.toggle("empty",!val);}
+    choose.onclick=()=>pick("tmx",false).then(r=>{if(r&&r.available===false){openBrowser("tmx","",p=>{set(p);draw();});return;}if((r&&r.paths||[]).length){set(r.paths[0]);draw();}}).catch(err=>toast("選択エラー: "+err));
+    cloud.onclick=()=>cloudInline(cbox,p=>{set(p);draw();});
+    mk.onclick=()=>{mk.disabled=true;api("/api/new-tmx",{method:"POST",body:JSON.stringify({})}).then(r=>{mk.disabled=false;if(!r||r.available===false){toast("新規作成はサーバーモードでのみ利用できます");return;}if(r.ok&&r.path){set(r.path);draw();toast("空のメイン TM を作成しました");}else if(!r.path){/*キャンセル*/}else{toast("作成失敗："+(r.error||"不明"));}}).catch(err=>{mk.disabled=false;toast("通信エラー: "+err);});};
+    clr.onclick=()=>{set("");draw();};draw();return f;}
+  bd.appendChild(newTmxField("メイン TM（.tmx・1つ・必須／マッチ用）","既存の .tmx を選択、または「＋ 新規作成」で空の TM を作成できます。",()=>st.main_tm,x=>{st.main_tm=x;}));
   bd.appendChild(pathField("Product TM（.tmx・任意／用語集ヒント）","UI 用語の一致＋AI 翻訳の用語集ヒントに使います。",()=>st.product_tm,x=>{st.product_tm=x;}));
   // サブ TM（複数）
-  const fsub=el("div","fld");fsub.appendChild(el("label",null,"サブ TM（.tmx・任意・複数可／マッチ用）"));const subList=el("div");fsub.appendChild(subList);const addSub=el("button","mini","＋ サブ TM 追加");fsub.appendChild(addSub);bd.appendChild(fsub);
+  const fsub=el("div","fld");fsub.appendChild(el("label",null,"サブ TM（.tmx・任意・複数可／マッチ用）"));const subList=el("div");fsub.appendChild(subList);const addSub=el("button","mini","＋ サブ TM 追加");const addSubC=el("button","mini","＋ クラウドから追加");fsub.appendChild(addSub);fsub.appendChild(addSubC);const subcbox=el("div");subcbox.style.marginTop="4px";fsub.appendChild(subcbox);bd.appendChild(fsub);
   function drawSub(){subList.innerHTML="";if(!st.sub_tms.length){subList.appendChild(el("div","hint","（未追加）"));}st.sub_tms.forEach((t,i)=>{const r=el("div","srcitem");r.appendChild(el("span","p",t));const x=el("button","mini danger","削除");x.onclick=()=>{st.sub_tms.splice(i,1);drawSub();};r.appendChild(x);subList.appendChild(r);});}
-  addSub.onclick=()=>pick("tmx",true).then(r=>{if(r&&r.available===false){openBrowser("tmx","",p=>{st.sub_tms.push(p);drawSub();});return;}(r&&r.paths||[]).forEach(p=>st.sub_tms.push(p));drawSub();}).catch(err=>toast("選択エラー: "+err));drawSub();
+  addSub.onclick=()=>pick("tmx",true).then(r=>{if(r&&r.available===false){openBrowser("tmx","",p=>{st.sub_tms.push(p);drawSub();});return;}(r&&r.paths||[]).forEach(p=>st.sub_tms.push(p));drawSub();}).catch(err=>toast("選択エラー: "+err));
+  addSubC.onclick=()=>cloudInline(subcbox,p=>{if(st.sub_tms.indexOf(p)<0)st.sub_tms.push(p);drawSub();});drawSub();
+  // MTを実行（既訳のない≤74%セグメントのMTを翻訳欄に反映する／OFFなら翻訳欄は英語のまま・MTは履歴ペインに表示）
+  const fmt=el("div","fld");
+  const mtlab=el("label","toggle2");const mtcb=el("input");mtcb.type="checkbox";mtcb.checked=!!st.run_mt;
+  mtlab.appendChild(mtcb);mtlab.appendChild(document.createTextNode(" MTを実行（既訳のないセグメントのMTを翻訳欄に反映）"));
+  fmt.appendChild(mtlab);
+  fmt.appendChild(el("div","hint","OFF にすると翻訳欄は英語のまま表示し、MT の結果は翻訳履歴ペインに「MT」として表示します（作業ファイルで後から「MTを実行する」ボタンでも反映できます）。この選択は次回の作成時にも引き継がれます。"));
+  mtcb.onchange=()=>{st.run_mt=mtcb.checked;try{localStorage.setItem("kotonoha-proj-runmt",mtcb.checked?"1":"0");}catch(e){}};
+  bd.appendChild(fmt);
+  // 未承認も使用（notapproved の TU も Pre-translation 候補に使う／OFF なら approved のみ）
+  const fun=el("div","fld");
+  const unlab=el("label","toggle2");const uncb=el("input");uncb.type="checkbox";uncb.checked=!!st.use_notapproved;
+  unlab.appendChild(uncb);unlab.appendChild(document.createTextNode(" 未承認のセグメントも使用（Pre-translation に notapproved も使う）"));
+  fun.appendChild(unlab);
+  fun.appendChild(el("div","hint","OFF にすると承認済み(approved)の既訳だけで下訳します（notapproved を除外）。TM の信頼度を重視する場合に OFF。この選択は次回の作成時にも引き継がれます。※切替時は初回の解析で索引を作り直します。"));
+  uncb.onchange=()=>{st.use_notapproved=uncb.checked;try{localStorage.setItem("kotonoha-proj-useunapp",uncb.checked?"1":"0");}catch(e){}};
+  bd.appendChild(fun);
   m.appendChild(bd);
   // フッター
-  const ft=el("div","ft");const run=el("button","primary","作成して実行");const mk=el("button","primary","作成のみ");const cancel=el("button","ghost","キャンセル");
+  const ft=el("div","ft");const run=el("button","primary","作成して実行");const mk=el("button","primary","保存");const cancel=el("button","ghost","キャンセル");
   ft.appendChild(run);ft.appendChild(mk);ft.appendChild(cancel);m.appendChild(ft);cancel.onclick=closeOvl;
   function validate(){if(!st.name.trim()){toast("プロジェクト名を入力してください");return false;}if(!st.sources.length){toast("ソースを1つ以上追加してください");return false;}if(!st.main_tm){toast("メイン TM を選択してください");return false;}return true;}
   function create(then){if(!validate())return;run.disabled=true;mk.disabled=true;
     api("/api/create",{method:"POST",body:JSON.stringify(st)}).then(r=>{
       if(!r||!r.id){run.disabled=false;mk.disabled=false;toast("作成失敗："+((r&&r.error)||"不明"));return;}
-      if(then==="run"){toast("作成しました。実行中…");api("/api/run",{method:"POST",body:JSON.stringify({id:r.id})}).then(rr=>{closeOvl();toast(rr&&rr.ok?("実行完了："+(rr.registered||0)+" 記事を登録しました"):("作成済／実行失敗："+((rr&&rr.error)||"不明")));refresh();}).catch(err=>{closeOvl();toast("作成済／実行の通信エラー: "+err);refresh();});}
+      if(then==="run"){toast("作成しました。実行中…");api("/api/run",{method:"POST",body:JSON.stringify({id:r.id})}).then(rr=>{closeOvl();toast(rr&&rr.ok?("実行完了（生成 "+(rr.registered||0)+" 件）"):("作成済／実行失敗："+((rr&&rr.error)||"不明")));refresh().then(function(){if(rr&&rr.ok&&rr.produced)openProduced(rr.project,rr.produced);});}).catch(err=>{closeOvl();toast("作成済／実行の通信エラー: "+err);refresh();});}
       else{closeOvl();toast("プロジェクトを作成しました（定義として保存）");refresh();}
     }).catch(err=>{run.disabled=false;mk.disabled=false;toast("通信エラー: "+err);});}
   run.onclick=()=>create("run");mk.onclick=()=>create("mk");
@@ -343,6 +505,15 @@ function openCreate(){
 
 // ===== 全機能GUI化: 行の編集／ツールメニューのダイアログ群 =====
 function modalShell(title){const m=el("div","modal");m.appendChild(el("h2",null,title));const bd=el("div","bd");m.appendChild(bd);const ft=el("div","ft");return {m:m,bd:bd,ft:ft};}
+// i ボタン: 使い方・保存場所の説明をダイアログ表示（説明文はページ上に常設しない＝作業領域確保）
+function openInfo(){
+  const sh=modalShell("このツールについて");
+  sh.bd.appendChild(el("p","infopara","Japanese（Pre-translation）列を編集して TEP（翻訳・編集・校正）し、仕上がった行の「確定」にチェック（編集不要な良い一致もそのまま確定可）してから「XLIFF 書き出し」します。確定した行だけが Live_TM（Master／プロジェクト TM）への書き戻し対象です。TM 行は TM 訳、MT 行は AI 下訳。編集・確定はブラウザに自動保存されます（同一PC・同一ブラウザ）。確定行を編集すると確定は解除され、再確定が必要です。"));
+  sh.bd.appendChild(el("p","infopara","台帳: _projects.json ／ 用語集: _terms.tsv（全プロジェクト共通）／ この一覧は projects.py dashboard で生成。開き直すと最新になります。"));
+  const close=el("button","primary","閉じる");close.onclick=closeOvl;
+  sh.ft.appendChild(close);sh.m.appendChild(sh.ft);overlay(sh.m);
+}
+(function(){var ib=document.getElementById("infobtn");if(ib)ib.addEventListener("click",openInfo);})();
 function textField(label,hint,val,set,ph){const f=el("div","fld");f.appendChild(el("label",null,label));if(hint)f.appendChild(el("div","hint",hint));const i=el("input");i.type="text";if(ph)i.placeholder=ph;if(val!=null)i.value=val;i.oninput=()=>set(i.value);f.appendChild(i);return f;}
 function pathFieldK(label,hint,kind,get,set){const f=el("div","fld");f.appendChild(el("label",null,label));if(hint)f.appendChild(el("div","hint",hint));const row=el("div","row");const v=el("div","pathval");const choose=el("button","mini","選択");const clr=el("button","mini danger","クリア");row.appendChild(v);row.appendChild(choose);row.appendChild(clr);f.appendChild(row);
   function draw(){const val=get();v.textContent=val||"（未選択）";v.classList.toggle("empty",!val);}
@@ -356,25 +527,44 @@ function busy(btn,on,label){if(on){btn.dataset.old=btn.textContent;btn.textConte
 function showLog(title,log,revealPath){const sh=modalShell(title);const pre=el("div","pre");pre.textContent=log||"(出力なし)";sh.bd.appendChild(pre);const close=el("button","primary","閉じる");close.onclick=closeOvl;if(revealPath){const open=el("button","ghost","出力フォルダを開く");open.onclick=()=>api("/api/reveal",{method:"POST",body:JSON.stringify({path:revealPath})}).then(r=>{if(!(r&&r.ok))toast("フォルダを開けませんでした");});sh.ft.appendChild(open);}sh.ft.appendChild(close);sh.m.appendChild(sh.ft);overlay(sh.m);}
 
 function openEdit(p){
-  const st={status:p.status||"未解析",memo:p.memo||"",due:p.due||""};
+  const st={status:((p.status&&p.status!=="未解析")?p.status:"作成済"),memo:p.memo||"",due:p.due||"",
+            main_tm:(p.main_tm||""),product_tm:(p.product_tm||""),sub_tms:((p.sub_tms||[]).slice())};
   const sh=modalShell("編集: "+(p.title||p.id||""));
-  const fs=el("div","fld");fs.appendChild(el("label",null,"状態"));const sel=el("select");["未解析","作業中","レビュー中","完了"].forEach(s=>{const o=el("option",null,s);o.value=s;if(s===st.status)o.selected=true;sel.appendChild(o);});sel.onchange=()=>{st.status=sel.value;};fs.appendChild(sel);sh.bd.appendChild(fs);
+  const fs=el("div","fld");fs.appendChild(el("label",null,"状態"));const sel=el("select");
+  // 「完了」は手動選択不可（TEP完了＝TMへの書き戻しで自動設定）。現在完了の行のみ表示し復帰は可。
+  const _opts=["作成済","作業中","レビュー中"];if(st.status==="完了")_opts.push("完了");
+  _opts.forEach(s=>{const o=el("option",null,s);o.value=s;if(s===st.status)o.selected=true;sel.appendChild(o);});sel.onchange=()=>{st.status=sel.value;};fs.appendChild(sel);
+  fs.appendChild(el("div","hint","「完了」は編集画面の <b>TEP完了</b>（確定訳を TM へ書き戻し）で自動設定されます。ここでは手動で完了にできません。"));
+  sh.bd.appendChild(fs);
   sh.bd.appendChild(textField("メモ","",st.memo,v=>{st.memo=v;}));
   sh.bd.appendChild(textField("期日 (YYYY-MM-DD)","",st.due,v=>{st.due=v;},"2026-12-31"));
+  // TM の変更（選択 / クラウドから）。保存で /api/set-tms に反映。
+  function etmField(label,hint,get,set){const f=el("div","fld");f.appendChild(el("label",null,label));if(hint)f.appendChild(el("div","hint",hint));const row=el("div","row");const v=el("div","pathval");const choose=el("button","mini","選択");const cloud=el("button","mini","クラウドから");const clr=el("button","mini danger","クリア");row.appendChild(v);row.appendChild(choose);row.appendChild(cloud);row.appendChild(clr);f.appendChild(row);const cbox=el("div");cbox.style.marginTop="4px";f.appendChild(cbox);
+    function draw(){const val=get();v.textContent=val||"（未選択）";v.classList.toggle("empty",!val);}
+    choose.onclick=()=>pick("tmx",false).then(r=>{if(r&&r.available===false){openBrowser("tmx","",pp=>{set(pp);draw();});return;}if((r&&r.paths||[]).length){set(r.paths[0]);draw();}}).catch(err=>toast("選択エラー: "+err));
+    cloud.onclick=()=>cloudInline(cbox,pp=>{set(pp);draw();});
+    clr.onclick=()=>{set("");draw();};draw();return f;}
+  sh.bd.appendChild(etmField("メイン TM（.tmx／マッチ用）","",()=>st.main_tm,x=>{st.main_tm=x;}));
+  sh.bd.appendChild(etmField("Product TM（.tmx・任意）","",()=>st.product_tm,x=>{st.product_tm=x;}));
+  const fsub=el("div","fld");fsub.appendChild(el("label",null,"サブ TM（.tmx・任意・複数可）"));const subList=el("div");fsub.appendChild(subList);const addSub=el("button","mini","＋ 選択して追加");const addSubC=el("button","mini","＋ クラウドから追加");fsub.appendChild(addSub);fsub.appendChild(addSubC);const subcbox=el("div");subcbox.style.marginTop="4px";fsub.appendChild(subcbox);sh.bd.appendChild(fsub);
+  function drawESub(){subList.innerHTML="";if(!st.sub_tms.length){subList.appendChild(el("div","hint","（未追加）"));}st.sub_tms.forEach((t,i)=>{const r=el("div","srcitem");r.appendChild(el("span","p",t));const x=el("button","mini danger","削除");x.onclick=()=>{st.sub_tms.splice(i,1);drawESub();};r.appendChild(x);subList.appendChild(r);});}
+  addSub.onclick=()=>pick("tmx",true).then(r=>{if(r&&r.available===false){openBrowser("tmx","",pp=>{st.sub_tms.push(pp);drawESub();});return;}(r&&r.paths||[]).forEach(pp=>st.sub_tms.push(pp));drawESub();}).catch(err=>toast("選択エラー: "+err));
+  addSubC.onclick=()=>cloudInline(subcbox,pp=>{if(st.sub_tms.indexOf(pp)<0)st.sub_tms.push(pp);drawESub();});drawESub();
   const del=el("button","ghost","このプロジェクトを削除");del.style.color="#c0392b";let armed=false;
   del.onclick=()=>{if(!armed){armed=true;del.textContent="本当に削除？（もう一度クリックで確定）";return;}busy(del,true,"削除中…");api("/api/remove",{method:"POST",body:JSON.stringify({id:p.id,delete_file:false})}).then(r=>{closeOvl();toast(r&&r.ok?"削除しました":("削除失敗："+((r&&r.error)||"不明")));refresh();}).catch(err=>{busy(del,false);toast("通信エラー: "+err);});};
   const save=el("button","primary","保存");const cancel=el("button","ghost","キャンセル");cancel.onclick=closeOvl;
   save.onclick=()=>{busy(save,true,"保存中…");Promise.all([
       api("/api/set-status",{method:"POST",body:JSON.stringify({id:p.id,status:st.status})}),
       api("/api/set-memo",{method:"POST",body:JSON.stringify({id:p.id,memo:st.memo})}),
-      api("/api/set-due",{method:"POST",body:JSON.stringify({id:p.id,due:st.due})})
+      api("/api/set-due",{method:"POST",body:JSON.stringify({id:p.id,due:st.due})}),
+      api("/api/set-tms",{method:"POST",body:JSON.stringify({id:p.id,main_tm:st.main_tm,product_tm:st.product_tm,sub_tms:st.sub_tms})})
     ]).then(()=>{closeOvl();toast("更新しました");refresh();}).catch(err=>{busy(save,false);toast("通信エラー: "+err);});};
   sh.ft.appendChild(del);sh.ft.appendChild(cancel);sh.ft.appendChild(save);sh.m.appendChild(sh.ft);overlay(sh.m);
 }
 
 function openInject(){
   const st={mode:"single",html:"",mt:"",combined_todo:"",combined_mt:""};
-  const sh=modalShell("MT を HTML に注入");
+  const sh=modalShell("MTをHTMLに反映");
   sh.bd.appendChild(el("div","hint","翻訳済み mt-done は Claude 等で作成した成果物を指定します。単一＝1記事HTML＋mt-done、一括＝combined.mt-todo.json＋combined.mt-done.jsonl。"));
   const fm=el("div","fld");fm.appendChild(el("label",null,"モード"));const sel=el("select");[["single","単一（HTML＋mt-done）"],["batch","一括（combined）"]].forEach(o=>{const op=el("option",null,o[1]);op.value=o[0];sel.appendChild(op);});fm.appendChild(sel);sh.bd.appendChild(fm);
   const single=el("div");const batch=el("div");batch.hidden=true;
@@ -384,8 +574,8 @@ function openInject(){
   batch.appendChild(pathFieldK("combined.mt-done.jsonl","",'json',()=>st.combined_mt,x=>{st.combined_mt=x;}));
   sh.bd.appendChild(single);sh.bd.appendChild(batch);
   sel.onchange=()=>{st.mode=sel.value;single.hidden=(st.mode!=="single");batch.hidden=(st.mode!=="batch");};
-  const run=el("button","primary","注入");const cancel=el("button","ghost","キャンセル");cancel.onclick=closeOvl;
-  run.onclick=()=>{busy(run,true,"注入中…");api("/api/inject",{method:"POST",body:JSON.stringify(st)}).then(r=>{busy(run,false);if(r&&r.ok){toast("注入しました");showLog("MT 注入結果",r.log);}else{toast("注入失敗："+((r&&r.error)||"不明"));if(r&&r.log)showLog("MT 注入ログ",r.log);}}).catch(err=>{busy(run,false);toast("通信エラー: "+err);});};
+  const run=el("button","primary","反映");const cancel=el("button","ghost","キャンセル");cancel.onclick=closeOvl;
+  run.onclick=()=>{busy(run,true,"反映中…");api("/api/inject",{method:"POST",body:JSON.stringify(st)}).then(r=>{busy(run,false);if(r&&r.ok){toast("反映しました");showLog("MT反映結果",r.log);}else{toast("反映失敗："+((r&&r.error)||"不明"));if(r&&r.log)showLog("MT反映ログ",r.log);}}).catch(err=>{busy(run,false);toast("通信エラー: "+err);});};
   sh.ft.appendChild(cancel);sh.ft.appendChild(run);sh.m.appendChild(sh.ft);overlay(sh.m);
 }
 
@@ -421,7 +611,7 @@ function openGlossary(){
   const sh=modalShell("UI Glossary を作成");
   sh.bd.appendChild(el("div","hint","ソース(.mdx)・生成HTML・確定XLIFF のいずれか1つ以上を指定。<out>.csv（Excel可）と .json を出力します。"));
   sh.bd.appendChild(listFieldK("ソース .mdx（複数可）","",'source',st.source));
-  sh.bd.appendChild(listFieldK("生成/TEP HTML（複数可）","",'html',st.html));
+  sh.bd.appendChild(listFieldK("生成した作業ファイル(HTML)（複数可）","",'html',st.html));
   sh.bd.appendChild(listFieldK("確定 XLIFF（複数可）","",'xliff',st.xliff));
   const fr=el("div","fld");const lab=el("label","toggle2");const cb=el("input");cb.type="checkbox";cb.onchange=()=>{st.confirmed_only=cb.checked;};lab.appendChild(cb);lab.appendChild(document.createTextNode(" XLIFF は確定行のみ使用する"));fr.appendChild(lab);sh.bd.appendChild(fr);
   sh.bd.appendChild(textField("出力プレフィックス（フルパス）","<prefix>.csv / .json を出力",st.out,v=>{st.out=v;},"C:\\...\\UI-Glossary"));
@@ -430,11 +620,512 @@ function openGlossary(){
   sh.ft.appendChild(cancel);sh.ft.appendChild(run);sh.m.appendChild(sh.ft);overlay(sh.m);
 }
 
+function openFileCompare(){
+  const st={target:"",current:"",results:"",label:"",translatable_only:false};
+  const sh=modalShell("ファイル比較 (EN: Current vs Target)");
+  sh.bd.appendChild(el("div","hint","翻訳済みの英語ソース集合(Target)と現行(Current)を比較し、Excelレポートを出力します。Target 以外は既定値で可。"));
+  sh.bd.appendChild(pathFieldK("Target（翻訳済みENフォルダー・必須）","",'dir',()=>st.target,x=>{st.target=x;}));
+  sh.bd.appendChild(pathFieldK("Current（現行フォルダー・任意）","未指定なら既定",'dir',()=>st.current,x=>{st.current=x;}));
+  sh.bd.appendChild(pathFieldK("出力フォルダー（任意）","未指定なら既定の Results",'dir',()=>st.results,x=>{st.results=x;}));
+  sh.bd.appendChild(textField("ラベル（任意）","ファイル名の接尾辞",st.label,v=>{st.label=v;},"Fullset / Project"));
+  const fr=el("div","fld");const lab=el("label","toggle2");const cb=el("input");cb.type="checkbox";cb.onchange=()=>{st.translatable_only=cb.checked;};lab.appendChild(cb);lab.appendChild(document.createTextNode(" 翻訳対象テキストのみで比較する"));fr.appendChild(lab);sh.bd.appendChild(fr);
+  const run=el("button","primary","比較を実行");const cancel=el("button","ghost","キャンセル");cancel.onclick=closeOvl;
+  run.onclick=()=>{if(!st.target){toast("Target フォルダーを選択してください");return;}busy(run,true,"比較中…");api("/api/filecompare",{method:"POST",body:JSON.stringify(st)}).then(r=>{busy(run,false);if(r&&r.ok){toast("比較が完了しました");showLog("ファイル比較 結果",r.log,r.reveal);}else{toast("失敗："+((r&&r.error)||"不明"));showLog("ファイル比較 ログ",(r&&r.log)||((r&&r.error)||""),r&&r.reveal);}}).catch(err=>{busy(run,false);toast("通信エラー: "+err);});};
+  sh.ft.appendChild(cancel);sh.ft.appendChild(run);sh.m.appendChild(sh.ft);overlay(sh.m);
+}
+function openVersionCheck(){
+  const st={en:"",ja:"",published:"",results:"",no_tm:false};
+  const sh=modalShell("JA バージョンチェック");
+  sh.bd.appendChild(el("div","hint","日本語版が英語版と同じバージョンかを判定し、Excelレポートを出力します。各フォルダー未指定なら既定値を使用。"));
+  sh.bd.appendChild(pathFieldK("英語版フォルダー EN（任意）","",'dir',()=>st.en,x=>{st.en=x;}));
+  sh.bd.appendChild(pathFieldK("日本語版フォルダー JA（任意）","",'dir',()=>st.ja,x=>{st.ja=x;}));
+  sh.bd.appendChild(pathFieldK("Published JA（任意）","",'dir',()=>st.published,x=>{st.published=x;}));
+  sh.bd.appendChild(pathFieldK("出力フォルダー（任意）","",'dir',()=>st.results,x=>{st.results=x;}));
+  const fr=el("div","fld");const lab=el("label","toggle2");const cb=el("input");cb.type="checkbox";cb.onchange=()=>{st.no_tm=cb.checked;};lab.appendChild(cb);lab.appendChild(document.createTextNode(" TM参照を使わない"));fr.appendChild(lab);sh.bd.appendChild(fr);
+  const run=el("button","primary","チェックを実行");const cancel=el("button","ghost","キャンセル");cancel.onclick=closeOvl;
+  run.onclick=()=>{busy(run,true,"チェック中…");api("/api/versioncheck",{method:"POST",body:JSON.stringify(st)}).then(r=>{busy(run,false);if(r&&r.ok){toast("チェックが完了しました");showLog("JA バージョンチェック 結果",r.log,r.reveal);}else{toast("失敗："+((r&&r.error)||"不明"));showLog("JA バージョンチェック ログ",(r&&r.log)||((r&&r.error)||""),r&&r.reveal);}}).catch(err=>{busy(run,false);toast("通信エラー: "+err);});};
+  sh.ft.appendChild(cancel);sh.ft.appendChild(run);sh.m.appendChild(sh.ft);overlay(sh.m);
+}
 const toolsPanel=document.getElementById("toolspanel");
 if(toolsPanel){
-  [["MT を HTML に注入",openInject],["索引キャッシュを事前作成",openPrebuild],["TEP 結果を TM に書き戻す",openWriteback],["UI Glossary を作成",openGlossary]].forEach(t=>{const b=el("button",null,t[0]);b.onclick=()=>{toolsPanel.hidden=true;t[1]();};toolsPanel.appendChild(b);});
+  [["MTをHTMLに反映",openInject],["索引キャッシュを事前作成",openPrebuild],["TEP 結果を TM に書き戻す",openWriteback],["UI Glossary を作成",openGlossary],["ファイル比較 (EN)",openFileCompare],["JA バージョンチェック",openVersionCheck]].forEach(t=>{const b=el("button",null,t[0]);b.onclick=()=>{toolsPanel.hidden=true;t[1]();};toolsPanel.appendChild(b);});
   document.getElementById("toolsbtn").addEventListener("click",()=>{toolsPanel.hidden=!toolsPanel.hidden;});
   document.addEventListener("click",e=>{if(!e.target.closest("#toolswrap"))toolsPanel.hidden=true;});
 }
-if(KT.served){document.body.classList.add("served");var _tw=document.getElementById("toolswrap");if(_tw)_tw.hidden=false;refresh();}
+
+// ===== 用語管理タブ =====
+let TERMS=[]; const tstate={q:""};
+function loadTerms(){return api("/api/terms").then(d=>{TERMS=(d&&d.rows)||[];renderTerms();}).catch(()=>{});}
+function termMatch(t,q){if(!q)return true;const h=((t.source||"")+" "+(t.target||"")+" "+(t.note||"")+" "+(t.doc||"")+" "+(t.project||"")).toLowerCase();return h.includes(q);}
+function renderTerms(){
+  const q=tstate.q.trim().toLowerCase();
+  const list=TERMS.filter(t=>termMatch(t,q));
+  const tb=document.getElementById("trows");if(!tb)return;
+  document.getElementById("tempty").hidden=list.length>0;
+  document.getElementById("termcount").textContent=list.length+" / "+TERMS.length+" 件";
+  tb.innerHTML=list.map(t=>'<tr data-id="'+esc(t.id)+'">'
+    +'<td class="termtext">'+esc(t.source)+'</td>'
+    +'<td class="termtext">'+esc(t.target)+'</td>'
+    +'<td class="termtext meta">'+esc(t.example||"")+'</td>'
+    +'<td class="termtext meta">'+esc(t.note||"")+'</td>'
+    +'<td class="meta">'+esc(t.doc||"")+'</td>'
+    +'<td class="meta">'+esc(t.project||"")+'</td>'
+    +'<td class="meta">'+esc(t.updated||"")+'</td>'
+    +'<td class="act"><button class="edit" type="button" data-id="'+esc(t.id)+'">編集</button></td></tr>').join("");
+}
+function openTermEdit(t){
+  t=t||{};const st={id:t.id||"",source:t.source||"",target:t.target||"",example:t.example||"",note:t.note||"",doc:t.doc||"",project:t.project||""};
+  const sh=modalShell(st.id?"用語の編集":"用語の追加");
+  sh.bd.appendChild(textField("ソース（原文の用語）","",st.source,v=>{st.source=v;}));
+  sh.bd.appendChild(textField("ターゲット（訳語）","",st.target,v=>{st.target=v;}));
+  sh.bd.appendChild(textField("用例","",st.example,v=>{st.example=v;}));
+  sh.bd.appendChild(textField("ノート","",st.note,v=>{st.note=v;}));
+  sh.bd.appendChild(textField("ドキュメント名","",st.doc,v=>{st.doc=v;}));
+  sh.bd.appendChild(textField("プロジェクト名","",st.project,v=>{st.project=v;}));
+  const save=el("button","primary","保存");const cancel=el("button","ghost","キャンセル");cancel.onclick=closeOvl;
+  let del=null;
+  if(st.id){del=el("button","ghost","削除");del.style.color="#c0392b";let armed=false;
+    del.onclick=()=>{if(!armed){armed=true;del.textContent="本当に削除？（もう一度）";return;}busy(del,true,"削除中…");api("/api/term-delete",{method:"POST",body:JSON.stringify({id:st.id})}).then(()=>{closeOvl();toast("削除しました");loadTerms();}).catch(err=>{busy(del,false);toast("通信エラー: "+err);});};}
+  save.onclick=()=>{if(!st.source.trim()){toast("ソースを入力してください");return;}busy(save,true,"保存中…");api("/api/term-save",{method:"POST",body:JSON.stringify(st)}).then(()=>{closeOvl();toast("保存しました");loadTerms();}).catch(err=>{busy(save,false);toast("通信エラー: "+err);});};
+  if(del)sh.ft.appendChild(del);sh.ft.appendChild(cancel);sh.ft.appendChild(save);sh.m.appendChild(sh.ft);overlay(sh.m);
+}
+function openTermExtract(){
+  const st={source:[],html:[],xliff:[],confirmed_only:false};
+  const sh=modalShell("用語を抽出して登録");
+  sh.bd.appendChild(el("div","hint","ソース(.mdx)/生成HTML/確定XLIFF から候補を抽出し、選んだ用語を用語集へ登録します。"));
+  sh.bd.appendChild(listFieldK("ソース .mdx（複数可）","",'source',st.source));
+  sh.bd.appendChild(listFieldK("生成した作業ファイル(HTML)（複数可）","",'html',st.html));
+  sh.bd.appendChild(listFieldK("確定 XLIFF（複数可）","",'xliff',st.xliff));
+  const doc=el("div","fld");doc.appendChild(el("label",null,"登録時のドキュメント名 / プロジェクト名（任意）"));
+  const dwrap=el("div","row");const di=el("input");di.type="text";di.placeholder="ドキュメント名";const pi=el("input");pi.type="text";pi.placeholder="プロジェクト名";dwrap.appendChild(di);dwrap.appendChild(pi);doc.appendChild(dwrap);sh.bd.appendChild(doc);
+  const box=el("div","brow");box.hidden=true;sh.bd.appendChild(box);
+  const extract=el("button","ghost","候補を抽出");const reg=el("button","primary","選択を登録");reg.disabled=true;const cancel=el("button","ghost","閉じる");cancel.onclick=closeOvl;
+  let cands=[];
+  extract.onclick=()=>{busy(extract,true,"抽出中…");api("/api/term-extract",{method:"POST",body:JSON.stringify(st)}).then(r=>{busy(extract,false);if(!r||!r.ok){toast("抽出失敗："+((r&&r.error)||"不明"));return;}cands=r.candidates||[];box.hidden=false;box.innerHTML="";if(!cands.length){box.appendChild(el("div","hint","候補がありません。"));reg.disabled=true;return;}cands.forEach((c,i)=>{const row=el("label","it");row.innerHTML='<input type="checkbox" checked data-i="'+i+'"> '+esc(c.source)+' → '+esc(c.target||"（訳なし）");box.appendChild(row);});reg.disabled=false;toast(cands.length+" 件の候補");}).catch(err=>{busy(extract,false);toast("通信エラー: "+err);});};
+  reg.onclick=()=>{const picks=[].slice.call(box.querySelectorAll('input[type=checkbox]')).filter(c=>c.checked).map(c=>cands[+c.getAttribute("data-i")]);if(!picks.length){toast("登録する用語を選んでください");return;}busy(reg,true,"登録中…");let n=0;const seq=picks.reduce((pr,c)=>pr.then(()=>api("/api/term-save",{method:"POST",body:JSON.stringify({source:c.source,target:c.target||"",doc:di.value,project:pi.value})}).then(()=>{n++;})),Promise.resolve());seq.then(()=>{busy(reg,false);closeOvl();toast(n+" 件を登録しました");loadTerms();}).catch(err=>{busy(reg,false);toast("通信エラー: "+err);});};
+  sh.ft.appendChild(cancel);sh.ft.appendChild(extract);sh.ft.appendChild(reg);sh.m.appendChild(sh.ft);overlay(sh.m);
+}
+const termExportPanel=document.getElementById("termexportpanel");
+if(termExportPanel){
+  [["TSV","tsv"],["CSV","csv"],["Xlsx","xlsx"]].forEach(f=>{const b=el("button",null,f[0]);b.onclick=()=>{termExportPanel.hidden=true;api("/api/term-export",{method:"POST",body:JSON.stringify({fmt:f[1]})}).then(r=>{if(r&&r.ok){toast("エクスポートしました");showLog("エクスポート",r.out,r.out);}else{toast("失敗："+((r&&r.error)||"不明"));}}).catch(err=>toast("通信エラー: "+err));};termExportPanel.appendChild(b);});
+  document.getElementById("termexportbtn").addEventListener("click",()=>{termExportPanel.hidden=!termExportPanel.hidden;});
+  document.addEventListener("click",e=>{if(!e.target.closest("#termexportbtn")&&!e.target.closest("#termexportpanel"))termExportPanel.hidden=true;});
+}
+(function(){
+  const tr=document.getElementById("trows");if(tr)tr.addEventListener("click",e=>{const b=e.target.closest("button.edit");if(!b)return;const t=TERMS.find(x=>x.id===b.getAttribute("data-id"));if(t)openTermEdit(t);});
+  const tq=document.getElementById("tq");if(tq)tq.addEventListener("input",e=>{tstate.q=e.target.value;renderTerms();});
+  const ta=document.getElementById("termadd");if(ta)ta.addEventListener("click",()=>openTermEdit(null));
+  const tx=document.getElementById("termextract");if(tx)tx.addEventListener("click",openTermExtract);
+})();
+function switchView(v){
+  document.getElementById("view-projects").hidden=(v!=="projects");
+  document.getElementById("view-terms").hidden=(v!=="terms");
+  var vtm=document.getElementById("view-tm");if(vtm)vtm.hidden=(v!=="tm");
+  var vh=document.getElementById("view-history");if(vh)vh.hidden=(v!=="history");
+  document.getElementById("tab-projects").setAttribute("aria-pressed",String(v==="projects"));
+  document.getElementById("tab-terms").setAttribute("aria-pressed",String(v==="terms"));
+  var ttm=document.getElementById("tab-tm");if(ttm)ttm.setAttribute("aria-pressed",String(v==="tm"));
+  var th=document.getElementById("tab-history");if(th)th.setAttribute("aria-pressed",String(v==="history"));
+  if(v==="terms")loadTerms();
+  if(v==="tm"){loadTM();bkLoad();cloudLoad();}
+  if(v==="history")loadHistory();
+  try{localStorage.setItem("kotonoha-subview",v);}catch(e){}
+}
+document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>switchView(b.dataset.view)));
+// サブタブ（プロジェクト/用語/TM/履歴）の前回選択を復元
+(function(){try{var sv=localStorage.getItem("kotonoha-subview");
+  if(sv&&document.getElementById("view-"+sv))switchView(sv);}catch(e){}})();
+// ===== 履歴タブ: 操作の自動記録（日付・作業内容）＋メモ編集・削除 =====
+var HIST=[];
+function loadHistory(){return api("/api/history").then(function(d){HIST=(d&&d.rows)||[];renderHistory();}).catch(function(){});}
+function renderHistory(){
+  var q=(document.getElementById("hq")||{}).value||"";var ql=q.trim().toLowerCase();
+  var list=HIST.filter(function(r){if(!ql)return true;return ((r.action||"")+" "+(r.detail||"")+" "+(r.memo||"")+" "+(r.project||"")).toLowerCase().indexOf(ql)>=0;});
+  document.getElementById("hcount").textContent=list.length?(list.length+" 件"):"";
+  document.getElementById("hempty").hidden=list.length>0;
+  document.getElementById("hrows").innerHTML=list.map(function(r){
+    var det=(r.detail||"")+(r.project?('　<span class="meta">['+esc(r.project)+']</span>'):"");
+    return '<tr data-id="'+esc(r.id)+'">'
+      +'<td class="meta">'+esc(r.at||"")+'</td>'
+      +'<td>'+esc(r.action||"")+'</td>'
+      +'<td class="ti">'+det+'</td>'
+      +'<td class="memo"><input class="hmemo" value="'+esc(r.memo||"").replace(/"/g,"&quot;")+'" placeholder="メモ"></td>'
+      +'<td class="act"><button class="edit" type="button" data-act="hsave" title="メモを保存">保存</button>'
+      +'<button class="edit" type="button" data-act="hdel" title="この履歴を削除" style="margin-left:4px">削除</button></td></tr>';
+  }).join("");
+}
+(function(){
+  var q=document.getElementById("hq");if(q)q.addEventListener("input",renderHistory);
+  var rf=document.getElementById("hrefresh");if(rf)rf.addEventListener("click",loadHistory);
+  var tb=document.getElementById("hrows");if(tb)tb.addEventListener("click",function(e){
+    var b=e.target.closest("button[data-act]");if(!b)return;var tr=b.closest("tr");if(!tr)return;var id=tr.getAttribute("data-id");
+    if(b.getAttribute("data-act")==="hsave"){
+      var memo=tr.querySelector(".hmemo").value;
+      api("/api/history-save",{method:"POST",body:JSON.stringify({id:id,memo:memo})}).then(function(){toast("メモを保存しました");});
+    }else if(b.getAttribute("data-act")==="hdel"){
+      if(!confirm("この履歴を削除しますか？"))return;
+      api("/api/history-delete",{method:"POST",body:JSON.stringify({id:id})}).then(function(){loadHistory();});
+    }
+  });
+})();
+// ===== TM タブ: TMエントリの一覧/検索/編集(EN+JA)/削除 =====
+var TMLIST=[], TMCUR="";
+function tmDate(d){var m=/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})/.exec(d||"");return m?(m[1]+"-"+m[2]+"-"+m[3]+" "+m[4]+":"+m[5]):(d||"");}
+function loadTM(){
+  return api("/api/tm-list").then(function(d){
+    TMLIST=(d&&d.rows)||[];
+    var sel=document.getElementById("tmsel");if(!sel)return;
+    sel.innerHTML=TMLIST.map(function(r){
+      var lbl=r.name+" ["+r.role+"]"+(r.editable?(r.count!=null?(" ・"+r.count+"件"):""):" ・読み取り専用");
+      return '<option value="'+esc(r.path)+'"'+(r.editable?"":" data-ro=\"1\"")+'>'+esc(lbl)+'</option>';
+    }).join("");
+    // 既定は編集可能な先頭TM
+    var firstEditable=TMLIST.filter(function(r){return r.editable;})[0];
+    TMCUR=(firstEditable?firstEditable.path:(TMLIST[0]?TMLIST[0].path:""));
+    if(TMCUR)sel.value=TMCUR;
+    loadTMEntries();
+  }).catch(function(){});
+}
+function curTMrow(){return TMLIST.find(function(r){return r.path===TMCUR;});}
+function loadTMEntries(){
+  var q=(document.getElementById("tmq")||{}).value||"";
+  var info=document.getElementById("tminfo");var row=curTMrow();
+  if(info)info.textContent=row?(row.editable?"編集可":"読み取り専用（XTML/サイズ）"):"";
+  if(!TMCUR){document.getElementById("tmrows").innerHTML="";document.getElementById("tmempty").hidden=false;return;}
+  api("/api/tm-entries?tm="+encodeURIComponent(TMCUR)+"&q="+encodeURIComponent(q)).then(function(d){
+    var rows=(d&&d.rows)||[];renderTMrows(rows);
+  }).catch(function(){renderTMrows([]);});
+}
+function renderTMrows(rows){
+  var tb=document.getElementById("tmrows");var row=curTMrow();var ed=(row&&row.editable);
+  document.getElementById("tmcount").textContent=rows.length?(rows.length+" 件"):"";
+  document.getElementById("tmempty").hidden=rows.length>0;
+  tb.innerHTML=rows.map(function(r){
+    var act=ed?('<button class="edit" type="button" data-act="tmedit">編集</button><button class="edit" type="button" data-act="tmdel" style="margin-left:4px">削除</button>'):'<span class="meta">読取専用</span>';
+    return '<tr data-src="'+esc(r.src)+'" data-tgt="'+esc(r.tgt)+'">'
+      +'<td class="ti">'+esc(r.src)+'</td><td class="ti">'+esc(r.tgt)+'</td>'
+      +'<td class="meta">'+esc(tmDate(r.changedate))+'</td><td class="act">'+act+'</td></tr>';
+  }).join("");
+}
+function openTmEdit(src,tgt){
+  var row=curTMrow();if(!row||!row.editable)return;
+  var m=el("div","modal");m.appendChild(el("h2",null,src?"TMエントリを編集":"TMエントリを追加"));
+  var bd=el("div","bd");
+  function fld(label,val){var f=el("div","fld");f.appendChild(el("label",null,label));var ta=el("textarea");ta.value=val||"";f.appendChild(ta);bd.appendChild(f);return ta;}
+  var enI=fld("EN（原文）",src);var jaI=fld("JA（訳）",tgt);
+  m.appendChild(bd);
+  var ft=el("div","ft");var ok=el("button","primary",src?"保存":"追加");var c=el("button","ghost","キャンセル");
+  ok.onclick=function(){
+    var body={tm:TMCUR,old_src:src||"",old_tgt:tgt||"",src:enI.value,tgt:jaI.value};
+    ok.disabled=true;
+    api("/api/tm-save",{method:"POST",body:JSON.stringify(body)}).then(function(r){
+      closeOvl();toast(r&&r.ok?"TMを更新しました（バックアップ作成済）":("更新失敗："+((r&&r.error)||"不明")));loadTMEntries();
+    }).catch(function(e){ok.disabled=false;toast("通信エラー: "+e);});
+  };
+  c.onclick=closeOvl;ft.appendChild(ok);ft.appendChild(c);m.appendChild(ft);overlay(m);
+}
+(function(){
+  var sel=document.getElementById("tmsel");if(sel)sel.addEventListener("change",function(){TMCUR=sel.value;loadTMEntries();});
+  var q=document.getElementById("tmq");if(q)q.addEventListener("input",function(){clearTimeout(window._tmqT);window._tmqT=setTimeout(loadTMEntries,250);});
+  var add=document.getElementById("tmaddbtn");if(add)add.addEventListener("click",function(){var row=curTMrow();if(!row||!row.editable){toast("編集可能なTMを選択してください");return;}openTmEdit("","");});
+  var tb=document.getElementById("tmrows");if(tb)tb.addEventListener("click",function(e){
+    var b=e.target.closest("button[data-act]");if(!b)return;var tr=b.closest("tr");if(!tr)return;
+    var src=tr.getAttribute("data-src"),tgt=tr.getAttribute("data-tgt");
+    if(b.getAttribute("data-act")==="tmedit"){openTmEdit(src,tgt);}
+    else if(b.getAttribute("data-act")==="tmdel"){
+      if(!confirm("このTMエントリを削除しますか？\\n"+src+" → "+tgt))return;
+      api("/api/tm-delete",{method:"POST",body:JSON.stringify({tm:TMCUR,src:src,tgt:tgt})}).then(function(r){toast(r&&r.ok?"削除しました（バックアップ作成済）":("削除失敗："+((r&&r.error)||"不明")));loadTMEntries();});
+    }
+  });
+})();
+
+// ===== 親タブ: プロジェクト / TM Match Explorer（下位構造は各タブ内に維持） =====
+// ===== 親タブ: プロジェクト ＋ 開いた記事ごとのプロジェクト名タブ（複数可） =====
+var LS_TEP="kotonoha-tep-tabs";    // [{id,url,title}]
+var LS_ACT="kotonoha-ptab-active"; // "proj" | "tep:<id>" | "demo"
+function tepTabs(){try{return JSON.parse(localStorage.getItem(LS_TEP)||"[]")||[];}catch(e){return[];}}
+function tepTabsSave(a){try{localStorage.setItem(LS_TEP,JSON.stringify(a));}catch(e){}}
+function ptabActive(){try{return localStorage.getItem(LS_ACT)||"proj";}catch(e){return "proj";}}
+function ptabActiveSave(v){try{localStorage.setItem(LS_ACT,v);}catch(e){}}
+function renderPTabs(){
+  var bar=document.getElementById("ptabs");if(!bar)return;
+  var act=ptabActive();
+  var html='<button class="ptab" data-ptab="proj" type="button" aria-pressed="'+(act==="proj")+'">プロジェクト</button>';
+  var tabs=KT.served?tepTabs():[];
+  if(tabs.length){
+    tabs.forEach(function(t){var w="tep:"+t.id;
+      html+='<button class="ptab" data-ptab="'+esc(w)+'" type="button" aria-pressed="'+(act===w)+'" title="'+esc((t.title||"")+" — 解析・Pre-translation済み／作業内容は自動保存")+'"><span class="lbl">'+esc(t.title||"(無題)")+'</span><span class="x" data-close="'+esc(t.id)+'" title="閉じる">×</span></button>';});
+  } else if(KT.served){
+    html+='<button class="ptab" data-ptab="demo" type="button" aria-pressed="'+(act==="demo")+'">TM-Match-Explorer</button>';
+  }
+  bar.innerHTML=html;
+}
+function viewIdFor(which){ if(which==="demo")return "tepview-__demo__"; if(which.indexOf("tep:")===0)return "tepview-"+which.slice(4); return ""; }
+function ensureView(id,url){
+  var box=document.getElementById("tepviews");if(!box||document.getElementById("tepview-"+id))return;
+  var v=document.createElement("div");v.id="tepview-"+id;v.className="tepview";v.hidden=true;
+  // ヒント/再読み込み/別タブ/保存して閉じる は TEPウィンドウ（iframe内）側のヘッダーへ移設。ここは iframe のみ。
+  v.innerHTML='<iframe class="tepframe"></iframe>';
+  box.appendChild(v);
+  v.querySelector("iframe").src=url;
+}
+function ensureDemo(){
+  var box=document.getElementById("tepviews");if(!box||document.getElementById("tepview-__demo__"))return;
+  var v=document.createElement("div");v.id="tepview-__demo__";v.className="tepview";v.hidden=true;
+  v.innerHTML='<iframe class="tepframe" src="/explorer"></iframe>';
+  box.appendChild(v);
+}
+// TEPウィンドウ(iframe・同一オリジン)から「保存して閉じる」で現在のタブを閉じるために公開
+window.closeActiveTEP=function(){var a=ptabActive();if(a.indexOf("tep:")===0)closeTEP(a.slice(4));};
+function showPTab(which){
+  ptabActiveSave(which);
+  var proj=document.getElementById("ptab-proj");if(proj)proj.hidden=(which!=="proj");
+  if(which==="demo")ensureDemo();
+  var box=document.getElementById("tepviews");var tvid=viewIdFor(which);
+  if(box)Array.prototype.forEach.call(box.children,function(v){v.hidden=(v.id!==tvid);});
+  renderPTabs();
+}
+function openTEP(id,url,title){
+  if(!KT.served)return;
+  var tabs=tepTabs(),i=-1;
+  tabs.forEach(function(t,k){if(t.id===id)i=k;});
+  if(i<0){tabs.push({id:id,url:url,title:title||id});}
+  else{tabs[i].url=url; if(title)tabs[i].title=title;}
+  tepTabsSave(tabs);
+  var ex=document.getElementById("tepview-"+id);
+  if(ex){var fr=ex.querySelector("iframe"); if(fr)fr.src=url;}  // 既存ビューは最新内容に再読込（再実行後に反映）
+  else{ensureView(id,url);}
+  showPTab("tep:"+id);
+}
+function closeTEP(id){
+  var tabs=tepTabs().filter(function(t){return t.id!==id;});tepTabsSave(tabs);
+  var v=document.getElementById("tepview-"+id);if(v)v.remove();
+  if(ptabActive()==="tep:"+id){showPTab(tabs.length?("tep:"+tabs[tabs.length-1].id):"demo");}
+  else{renderPTabs();}
+}
+document.getElementById("ptabs").addEventListener("click",function(e){
+  var x=e.target.closest(".x");if(x){e.stopPropagation();closeTEP(x.getAttribute("data-close"));return;}
+  var b=e.target.closest(".ptab");if(!b)return;showPTab(b.getAttribute("data-ptab"));
+});
+// 記事「開く」→ プロジェクト名タブで表示（サーバーモード）。file:// は従来どおり別タブ。
+(function(){var rowsEl=document.getElementById("rows");if(!rowsEl)return;
+  rowsEl.addEventListener("click",function(e){
+    var a=e.target.closest("a.open");if(!a)return;
+    if(KT.served){e.preventDefault();var href=a.getAttribute("href");var m=href.match(/[?&]id=([^&]+)/);var id=m?decodeURIComponent(m[1]):href;openTEP(id,href,a.getAttribute("data-title")||"");}
+  });
+})();
+// 生成物（中間生成物）の TEP を絶対パスで開く（別プロジェクト化せず /article?path= で配信）
+function tepKey(s){var h=0;for(var i=0;i<(s||"").length;i++){h=(h*31+s.charCodeAt(i))|0;}return "f"+(h>>>0).toString(36);}
+function openTEPbyPath(path,label){
+  if(!KT.served||!path)return;
+  openTEP(tepKey(path),"/article?path="+encodeURIComponent(path),label||path);
+}
+// 実行で生成された記事をプロジェクト名タブで自動表示（produced=[{title,html}]）
+function openProduced(projName,produced){
+  if(!KT.served||!produced||!produced.length)return;
+  produced.forEach(function(a){
+    var ti=(a&&a.title)||"";var html=(a&&a.html)||"";
+    if(!html)return;
+    var label=(produced.length>1)?((projName||"")+" ／ "+ti):(projName||ti);
+    openTEPbyPath(html,label);
+  });
+}
+function fmtSize(n){if(n==null)return "";if(n<1024)return n+" B";if(n<1048576)return (n/1024).toFixed(1)+" KB";return (n/1048576).toFixed(1)+" MB";}
+// 『詳細』: プロジェクト行の下にサブセクションを開閉（作業サマリー＋_Details フォルダーの中間生成物）
+function toggleDetails(pid,btn){
+  var row=document.getElementById("detrow-"+pid),panel=document.getElementById("detpanel-"+pid);
+  if(!row||!panel)return;
+  var opening=row.hidden;
+  row.hidden=!opening;
+  if(btn)btn.setAttribute("aria-pressed",opening?"true":"false");
+  if(opening){
+    panel.innerHTML='<div class="empty">読み込み中…</div>';
+    api("/api/details?id="+encodeURIComponent(pid)).then(function(d){renderDetails(pid,panel,d);})
+      .catch(function(e){panel.innerHTML='<div class="empty">読み込みエラー: '+esc(String(e))+'</div>';});
+  }
+}
+function renderDetails(pid,panel,d){
+  if(!d||!d.ok){panel.innerHTML='<div class="empty">詳細を取得できませんでした'+(d&&d.error?("："+esc(d.error)):"")+'</div>';return;}
+  var s=d.summary||{},arts=s.artifacts||[],h='';
+  h+='<h3>作業サマリー</h3><div class="sumline">';
+  h+='状態: <b>'+esc(s.status||"-")+'</b> ／ ソース <b>'+(s.sources||0)+'</b> 件 ／ メインTM <b>'+esc(s.main_tm||"未設定")+'</b> ／ Product TM <b>'+(s.product_tm?"有":"無")+'</b> ／ サブTM <b>'+(s.sub_tms||0)+'</b> 件';
+  if(s.last_run)h+='<br>最終実行: <b>'+esc(s.last_run)+'</b>';
+  if(arts.length){var seg=0,mt=0;arts.forEach(function(x){seg+=(x.segs||0);mt+=(x.mt||0);});
+    h+='<br>生成記事: <b>'+arts.length+'</b> 件（計 '+seg+' セグメント ／ うち MT '+mt+'）';}
+  h+='</div>';
+  h+='<div class="ebar"><span style="color:var(--muted)">中間生成物（_kotonoha）:</span> <span class="dpath">'+esc(d.details_dir||"")+'</span> <button type="button" class="detopen" data-path="'+esc(d.details_dir||"")+'">フォルダーを開く</button></div>';
+  if(!d.files||!d.files.length){
+    h+='<div class="empty">まだ中間生成物はありません。「実行」すると、解析・Pre-translation の結果（作業ファイル ほか）がここに保存されます。</div>';
+  }else{
+    h+='<div class="flist">';
+    d.files.forEach(function(f){
+      h+='<div class="frow"><span class="fn">';
+      h+=f.is_tep?('<a class="tep" data-path="'+esc(f.path)+'">'+esc(f.name)+(f.is_tep?' <span style="font-weight:400;color:var(--muted)">（開いて編集）</span>':'')+'</a>'):esc(f.name);
+      h+='</span><span class="fm">'+esc(fmtSize(f.size))+(f.mtime?("　"+esc(f.mtime)):"")+'</span>';
+      h+='<a class="reveal" data-reveal="'+esc(f.path)+'" title="保存場所を開く">開く</a></div>';
+    });
+    h+='</div>';
+  }
+  panel.innerHTML=h;
+}
+// 『出力』: 保存先を選択（2_For review / 3_Final / 任意フォルダー）してから出力
+function openExportChoice(pid,btn){
+  if(!KT.served)return;
+  var chosen={mode:"review",path:""};
+  var m=el("div","modal");m.appendChild(el("h2",null,"出力先を選択"));
+  var bd=el("div","bd");
+  bd.appendChild(el("p",null,"翻訳版（記事の訳文を適用した成果物）の保存先を選びます。"));
+  var warn=el("p",null,"※ 2_For review に元ファイルと同名の成果物がある場合は上書きされます（元ファイルを残したいときは 3_Final か別フォルダーを選択）。");
+  warn.style.cssText="color:var(--muted);font-size:12px;margin:-4px 0 4px";bd.appendChild(warn);
+  var wrap=el("div","fld");
+  [["review","2_For review（既定）"],["final","3_Final"],["other","その他のフォルダーを選択…"]].forEach(function(o){
+    var lab=el("label","toggle2");lab.style.display="block";lab.style.margin="7px 0";
+    var r=el("input");r.type="radio";r.name="exdest";r.value=o[0];if(o[0]==="review")r.checked=true;
+    lab.appendChild(r);lab.appendChild(document.createTextNode(" "+o[1]));wrap.appendChild(lab);
+    r.onclick=function(){chosen.mode=o[0];if(o[0]==="other"){openBrowser("dir",chosen.path||"",function(dir){chosen.path=dir;pc.textContent="選択: "+dir;pc.hidden=false;});}};
+  });
+  bd.appendChild(wrap);
+  var pc=el("div","dpath");pc.hidden=true;pc.style.margin="4px 0 0";bd.appendChild(pc);
+  m.appendChild(bd);
+  var ft=el("div","ft");var go=el("button","primary","出力");
+  go.onclick=function(){
+    var body={id:pid};
+    if(chosen.mode==="final")body.out_path="3_Final";
+    else if(chosen.mode==="other"){if(!chosen.path){toast("フォルダーを選択してください");return;}body.out_path=chosen.path;}
+    else body.out_path="2_For review";
+    closeOvl();
+    toast("出力中…");
+    api("/api/export",{method:"POST",body:JSON.stringify(body)}).then(function(r){
+      toast(r&&r.ok?("出力しました: "+(r.out_dir||"")+(r.applied!=null?("（適用 "+r.applied+"）"):"")):("出力失敗："+((r&&r.error)||"不明なエラー")));
+    }).catch(function(err){toast("通信エラー: "+err);});
+  };
+  ft.appendChild(go);var c=el("button","ghost","キャンセル");c.onclick=closeOvl;ft.appendChild(c);
+  m.appendChild(ft);overlay(m);
+}
+// 初期化: タブ復元＆アクティブ表示
+(function(){ renderPTabs();
+  var tabs=KT.served?tepTabs():[]; tabs.forEach(function(t){ensureView(t.id,t.url);});
+  var act=ptabActive();
+  if(act.indexOf("tep:")===0 && !tabs.some(function(t){return "tep:"+t.id===act;}))act="proj";
+  if(act==="demo"&&!KT.served)act="proj";
+  showPTab(act);
+})();
+
+// ===== TM バックアップ（手動確認式・自動書き込みなし） =====
+var BKCFG={enabled:false,freq:"never",last:"",dir:""}, BKTARGETS=[];
+function bkLoad(){
+  if(!KT.served)return;
+  api("/api/backup-config").then(function(r){
+    if(!r||!r.ok)return;
+    BKCFG=r.cfg||BKCFG; BKTARGETS=r.targets||[];
+    var on=document.getElementById("bkon");if(on)on.checked=!!BKCFG.enabled;
+    var fq=document.getElementById("bkfreq");if(fq)fq.value=BKCFG.freq||"never";
+    var ls=document.getElementById("bklast");if(ls)ls.textContent=(BKCFG.last?("最終: "+BKCFG.last):"未実施")+"／対象 "+BKTARGETS.length+" 本";
+  }).catch(function(){});
+}
+function bkSaveCfg(){
+  var on=document.getElementById("bkon"), fq=document.getElementById("bkfreq");
+  api("/api/backup-config",{method:"POST",body:JSON.stringify({enabled:!!(on&&on.checked),freq:(fq?fq.value:"never")})})
+    .then(function(r){if(r&&r.ok){BKCFG=r.cfg;bkLoad();}}).catch(function(){});
+}
+function bkRunPick(){
+  // 保存先をネイティブダイアログで確認（既定＝前回フォルダー）→ バックアップ実行
+  pick("dir",false).then(function(r){
+    var dir="";
+    if(r&&r.available===false){toast("サーバーモードでのみ利用できます");return;}
+    if(r&&r.paths&&r.paths.length)dir=r.paths[0];
+    if(!dir)return;
+    toast("バックアップ中…（対象 "+BKTARGETS.length+" 本）");
+    api("/api/backup-run",{method:"POST",body:JSON.stringify({dir:dir})}).then(function(d){
+      if(d&&d.ok){toast("バックアップ完了: "+(d.copied||[]).length+" 本 → "+d.folder);bkLoad();}
+      else{toast("バックアップ失敗："+((d&&d.error)||"不明"));}
+    }).catch(function(err){toast("通信エラー: "+err);});
+  }).catch(function(err){toast("選択エラー: "+err);});
+}
+(function(){
+  var on=document.getElementById("bkon");if(on)on.addEventListener("change",bkSaveCfg);
+  var fq=document.getElementById("bkfreq");if(fq)fq.addEventListener("change",bkSaveCfg);
+  var nb=document.getElementById("bknow");if(nb)nb.addEventListener("click",bkRunPick);
+})();
+// 起動時: 期限到来なら作成を確認（自動では作成しない）
+function bkMaybePrompt(){
+  if(!KT.served)return;
+  api("/api/backup-config").then(function(r){
+    if(!r||!r.ok||!r.due)return;
+    BKCFG=r.cfg||BKCFG; BKTARGETS=r.targets||[];
+    if(confirm("TMバックアップの時期です（前回: "+(BKCFG.last||"未実施")+"）。\n対象 "+BKTARGETS.length+" 本を今すぐバックアップしますか？\n（保存先を次のダイアログで選びます）"))
+      bkRunPick();
+  }).catch(function(){});
+}
+
+// ===== クラウド(OneDrive)TM: 指定フォルダーへ保存/から読込（ファイル・フォルダー単位） =====
+var CLOUDDIR="", CLOUDTMX=[];
+// 作成/編集ダイアログ用: クラウドフォルダーの .tmx をインライン select で選ばせ、onPick(path) で返す
+function cloudInline(cbox,onPick){
+  api("/api/cloud-config").then(function(r){
+    if(!r||!r.ok||!r.cloud_dir){toast("クラウドTMフォルダー未設定（TMタブで設定してください）");return;}
+    var list=r.tmx||[];if(!list.length){toast("クラウドに .tmx がありません");return;}
+    cbox.innerHTML="";var sel=el("select");var o0=el("option",null,"（クラウドから選択）");o0.value="";sel.appendChild(o0);
+    list.forEach(function(t){var o=el("option",null,t.name);o.value=t.path;sel.appendChild(o);});
+    sel.onchange=function(){if(sel.value)onPick(sel.value);};
+    cbox.appendChild(sel);
+  }).catch(function(e){toast("通信エラー: "+e);});
+}
+function cloudLoad(){
+  if(!KT.served)return;
+  api("/api/cloud-config").then(function(r){
+    if(!r||!r.ok)return;
+    CLOUDDIR=r.cloud_dir||""; CLOUDTMX=r.tmx||[];
+    var e=document.getElementById("clouddir");if(e)e.textContent=CLOUDDIR?(CLOUDDIR+"（"+CLOUDTMX.length+" 本）"):"（未設定）";
+  }).catch(function(){});
+}
+function cloudSetDir(){
+  pick("dir",false).then(function(r){
+    if(r&&r.available===false){toast("サーバーモードでのみ利用できます");return;}
+    var dir=(r&&r.paths&&r.paths.length)?r.paths[0]:"";if(!dir)return;
+    api("/api/cloud-config",{method:"POST",body:JSON.stringify({cloud_dir:dir})}).then(function(d){
+      if(d&&d.ok){toast("クラウドTMフォルダーを設定しました");cloudLoad();}
+      else{toast("設定失敗："+((d&&d.error)||"不明"));}
+    }).catch(function(err){toast("通信エラー: "+err);});
+  }).catch(function(err){toast("選択エラー: "+err);});
+}
+function cloudCopy(src,dst,folder,label,after){
+  api("/api/tm-copy",{method:"POST",body:JSON.stringify({src:src,dst_dir:dst,folder:!!folder,label:label})}).then(function(d){
+    if(d&&d.ok){toast("クラウド"+label+"完了: "+(d.copied||[]).length+" 本");cloudLoad();if(after)after();}
+    else{toast("クラウド"+label+"失敗："+((d&&d.error)||"不明"));}
+  }).catch(function(err){toast("通信エラー: "+err);});
+}
+function openCloud(){
+  if(!CLOUDDIR){toast("先に「変更」でクラウドTMフォルダーを指定してください");return;}
+  const sh=modalShell("クラウドTM 操作");
+  sh.bd.appendChild(el("div","hint","クラウドTMフォルダー: "+CLOUDDIR+"（OneDrive の共有フォルダーを想定。同期は OneDrive 任せ）"));
+  function row(label,hint,fn){const f=el("div","fld");const b=el("button","primary",label);b.style.alignSelf="flex-start";b.onclick=fn;f.appendChild(b);if(hint)f.appendChild(el("div","hint",hint));return f;}
+  // 保存: 選択中TM → クラウド
+  sh.bd.appendChild(row("選択中の TM をクラウドへ保存","TMタブで選択中の TM（"+((window.TMCUR&&TMCUR.split(/[\\\\/]/).pop())||"未選択")+"）をクラウドフォルダーへコピー（上書き）。",function(){
+    if(!window.TMCUR){toast("TMタブで TM を選択してください");return;}
+    cloudCopy(TMCUR, CLOUDDIR, false, "保存");
+  }));
+  // 保存: ローカルフォルダー → クラウド（フォルダー単位）
+  sh.bd.appendChild(row("フォルダーごとクラウドへ保存","選ぶフォルダー内の全 .tmx をクラウドへコピー（上書き）。",function(){
+    pick("dir",false).then(function(r){var dir=(r&&r.paths&&r.paths.length)?r.paths[0]:"";if(!dir)return;cloudCopy(dir, CLOUDDIR, true, "保存");}).catch(function(err){toast("選択エラー: "+err);});
+  }));
+  // 読込: クラウドの .tmx → ローカルフォルダー
+  const lf=el("div","fld");lf.appendChild(el("label",null,"クラウドから読込（.tmx を選択 → 保存先フォルダーへコピー）"));
+  const sel=el("select");(CLOUDTMX.length?CLOUDTMX:[{name:"（クラウドに .tmx がありません）",path:""}]).forEach(function(t){const o=el("option",null,t.name);o.value=t.path;sel.appendChild(o);});lf.appendChild(sel);
+  const rb=el("button","primary","このファイルを読込");rb.style.alignSelf="flex-start";
+  rb.onclick=function(){const sp=sel.value;if(!sp){toast("クラウドに .tmx がありません");return;}pick("dir",false).then(function(r){var dir=(r&&r.paths&&r.paths.length)?r.paths[0]:"";if(!dir)return;cloudCopy(sp, dir, false, "読込");}).catch(function(err){toast("選択エラー: "+err);});};
+  lf.appendChild(rb);sh.bd.appendChild(lf);
+  // 読込: クラウドのフォルダー全体 → ローカルフォルダー
+  sh.bd.appendChild(row("フォルダーごと読込","クラウドフォルダー内の全 .tmx を、選ぶローカルフォルダーへコピー。",function(){
+    pick("dir",false).then(function(r){var dir=(r&&r.paths&&r.paths.length)?r.paths[0]:"";if(!dir)return;cloudCopy(CLOUDDIR, dir, true, "読込");}).catch(function(err){toast("選択エラー: "+err);});
+  }));
+  const close=el("button","ghost","閉じる");close.onclick=closeOvl;
+  sh.ft.appendChild(close);sh.m.appendChild(sh.ft);overlay(sh.m);
+}
+(function(){
+  var cs=document.getElementById("cloudset");if(cs)cs.addEventListener("click",cloudSetDir);
+  var cb=document.getElementById("cloudbtn");if(cb)cb.addEventListener("click",openCloud);
+})();
+
+if(KT.served){document.body.classList.add("served");var _tw=document.getElementById("toolswrap");if(_tw)_tw.hidden=false;var _tabs=document.getElementById("tabs");if(_tabs)_tabs.hidden=false;refresh();bkMaybePrompt();}
 </script></body></html>
