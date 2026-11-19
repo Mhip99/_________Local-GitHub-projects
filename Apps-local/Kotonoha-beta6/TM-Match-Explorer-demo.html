@@ -308,6 +308,62 @@ body.summaryview #view-summary{flex:1;}
 .themebtn,.filepill{padding:4px 9px;font-size:11.5px;}
 .count{margin:4px 2px;font-size:12px;}
 .segpane{height:46vh;}
+/* ===== 各ペインはリサイズ可能・ページはレスポンシブ：
+   TEP(セグメント)ペインは縦リサイズ可（右下のつまみで高さ調整。内部スクロールは高さを内容が超えたとき＝必要時のみ表示）、各リファレンスペインはリサイズ可、
+   ペイン内のスクロールバーは内容がペインサイズを超えたとき（必要時）に表示。
+   ペインを広げるとページ全体がレスポンシブに追従（ページ右端で縦スクロール）。 ===== */
+body:not(.summaryview){overflow-y:auto;}
+body:not(.summaryview) .wrap{height:auto;min-height:100vh;}
+body:not(.summaryview) #view-work{flex:none;min-height:0;}
+.worklayout{flex:none;min-height:0;overflow:visible;}
+.segpane{height:46vh;min-height:140px;overflow:auto;resize:vertical;}
+.refbox{height:auto;min-height:0;overflow:visible;resize:none;}
+.refpane,.histpane,.termpane{height:220px;min-height:110px;overflow:auto;resize:both;}
+/* 作業ビューのタブ行・操作行はスクロール時も上部に固定（広い作業領域を維持） */
+body:not(.summaryview) .vtabs{position:sticky;top:0;z-index:6;background:var(--ground);}
+body:not(.summaryview) #view-work .controls{position:sticky;top:38px;z-index:5;background:var(--ground);}
+/* 「280/280 セグメント」カウントを操作行（前回保存と同じ行）の右端へ */
+.count{margin:0 0 0 auto;}
+/* ページ(ブラウザ)の縦スクロールバーのみ非表示：ホイール/キー操作でのスクロールは可能。各ペイン内のスクロールバーには影響しない */
+html,body{scrollbar-width:none;-ms-overflow-style:none;}
+html::-webkit-scrollbar,body::-webkit-scrollbar{width:0;height:0;}
+/* Concordance：検索対象TM のドロップダウン（トグル＋固定配置オーバーレイ＋下部固定の「＋TMを追加」） */
+.concdd{position:relative;display:inline-block;}
+.concdd-toggle{display:inline-flex;align-items:center;gap:6px;}
+.concdd-panel{min-width:240px;max-width:380px;max-height:300px;display:flex;flex-direction:column;
+  background:var(--surface);border:1px solid var(--hairline-strong);border-radius:8px;box-shadow:var(--shadow);z-index:1000;}
+.concdd-list{overflow:auto;padding:6px;display:flex;flex-direction:column;gap:4px;}
+.concdd-list .histhint{padding:4px 2px;}
+.concdd-list .conctm{width:100%;border-radius:6px;}
+.concdd-list .conctm .cn{max-width:none;flex:1;}
+.concdd-foot{position:sticky;bottom:0;border-top:1px solid var(--hairline);background:var(--surface);
+  padding:6px;display:flex;gap:6px;align-items:center;border-radius:0 0 8px 8px;}
+.concdd-foot #concaddsel{flex:1;min-width:0;}
+/* 各ペインの 拡大/縮小 トグル（ツールバー右端。縮小＝ヘッダー1行） */
+.panehd{display:flex;align-items:center;gap:6px;margin:0 0 4px;padding-bottom:2px;font-size:11px;letter-spacing:.05em;}
+.panetoggle{margin-left:auto;flex:0 0 auto;border:1px solid var(--hairline);background:var(--surface);color:var(--muted);
+  border-radius:5px;padding:0 6px;font-size:11px;line-height:1.4;cursor:pointer;}
+.panetoggle:hover{color:var(--ink);border-color:var(--hairline-strong);}
+.seghd{position:sticky;top:0;z-index:3;background:var(--surface);font-size:10px;letter-spacing:.04em;text-transform:uppercase;
+  color:var(--faint);font-weight:600;margin:0 0 2px;padding-bottom:1px;line-height:1.2;}
+.seghd .panetoggle,.seghd .popbtn{padding:0 5px;font-size:10px;line-height:1.25;}
+.seghd .popgroup{gap:3px;}
+.seghd .poplab{font-size:10px;}
+.refpane.collapsed,.segpane.collapsed{height:auto!important;min-height:0!important;resize:none!important;overflow:hidden!important;}
+.refpane.collapsed>*:not(.panehd),.segpane.collapsed>*:not(.panehd){display:none!important;}
+/* ペインのポップアウト（別タブ/別ウィンドウ）ボタン＋表示モード（?view=tep / ?view=ref） */
+.popgroup{display:inline-flex;align-items:center;gap:4px;}
+.poplab{font-size:11px;color:var(--faint);}
+.popbtn{border:1px solid var(--hairline);background:var(--surface);color:var(--muted);border-radius:5px;padding:0 6px;font-size:11px;line-height:1.5;cursor:pointer;}
+.popbtn:hover{color:var(--ink);border-color:var(--hairline-strong);}
+body.kview-tep #refbox{display:none!important;}
+body.kview-tep #segpane{height:calc(100vh - 92px);min-height:200px;}
+body.kview-ref .vtabs,body.kview-ref .controls,body.kview-ref #segpane,body.kview-ref #view-summary{display:none!important;}
+body.kview-ref #refbox{min-height:calc(100vh - 16px);align-content:flex-start;}
+/* TEPペイン: 各列のリサイズ（ヘッダー境界をドラッグ・ダブルクリックで既定に戻す） */
+#segpane thead th{position:sticky;top:var(--seghd-h,26px);z-index:2;background:var(--surface);padding:4px 10px;font-size:10.5px;}
+#segpane thead th .colresizer{position:absolute;top:0;right:-3px;width:7px;height:100%;cursor:col-resize;user-select:none;z-index:3;}
+#segpane thead th .colresizer:hover{background:var(--accent);opacity:.35;}
 </style>
 
 <div class="wrap">
@@ -349,15 +405,15 @@ body.summaryview #view-summary{flex:1;}
     </label>
     <div class="seg" id="catseg" role="group" aria-label="区分フィルター">
       <button data-cat="all" aria-pressed="true">すべて</button>
-      <button data-cat="Reused" aria-pressed="false">再利用</button>
+      <button data-cat="Reused" aria-pressed="false">Pre-Trans.</button>
       <button data-cat="Modified" aria-pressed="false">修正</button>
       <button data-cat="Added" aria-pressed="false">新規</button>
     </div>
     <div class="chips" id="bandchips" role="group" aria-label="マッチ率バンド"></div>
     <label class="toggle" title="原文の差分（削除された語）を取り消し線で表示"><input type="checkbox" id="deltoggle" checked> 削除を表示</label>
     <label class="toggle" title="訳文を直接編集できるモードに切替（タグ挿入パレット・右クリックメニュー有効）"><input type="checkbox" id="editmode"> 編集モード</label>
-    <label class="toggle" title="編集済みのセグメントのみ表示"><input type="checkbox" id="editedonly"> 編集済みのみ</label>
-    <label class="toggle" title="確定済みのセグメントのみ表示"><input type="checkbox" id="confirmedonly"> 確定済みのみ</label>
+    <label class="toggle" title="編集済みのセグメントのみ表示"><input type="checkbox" id="editedonly"> 編集済</label>
+    <label class="toggle" title="確定済みのセグメントのみ表示"><input type="checkbox" id="confirmedonly"> 確定済</label>
     <label class="toggle" title="原文と訳で数値/タグが食い違う「要確認」行のみ表示"><input type="checkbox" id="qaonly"> 要確認のみ<span id="qacount" class="qacount"></span></label>
     <label class="toggle" title="セグメントを確定したとき、同一原文（完全一致）の他セグメントへ同じ訳を自動で流し込む（確定は手動）"><input type="checkbox" id="autoprop"> 自動伝播</label>
     <button class="minibtn" id="confirmview" type="button" title="現在表示中（フィルター後）の、訳文が空でない行をまとめて確定">表示中を一括確定</button>
@@ -366,9 +422,9 @@ body.summaryview #view-summary{flex:1;}
     <span class="confcount" id="confcount"></span>
     <button class="minibtn" id="savewip" type="button" title="編集・確定の途中内容を保存（サーバーモードはサーバーにも保存し、次回開いた時に自動復元）">途中保存</button><span class="savedat" id="savedat" style="font-size:12px;opacity:.7;margin-left:6px"></span>
 <button class="expbtn" id="exportxliff" type="button" title="確定行を中心に XLIFF 1.2 を書き出し（TM書き戻しの入力）">XLIFF 書き出し</button>
+    <div class="count" id="count"></div>
   </div>
 
-  <div class="count" id="count"></div>
   <div class="worklayout">
   <div class="segpane" id="segpane">
     <table>
@@ -425,7 +481,7 @@ const META = {"source":{"name":"(デモ).json","path":"（デモのためパス�
 const BANDS=["ICE","100%","95-99%","85-94%","75-84%","<=74%"];
 const CATOF={"ICE":"Reused","100%":"Reused","95-99%":"Modified","85-94%":"Modified","75-84%":"Modified","<=74%":"Added"};
 const CATCLS={Reused:"b-reuse",Modified:"b-modify",Added:"b-new"};
-const CATJA={Reused:"再利用",Modified:"修正",Added:"新規"};
+const CATJA={Reused:"Pre-Trans.",Modified:"修正",Added:"新規"};
 const esc=s=>s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 function diff(parts){return parts.map(([op,t])=>op==="eq"?esc(t):op==="add"?`<ins>${esc(t)}</ins>`:`<del>${esc(t)}</del>`).join("");}
 function plain(parts){return parts.map(([op,t])=>op==="del"?"":t).join("");}
@@ -572,18 +628,18 @@ function computeSummary(){
   const tiles=[
     {k:"Segments",v:total,s:"総セグメント数",cls:""},
     {k:"Leverage",v:Math.round(lev/total*100)+"%",s:"ICE + 100%",cls:"accent"},
-    {k:"Reusable",v:Math.round(reusable/total*100)+"%",s:"≥75% の再利用可",cls:"reuse"},
+    {k:"Reusable",v:Math.round(reusable/total*100)+"%",s:"≥75% を Pre-Trans.",cls:"reuse"},
     {k:"MT",v:byCat.Added,s:"AI 下訳 (≤74%)",cls:"new"}
   ];
   document.getElementById("tiles").innerHTML=tiles.map(t=>
     `<div class="tile ${t.cls}"><div class="k">${t.k}</div><div class="v">${t.v}</div><div class="s">${t.s}</div></div>`).join("");
   const pct=c=>byCat[c]/total*100;
   document.getElementById("stack").innerHTML=
-    `<span class="s-reuse" style="width:${pct("Reused")}%" title="再利用"></span>`+
+    `<span class="s-reuse" style="width:${pct("Reused")}%" title="Pre-Trans."></span>`+
     `<span class="s-modify" style="width:${pct("Modified")}%" title="修正"></span>`+
     `<span class="s-new" style="width:${pct("Added")}%" title="新規"></span>`;
   document.getElementById("legend").innerHTML=[
-    ["--reuse","再利用",byCat.Reused],["--modify","修正",byCat.Modified],["--new","新規",byCat.Added]
+    ["--reuse","Pre-Trans.",byCat.Reused],["--modify","修正",byCat.Modified],["--new","新規",byCat.Added]
   ].map(([v,n,c])=>`<span class="li"><span class="sw" style="background:var(${v})"></span>${n} <span class="mono">${c}</span></span>`).join("");
   const max=Math.max(...BANDS.map(b=>byBand[b]),1);
   document.getElementById("bands").innerHTML=BANDS.map(b=>{
@@ -815,6 +871,7 @@ document.getElementById("rows").addEventListener("click",e=>{
   tr.classList.add("selected");
   renderHistory(+tr.dataset.i);
   renderTerms(+tr.dataset.i);
+  try{if(window.__segCh)window.__segCh.postMessage({t:"seg",i:+tr.dataset.i});}catch(_){}
 });
 // 現在フィルター表示中のセグメント index 一覧（確定系の共通対象）
 function visibleIndices(){
@@ -1052,13 +1109,13 @@ document.querySelectorAll(".vtab").forEach(b=>b.addEventListener("click",()=>swi
 (function(){
   var box=document.getElementById("refbox");if(!box)return;
   var LSB="kotonoha-refbox-h", LSP="kotonoha-refpane-sizes";
-  // 復元: ボックスの高さ
-  try{var h=localStorage.getItem(LSB);if(h)box.style.height=h;}catch(e){}
-  // 復元: 各ペインのサイズ（リサイズ済みのものだけ固定サイズに）
+  // refbox 自体は内容に合わせて伸びるため高さは固定しない（旧保存値は破棄）
+  try{box.style.height="";localStorage.removeItem(LSB);}catch(e){}
+  // 復元: 各ペインのリサイズ済みサイズ（幅・高さ。内容超過時のみ内部スクロールバー表示）
   var sizes={};try{sizes=JSON.parse(localStorage.getItem(LSP)||"{}")||{};}catch(e){sizes={};}
   Array.prototype.forEach.call(box.querySelectorAll(".refpane"),function(p){
     var s=sizes[p.getAttribute("data-pane")];
-    if(s&&(s.w||s.h)){ if(s.w){p.style.width=s.w;p.style.flex="0 0 auto";} if(s.h)p.style.height=s.h; }
+    if(s){ if(s.w){p.style.width=s.w;p.style.flex="0 0 auto";} if(s.h)p.style.height=s.h; }
   });
   var tB=null,tP=null;
   // 配置（列数）プリセット: 1列=縦3段 / 2列 / 3列=横3列
@@ -1096,10 +1153,17 @@ document.querySelectorAll(".vtab").forEach(b=>b.addEventListener("click",()=>swi
   (KTX.tms||[]).forEach(function(t){CONC.push({path:t.path,name:t.name,built:false,checked:true});});
   body.innerHTML=
     '<div class="concwrap">'
-    +'<div class="conctms" id="conctms"></div>'
-    +'<div class="concctl"><button type="button" class="minibtn" id="concadd">＋ TMを追加</button>'
-    +'<button type="button" class="minibtn" id="concbuild">索引を作成</button>'
+    +'<div class="concctl">'
+    +'<div class="concdd" id="concdd">'
+    +'<button type="button" class="minibtn concdd-toggle" id="conctmbtn" aria-expanded="false" title="検索対象の TM を選択">検索対象TM <span id="conctmsum">(0)</span> ▾</button>'
+    +'<div class="concdd-panel" id="conctmpanel" hidden>'
+    +'<div class="concdd-list" id="conctms"></div>'
+    +'<div class="concdd-foot"><button type="button" class="minibtn" id="concadd">＋ TMを追加</button>'
     +'<select id="concaddsel" hidden></select></div>'
+    +'</div>'
+    +'</div>'
+    +'<button type="button" class="minibtn" id="concbuild">Indexを作成</button>'
+    +'</div>'
     +'<div class="concsearch">'
     +'<input id="concq" type="search" placeholder="検索語（スペース区切りで複数）">'
     +'<select id="concfield"><option value="both">EN+JA</option><option value="en">ENのみ</option><option value="ja">JAのみ</option></select>'
@@ -1107,17 +1171,24 @@ document.querySelectorAll(".vtab").forEach(b=>b.addEventListener("click",()=>swi
     +'<label class="toggle"><input type="checkbox" id="conccase"> 大小区別</label>'
     +'<label class="toggle"><input type="checkbox" id="concregex"> 正規表現</label>'
     +'<button type="button" class="minibtn" id="concgo">検索</button></div>'
-    +'<div id="concresults"><div class="histhint">検索対象TMを選び（必要なら「索引を作成」）、検索語を入力して「検索」。</div></div>'
+    +'<div id="concresults"><div class="histhint">検索対象TMを選び（必要なら「Indexを作成」）、検索語を入力して「検索」。</div></div>'
     +'</div>';
+  function updateTMsum(){
+    var s=document.getElementById("conctmsum");if(!s)return;
+    s.textContent="("+CONC.filter(function(t){return t.checked;}).length+"/"+CONC.length+")";
+  }
   function renderTMs(){
     var el=document.getElementById("conctms");
-    if(!CONC.length){el.innerHTML='<div class="histhint">検索対象TMがありません。「＋ TMを追加」で追加してください。</div>';return;}
-    el.innerHTML=CONC.map(function(t,i){
-      return '<label class="conctm"><input type="checkbox" data-i="'+i+'" '+(t.checked?'checked':'')+'> '
-        +'<span class="cn">'+esc(t.name)+'</span>'
-        +'<span class="cb '+(t.built?'ok':'no')+'">'+(t.built?'索引:✓':'索引:未')+'</span>'
-        +'<span class="cx" data-rm="'+i+'" title="一覧から外す">×</span></label>';
-    }).join("");
+    if(el){
+      if(!CONC.length){el.innerHTML='<div class="histhint">検索対象TMがありません。「＋ TMを追加」で追加してください。</div>';}
+      else{el.innerHTML=CONC.map(function(t,i){
+        return '<label class="conctm"><input type="checkbox" data-i="'+i+'" '+(t.checked?'checked':'')+'> '
+          +'<span class="cn">'+esc(t.name)+'</span>'
+          +'<span class="cb '+(t.built?'ok':'no')+'">'+(t.built?'Index:✓':'Index:未')+'</span>'
+          +'<span class="cx" data-rm="'+i+'" title="一覧から外す">×</span></label>';
+      }).join("");}
+    }
+    updateTMsum();
   }
   function refreshStatus(){
     var paths=CONC.map(function(t){return t.path;}).join("\n");
@@ -1129,9 +1200,21 @@ document.querySelectorAll(".vtab").forEach(b=>b.addEventListener("click",()=>swi
     }).catch(renderTMs);
   }
   document.getElementById("conctms").addEventListener("click",function(e){
-    var rm=e.target.closest(".cx");if(rm){CONC.splice(+rm.getAttribute("data-rm"),1);renderTMs();return;}
-    var cb=e.target.closest("input[type=checkbox]");if(cb){CONC[+cb.getAttribute("data-i")].checked=cb.checked;}
+    var rm=e.target.closest(".cx");if(rm){e.preventDefault();CONC.splice(+rm.getAttribute("data-rm"),1);renderTMs();return;}
+    var cb=e.target.closest("input[type=checkbox]");if(cb){CONC[+cb.getAttribute("data-i")].checked=cb.checked;updateTMsum();}
   });
+  // 検索対象TM ドロップダウンの開閉（固定配置のオーバーレイ＝ペインの overflow に切られない）
+  (function(){
+    var btn=document.getElementById("conctmbtn"),panel=document.getElementById("conctmpanel");if(!btn||!panel)return;
+    function place(){var r=btn.getBoundingClientRect();panel.style.position="fixed";panel.style.left=r.left+"px";panel.style.top=(r.bottom+4)+"px";}
+    function openP(){place();panel.hidden=false;btn.setAttribute("aria-expanded","true");}
+    function closeP(){panel.hidden=true;btn.setAttribute("aria-expanded","false");}
+    btn.addEventListener("click",function(e){e.stopPropagation();if(panel.hidden)openP();else closeP();});
+    document.addEventListener("click",function(e){if(!panel.hidden&&!panel.contains(e.target)&&e.target!==btn)closeP();});
+    document.addEventListener("keydown",function(e){if(e.key==="Escape"&&!panel.hidden)closeP();});
+    window.addEventListener("resize",function(){if(!panel.hidden)closeP();});
+    document.addEventListener("scroll",function(e){if(!panel.hidden&&!panel.contains(e.target))closeP();},true);
+  })();
   document.getElementById("concadd").addEventListener("click",function(){
     var sel=document.getElementById("concaddsel");
     apiT("/api/tm-list").then(function(d){
@@ -1148,13 +1231,13 @@ document.querySelectorAll(".vtab").forEach(b=>b.addEventListener("click",()=>swi
   });
   document.getElementById("concbuild").addEventListener("click",function(){
     var targ=CONC.filter(function(t){return t.checked&&!t.built;}).map(function(t){return t.path;});
-    if(!targ.length){toastC("索引作成が必要なTM（チェック済・未構築）がありません");return;}
-    var b=document.getElementById("concbuild");b.disabled=true;var old=b.textContent;b.textContent="索引作成中…";
+    if(!targ.length){toastC("Index作成が必要なTM（チェック済・未構築）がありません");return;}
+    var b=document.getElementById("concbuild");b.disabled=true;var old=b.textContent;b.textContent="Index作成中…";
     apiT("/api/conc-build",{method:"POST",body:JSON.stringify({tms:targ})}).then(function(d){
       b.disabled=false;b.textContent=old;
       var n=((d&&d.results)||[]).filter(function(r){return r.ok;}).length;
-      toastC("索引を作成しました（"+n+"件のTM）");refreshStatus();
-    }).catch(function(e){b.disabled=false;b.textContent=old;toastC("索引作成エラー: "+e);});
+      toastC("Indexを作成しました（"+n+"件のTM）");refreshStatus();
+    }).catch(function(e){b.disabled=false;b.textContent=old;toastC("Index作成エラー: "+e);});
   });
   function doSearch(){
     var tms=CONC.filter(function(t){return t.checked;}).map(function(t){return t.path;});
@@ -1172,7 +1255,7 @@ document.querySelectorAll(".vtab").forEach(b=>b.addEventListener("click",()=>swi
     var box=document.getElementById("concresults");
     if(!d||d.ok===false){box.innerHTML='<div class="histhint">検索できません：'+esc((d&&d.error)||"不明")+'</div>';return;}
     var h='';
-    if(d.not_built&&d.not_built.length){h+='<div class="concwarn">未構築のTMがあります（検索対象外）：'+esc(d.not_built.join(", "))+'。「索引を作成」してください。</div>';}
+    if(d.not_built&&d.not_built.length){h+='<div class="concwarn">未構築のTMがあります（検索対象外）：'+esc(d.not_built.join(", "))+'。「Indexを作成」してください。</div>';}
     var rows=d.rows||[];
     if(!rows.length){h+='<div class="histhint">一致する用例はありません。</div>';box.innerHTML=h;return;}
     h+='<div class="conccount">'+rows.length+' 件'+(d.truncated?'（上限で打ち切り）':'')+'</div>';
@@ -1185,6 +1268,91 @@ document.querySelectorAll(".vtab").forEach(b=>b.addEventListener("click",()=>swi
   document.getElementById("concgo").addEventListener("click",doSearch);
   document.getElementById("concq").addEventListener("keydown",function(e){if(e.key==="Enter")doSearch();});
   renderTMs();refreshStatus();
+})();
+/* ===== 各ペインの 拡大/縮小（ツールバー右端のトグル。縮小＝ヘッダー1行、クリックで拡大） ===== */
+(function(){
+  function addToggle(pane,hd){
+    if(!pane||!hd||hd.querySelector(".panetoggle"))return;
+    var b=document.createElement("button");
+    b.type="button";b.className="panetoggle";b.textContent="▾";b.title="縮小";b.setAttribute("draggable","false");
+    b.addEventListener("mousedown",function(e){e.stopPropagation();});
+    b.addEventListener("click",function(e){e.stopPropagation();
+      var c=pane.classList.toggle("collapsed");
+      b.textContent=c?"▸":"▾";b.title=c?"拡大":"縮小";});
+    hd.appendChild(b);
+  }
+  Array.prototype.forEach.call(document.querySelectorAll("#refbox .refpane"),function(p){addToggle(p,p.querySelector(".panehd"));});
+  var seg=document.getElementById("segpane");
+  if(seg&&!seg.querySelector(".seghd")){
+    var hd=document.createElement("div");hd.className="panehd seghd";hd.textContent="TEP";
+    seg.insertBefore(hd,seg.firstChild);
+    addToggle(seg,hd);
+  }
+})();
+/* ===== ペインのポップアウト（別タブ/別ウィンドウ）: TEP単独 / リファレンス3ペインまとめて ===== */
+(function(){
+  function popURL(view){var u;try{u=new URL(location.href);}catch(e){return location.href;}u.searchParams.set("view",view);return u.toString();}
+  function mkgroup(view,host,label){
+    if(!host)return;
+    var g=document.createElement("span");g.className="popgroup";g.setAttribute("draggable","false");
+    g.addEventListener("mousedown",function(e){e.stopPropagation();});
+    if(label){var l=document.createElement("span");l.className="poplab";l.textContent=label;g.appendChild(l);}
+    [["⧉","別タブで開く",""],["⧈","別ウィンドウで開く","popup,width=1200,height=800"]].forEach(function(spec){
+      var b=document.createElement("button");b.type="button";b.className="popbtn";b.textContent=spec[0];b.title=spec[1];
+      b.setAttribute("draggable","false");
+      b.addEventListener("mousedown",function(e){e.stopPropagation();});
+      b.addEventListener("click",function(e){e.stopPropagation();window.open(popURL(view),"_blank","noopener"+(spec[2]?","+spec[2]:""));});
+      g.appendChild(b);
+    });
+    if(!host.querySelector(".panetoggle"))g.style.marginLeft="auto";
+    host.appendChild(g);
+  }
+  var seg=document.getElementById("segpane");
+  mkgroup("tep",seg&&seg.querySelector(".seghd"));
+  mkgroup("ref",document.getElementById("refctl"),"3ペイン:");
+  var view="";try{view=(new URL(location.href)).searchParams.get("view")||"";}catch(e){}
+  if(view==="tep")document.body.classList.add("kview-tep");
+  else if(view==="ref")document.body.classList.add("kview-ref");
+})();
+/* ===== TEPペイン⇔リファレンス別ウィンドウ 連動（同一オリジンの BroadcastChannel で選択セグメントを共有） ===== */
+(function(){
+  try{window.__segCh=new BroadcastChannel("kotonoha-seg:"+((window.__KT&&(window.__KT.pid||window.__KT.doc))||"demo"));}catch(e){return;}
+  window.__segCh.onmessage=function(e){
+    var d=e.data||{};
+    if(d.t==="seg"&&typeof d.i==="number"){ try{renderHistory(d.i);}catch(_){} try{renderTerms(d.i);}catch(_){} }
+    else if(d.t==="req"){ try{ if(typeof selRow!=="undefined"&&selRow>=0)window.__segCh.postMessage({t:"seg",i:selRow}); }catch(_){} }
+  };
+  // リファレンス単独ウィンドウは開いた時に現在の選択を要求（メイン側が応答）
+  try{ if(document.body.classList.contains("kview-ref"))window.__segCh.postMessage({t:"req"}); }catch(_){}
+})();
+/* ===== TEPペインの各列をリサイズ可能に（ヘッダー境界をドラッグ／ダブルクリックで既定幅／幅は保存） ===== */
+(function(){
+  var seg=document.getElementById("segpane");if(!seg)return;
+  var table=seg.querySelector("table");if(!table)return;
+  var cols=table.querySelectorAll("colgroup col");
+  var ths=table.querySelectorAll("thead th");
+  if(!cols.length||!ths.length)return;
+  var LS="kotonoha-segcolw";
+  try{var saved=JSON.parse(localStorage.getItem(LS)||"{}")||{};
+    Array.prototype.forEach.call(cols,function(c){var w=saved[c.className];if(w)c.style.width=w;});}catch(e){}
+  function save(){var o={};Array.prototype.forEach.call(cols,function(c){if(c.style.width)o[c.className]=c.style.width;});try{localStorage.setItem(LS,JSON.stringify(o));}catch(e){}}
+  Array.prototype.forEach.call(ths,function(th,i){
+    if(i>=cols.length-1)return;
+    var h=document.createElement("span");h.className="colresizer";h.title="ドラッグで列幅を調整（ダブルクリックで既定に戻す）";
+    th.appendChild(h);
+    h.addEventListener("mousedown",function(e){
+      e.preventDefault();e.stopPropagation();
+      var startX=e.clientX, startW=ths[i].offsetWidth;
+      function mm(ev){cols[i].style.width=Math.max(40,startW+(ev.clientX-startX))+"px";}
+      function mu(){document.removeEventListener("mousemove",mm);document.removeEventListener("mouseup",mu);document.body.style.cursor="";save();}
+      document.addEventListener("mousemove",mm);document.addEventListener("mouseup",mu);document.body.style.cursor="col-resize";
+    });
+    h.addEventListener("click",function(e){e.stopPropagation();});
+    h.addEventListener("dblclick",function(e){e.stopPropagation();cols[i].style.width="";save();});
+  });
+  // 列見出し(thead)のスティッキー位置＝TEP見出し行(.seghd)の実高に合わせる
+  function setSH(){var sh=seg.querySelector(".seghd");if(sh)seg.style.setProperty("--seghd-h",sh.offsetHeight+"px");}
+  setSH();window.addEventListener("load",setSH);
 })();
 /* ===== 編集ペイン右クリックメニュー: 元に戻す / 英語のまま / 履歴をコピー ===== */
 (function(){

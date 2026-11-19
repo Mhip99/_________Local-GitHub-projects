@@ -28,7 +28,8 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_STORE = os.path.join(HERE, "_projects.json")
-VERSION = "beta6.30"   # 画面バナー / EMPTY_TMX の creationtoolversion などに使用
+VERSION = "7.0"   # 画面バナー / EMPTY_TMX の creationtoolversion などに使用
+LT_PORT = 8081    # ローカル LanguageTool サーバーのポート（英語リアルタイム文法。/api/lt でプロキシ）
 STATUSES = ["作成済", "作業中", "レビュー中", "完了"]
 
 def load(store):
@@ -140,12 +141,29 @@ UISTATE_SHIM = (
     "localStorage.removeItem=function(k){_rm(k);if(window.__KT&&window.__KT.served&&String(k).indexOf('kotonoha-')===0)sc(k,null);};"
     "}catch(e){}})();</script>")
 
+def _js_embed(obj):
+    """JSON を <script> 内に安全に埋め込む（</script> や <!-- でのブレイクアウト・XSS を防止）。"""
+    return (json.dumps(obj, ensure_ascii=False)
+            .replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
+            .replace("\u2028", "\\u2028").replace("\u2029", "\\u2029"))
+
 def _served_prefix(kt_dict, store):
     """配信ページ先頭に入れる __KT / __UISTATE / SHIM の塊。"""
     return ("<script>window.__KT=%s;window.__UISTATE=%s;</script>%s"
-            % (json.dumps(kt_dict, ensure_ascii=False),
-               json.dumps(load_uistate(store), ensure_ascii=False),
+            % (_js_embed(kt_dict),
+               _js_embed(load_uistate(store)),
                UISTATE_SHIM))
+
+# 生成記事(テンプレート)は doctype/html/head/body を持たないフラグメント。
+# iframe 内では描画できるが、別タブ/別ウィンドウで単体表示すると quirks モードになり崩れる。
+# そこで配信時に **標準モードの完全なドキュメント** に包む（中身は無改変）。
+def _full_page(kt_dict, store, content):
+    return ('<!doctype html>\n<html lang="ja">\n<head>\n'
+            '<meta charset="utf-8">\n'
+            '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
+            + _served_prefix(kt_dict, store)
+            + content
+            + "\n</body>\n</html>")
 
 # ===== 用語管理（termbase）: 全プロジェクト共通の単一 TSV =====
 TERM_COLS = ["id", "source", "target", "example", "note", "doc", "project", "created", "updated"]
@@ -262,6 +280,11 @@ def _write_xlsx(path, header, data_rows):
         z.writestr("xl/_rels/workbook.xml.rels", wbrels)
         z.writestr("xl/worksheets/sheet1.xml", sheet)
 
+def _csv_safe(v):
+    """Excel/CSV の式インジェクション対策: 危険な先頭文字を ' で無害化（= + - @ TAB CR）。"""
+    s = "" if v is None else str(v)
+    return ("'" + s) if (s and s[0] in ("=", "+", "-", "@", "\t", "\r")) else s
+
 def export_terms(rows, out_path, fmt="tsv"):
     fmt = (fmt or "tsv").lower()
     cols = [c for c, _ in TERM_EXPORT]; heads = [h for _, h in TERM_EXPORT]
@@ -272,9 +295,9 @@ def export_terms(rows, out_path, fmt="tsv"):
             w = csv.writer(f, delimiter=("\t" if fmt == "tsv" else ","))
             w.writerow(heads)
             for r in rows:
-                w.writerow([(r.get(c) or "") for c in cols])
+                w.writerow([_csv_safe(r.get(c) or "") for c in cols])
     elif fmt == "xlsx":
-        _write_xlsx(out_path, heads, [[(r.get(c) or "") for c in cols] for r in rows])
+        _write_xlsx(out_path, heads, [[_csv_safe(r.get(c) or "") for c in cols] for r in rows])
     else:
         return {"ok": False, "error": "unknown format: %s" % fmt}
     return {"ok": True, "out": out_path, "count": len(rows)}
@@ -1621,6 +1644,8 @@ __UISTATE_SHIM__
 .ptab .lbl{flex:1 1 auto;min-width:0;line-height:1.25;max-height:2.9em;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;word-break:break-word}
 .ptab .x{flex:0 0 auto;margin-left:2px;opacity:.7;font-weight:700;font-size:15px;line-height:1;cursor:pointer;border-radius:4px;padding:0 3px}
 .ptab .x:hover{opacity:1;background:rgba(127,127,127,.25)}
+.ptab .pop{flex:0 0 auto;margin-left:2px;opacity:.6;font-size:12px;line-height:1;cursor:pointer;border-radius:4px;padding:0 3px}
+.ptab .pop:hover{opacity:1;background:rgba(127,127,127,.25)}
 .tepbar{display:flex;align-items:center;gap:10px;margin:2px 0 8px}
 .tepbar .tephint{color:var(--muted);font-size:13px}
 .tepframe{display:block;width:100%;height:calc(100vh - 84px);min-height:460px;border:1px solid var(--hairline);border-radius:8px;background:var(--surface)}
@@ -1671,7 +1696,7 @@ __UISTATE_SHIM__
 </div><!-- /view-terms -->
 <div id="view-tm" hidden>
   <div class="ctl">
-    <select id="tmsel" title="編集する TM を選択（XTML は読み取り専用）"></select>
+    <select id="tmsel" title="編集する TM を選択（XTM は一括更新のみ）"></select>
     <input id="tmq" type="search" placeholder="TMを検索（EN・JA 部分一致）…" title="EN/JA を部分一致で絞り込み">
     <button class="btn new" id="tmaddbtn" type="button" title="選択中の TM にエントリ（EN/JA）を追加">＋ エントリ追加</button>
     <span class="termcount" id="tmcount" title="表示中のエントリ数"></span>
@@ -2256,7 +2281,7 @@ function loadTM(){
     TMLIST=(d&&d.rows)||[];
     var sel=document.getElementById("tmsel");if(!sel)return;
     sel.innerHTML=TMLIST.map(function(r){
-      var lbl=r.name+" ["+r.role+"]"+(r.editable?(r.count!=null?(" ・"+r.count+"件"):""):" ・読み取り専用");
+      var lbl=r.name+(r.role==="メインTM"?" [メイン]":"")+(r.editable?(r.count!=null?(" ・"+r.count+"件"):""):" ・一括更新");
       return '<option value="'+esc(r.path)+'"'+(r.editable?"":" data-ro=\"1\"")+'>'+esc(lbl)+'</option>';
     }).join("");
     // 既定は編集可能な先頭TM
@@ -2270,7 +2295,7 @@ function curTMrow(){return TMLIST.find(function(r){return r.path===TMCUR;});}
 function loadTMEntries(){
   var q=(document.getElementById("tmq")||{}).value||"";
   var info=document.getElementById("tminfo");var row=curTMrow();
-  if(info)info.textContent=row?(row.editable?"編集可":"読み取り専用（XTML/サイズ）"):"";
+  if(info)info.textContent=row?(row.editable?"編集可":"一括更新（TEP完了で追記）"):"";
   if(!TMCUR){document.getElementById("tmrows").innerHTML="";document.getElementById("tmempty").hidden=false;return;}
   api("/api/tm-entries?tm="+encodeURIComponent(TMCUR)+"&q="+encodeURIComponent(q)).then(function(d){
     var rows=(d&&d.rows)||[];renderTMrows(rows);
@@ -2281,7 +2306,7 @@ function renderTMrows(rows){
   document.getElementById("tmcount").textContent=rows.length?(rows.length+" 件"):"";
   document.getElementById("tmempty").hidden=rows.length>0;
   tb.innerHTML=rows.map(function(r){
-    var act=ed?('<button class="edit" type="button" data-act="tmedit">編集</button><button class="edit" type="button" data-act="tmdel" style="margin-left:4px">削除</button>'):'<span class="meta">読取専用</span>';
+    var act=ed?('<button class="edit" type="button" data-act="tmedit">編集</button><button class="edit" type="button" data-act="tmdel" style="margin-left:4px">削除</button>'):'<span class="meta">一括更新</span>';
     return '<tr data-src="'+esc(r.src)+'" data-tgt="'+esc(r.tgt)+'">'
       +'<td class="ti">'+esc(r.src)+'</td><td class="ti">'+esc(r.tgt)+'</td>'
       +'<td class="meta">'+esc(tmDate(r.changedate))+'</td><td class="act">'+act+'</td></tr>';
@@ -2330,11 +2355,11 @@ function ptabActiveSave(v){try{localStorage.setItem(LS_ACT,v);}catch(e){}}
 function renderPTabs(){
   var bar=document.getElementById("ptabs");if(!bar)return;
   var act=ptabActive();
-  var html='<button class="ptab" data-ptab="proj" type="button" aria-pressed="'+(act==="proj")+'">プロジェクト</button>';
+  var html='<button class="ptab" data-ptab="proj" type="button" aria-pressed="'+(act==="proj")+'">プロジェクト'+(KT.served?'<span class="pop" data-popurl="/" data-popwin="0" title="別タブで開く">⧉</span><span class="pop" data-popurl="/" data-popwin="1" title="別ウィンドウで開く">⧈</span>':'')+'</button>';
   var tabs=KT.served?tepTabs():[];
   if(tabs.length){
     tabs.forEach(function(t){var w="tep:"+t.id;
-      html+='<button class="ptab" data-ptab="'+esc(w)+'" type="button" aria-pressed="'+(act===w)+'" title="'+esc((t.title||"")+" — 解析・Pre-translation済み／作業内容は自動保存")+'"><span class="lbl">'+esc(t.title||"(無題)")+'</span><span class="x" data-close="'+esc(t.id)+'" title="閉じる">×</span></button>';});
+      html+='<button class="ptab" data-ptab="'+esc(w)+'" type="button" aria-pressed="'+(act===w)+'" title="'+esc((t.title||"")+" — 解析・Pre-translation済み／作業内容は自動保存")+'"><span class="lbl">'+esc(t.title||"(無題)")+'</span><span class="pop" data-popurl="'+esc(t.url)+'" data-popwin="0" title="別タブで開く">⧉</span><span class="pop" data-popurl="'+esc(t.url)+'" data-popwin="1" title="別ウィンドウで開く">⧈</span><span class="x" data-close="'+esc(t.id)+'" title="閉じる">×</span></button>';});
   } else if(KT.served){
     html+='<button class="ptab" data-ptab="demo" type="button" aria-pressed="'+(act==="demo")+'">TM-Match-Explorer</button>';
   }
@@ -2384,6 +2409,7 @@ function closeTEP(id){
   else{renderPTabs();}
 }
 document.getElementById("ptabs").addEventListener("click",function(e){
+  var pop=e.target.closest(".pop");if(pop){e.stopPropagation();var pu=pop.getAttribute("data-popurl")||"/";var pw=pop.getAttribute("data-popwin")==="1";window.open(pu,"_blank",pw?"noopener,popup,width=1200,height=800":"noopener");return;}
   var x=e.target.closest(".x");if(x){e.stopPropagation();closeTEP(x.getAttribute("data-close"));return;}
   var b=e.target.closest(".ptab");if(!b)return;showPTab(b.getAttribute("data-ptab"));
 });
@@ -2880,7 +2906,7 @@ elif a.cmd == "dashboard":
     print(out)
 
 elif a.cmd == "serve":
-    import http.server, socket, webbrowser, secrets, urllib.parse, subprocess
+    import http.server, socket, webbrowser, secrets, urllib.parse, urllib.request, subprocess
 
     TOKEN = secrets.token_urlsafe(16)
     STORE = a.store
@@ -3050,6 +3076,14 @@ elif a.cmd == "serve":
         def _auth(self):
             return self.headers.get("X-KT-Token", "") == TOKEN
 
+        def _host_ok(self):
+            """DNS リバインディング対策: Host はループバックのみ許可（空は許容＝curl等）。"""
+            h = (self.headers.get("Host", "") or "").strip()
+            if not h:
+                return True
+            host = h.rsplit(":", 1)[0].strip().strip("[]").lower()
+            return host in ("127.0.0.1", "localhost", "::1")
+
         def _serve_article(self, rid):
             """Serve a registered artifact HTML over http with the KT token injected,
             so its term pane can call /api/* (file:// 配信では不可)。登録済み html に限定。
@@ -3065,7 +3099,7 @@ elif a.cmd == "serve":
             kt = {"served": True, "token": TOKEN,
                   "doc": p.get("title", ""), "project": p.get("project", ""),
                   "pid": (p.get("id", "") if p else "")}
-            self._send(200, _served_prefix(kt, STORE) + content, "text/html; charset=utf-8")
+            self._send(200, _full_page(kt, STORE, content), "text/html; charset=utf-8")
 
         def _serve_article_path(self, path):
             """生成物（中間生成物）の作業ファイル(HTML)を絶対パスで配信。
@@ -3115,10 +3149,29 @@ elif a.cmd == "serve":
                   "doc": pseudo.get("title", ""), "project": pseudo.get("project", ""),
                   "pid": (owner.get("id", "") if owner else ""),
                   "tms": kt_tms}
-            self._send(200, _served_prefix(kt, STORE) + content, "text/html; charset=utf-8")
+            self._send(200, _full_page(kt, STORE, content), "text/html; charset=utf-8")
 
         def do_GET(self):
+            if not self._host_ok():
+                self._send(403, {"error": "bad host"}); return
             u = urllib.parse.urlparse(self.path)
+            if u.path.startswith("/fonts/"):
+                # 同梱フォントの配信（外部CDN不要）。basename限定＋拡張子ホワイトリストでトラバーサル防止。
+                fn = os.path.basename(urllib.parse.unquote(u.path[7:]))
+                if fn and (fn.endswith(".woff2") or fn.endswith(".css")):
+                    fp = os.path.join(HERE, "fonts", fn)
+                    if os.path.isfile(fp):
+                        ctype = "font/woff2" if fn.endswith(".woff2") else "text/css; charset=utf-8"
+                        try:
+                            data = open(fp, "rb").read()
+                            self.send_response(200)
+                            self.send_header("Content-Type", ctype)
+                            self.send_header("Content-Length", str(len(data)))
+                            self.send_header("Cache-Control", "public, max-age=604800")
+                            self.end_headers(); self.wfile.write(data); return
+                        except Exception:
+                            pass
+                self._send(404, {"error": "not found"}); return
             if u.path in ("/", "/index.html"):
                 self._send(200, dashboard_html(load(STORE), served=True, token=TOKEN,
                                                uistate=load_uistate(STORE)),
@@ -3150,7 +3203,7 @@ elif a.cmd == "serve":
                                   content, count=1)
                 content = content.replace('DomoStats Connector <span class="demoflag">DEMO</span>', "（プロジェクト未選択）")
                 kt = {"served": True, "token": TOKEN, "doc": "", "project": "", "pid": "", "tms": []}
-                self._send(200, _served_prefix(kt, STORE) + content,
+                self._send(200, _full_page(kt, STORE, content),
                            "text/html; charset=utf-8")
                 return
             if u.path.startswith("/api/"):
@@ -3235,9 +3288,27 @@ elif a.cmd == "serve":
                     self._send(200, {"ok": True, "cloud_dir": cd,
                                      "exists": bool(cd and os.path.isdir(cd)),
                                      "tmx": cloud_tmx_list(cd)}); return
+                if u.path == "/api/check-done":
+                    # スペル・文法チェック結果 _wip/<art>.check-done.jsonl を読み込んで返す
+                    q = urllib.parse.parse_qs(u.query)
+                    art = q.get("art", [""])[0] or "untitled"
+                    safe = ("".join(("_" if c in '\\/:*?"<>|' else c) for c in art)[:120]) or "untitled"
+                    fp = os.path.join(os.path.dirname(os.path.abspath(STORE)), "_wip", safe + ".check-done.jsonl")
+                    rows = []
+                    if os.path.isfile(fp):
+                        try:
+                            for line in open(fp, encoding="utf-8"):
+                                line = line.strip()
+                                if line:
+                                    rows.append(json.loads(line))
+                        except Exception as e:
+                            self._send(200, {"ok": False, "error": str(e)}); return
+                    self._send(200, {"ok": True, "rows": rows, "exists": os.path.isfile(fp)}); return
             self._send(404, {"error": "not found"})
 
         def do_POST(self):
+            if not self._host_ok():
+                self._send(403, {"error": "bad host"}); return
             u = urllib.parse.urlparse(self.path)
             if not u.path.startswith("/api/") or not self._auth():
                 self._send(403, {"error": "forbidden"}); return
@@ -3265,6 +3336,42 @@ elif a.cmd == "serve":
                     json.dump(rec, open(os.path.join(wipdir, safe + ".json"), "w", encoding="utf-8"),
                               ensure_ascii=False, indent=1)
                     self._send(200, {"ok": True, "savedAt": rec["savedAt"]})
+                except Exception as e:
+                    self._send(200, {"ok": False, "error": str(e)})
+                return
+            if u.path == "/api/lt":
+                # LanguageTool ローカルサーバー(127.0.0.1:LT_PORT)への同一オリジンproxy。
+                # ブラウザのCORS回避＋機密テキストはローカル内(ハブ→LT)のみ＝外部送信なし。
+                try:
+                    text = payload.get("text", "") or ""
+                    lang = payload.get("language", "auto") or "auto"
+                    data = urllib.parse.urlencode({"language": lang, "text": text,
+                                                   "level": payload.get("level", "default") or "default"}).encode("utf-8")
+                    rq = urllib.request.Request("http://127.0.0.1:%d/v2/check" % LT_PORT, data=data,
+                                                headers={"Content-Type": "application/x-www-form-urlencoded"})
+                    with urllib.request.urlopen(rq, timeout=12) as rr:
+                        self._send(200, rr.read().decode("utf-8"), "application/json; charset=utf-8")
+                except Exception as e:
+                    self._send(200, {"ok": False, "error": "LanguageTool 未起動か通信失敗: %s" % e})
+                return
+            if u.path == "/api/check-todo":
+                # スペル・文法チェック用: 原文EN＋現在訳JA を _wip/<art>.check-todo.json へ書き出す
+                try:
+                    wipdir = os.path.join(os.path.dirname(os.path.abspath(STORE)), "_wip")
+                    os.makedirs(wipdir, exist_ok=True)
+                    art = payload.get("art", "") or "untitled"
+                    safe = ("".join(("_" if c in '\\/:*?"<>|' else c) for c in art)[:120]) or "untitled"
+                    items = payload.get("items", []) or []
+                    rec = {"art": art,
+                           "savedAt": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                           "instructions": ("各 item の en(英語原文) のスペル・文法、ja(日本語訳) の誤字脱字・文法を点検し、"
+                                            "同フォルダの <safe>.check-done.jsonl に1行ずつ "
+                                            '{"i":index,"issues":[{"field":"en|ja","msg":"指摘","suggest":"修正案"}]} '
+                                            "を書き出す（問題なしの item は書かない）。外部送信せずローカルで処理。"),
+                           "items": items}
+                    fp = os.path.join(wipdir, safe + ".check-todo.json")
+                    json.dump(rec, open(fp, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+                    self._send(200, {"ok": True, "path": fp, "count": len(items)})
                 except Exception as e:
                     self._send(200, {"ok": False, "error": str(e)})
                 return
@@ -3495,7 +3602,7 @@ elif a.cmd == "serve":
                 if not row:
                     self._send(403, {"error": "unknown TM"}); return
                 if not row.get("editable"):
-                    self._send(200, {"ok": False, "error": "このTMは編集できません（XTM 読み取り専用／サイズ超過）"}); return
+                    self._send(200, {"ok": False, "error": "このTMは個別編集できません（一括更新のみ・サイズ超過）"}); return
                 try:
                     if u.path == "/api/tm-save":
                         res = tm_io.update(ap, payload.get("old_src", ""), payload.get("old_tgt", ""),

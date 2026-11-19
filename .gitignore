@@ -20,3 +20,7 @@ _cloud.json
 
 # 生成物（解析/Pre-translation 出力・再実行で再生成可）
 Kotonoha-out/
+
+# 再生成前の一時バックアップ（生成物のコピー・不要）
+_archive-pre-regen-*/
+
