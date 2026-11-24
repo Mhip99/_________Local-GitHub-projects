@@ -1,8 +1,6 @@
 <title>TM Match Explorer</title>
 <meta name="description" content="Interactive viewer for TM match analysis.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/fonts/kotonoha-fonts.css">
 <style>
 :root{
   --ground:#F5F6F8; --surface:#FFFFFF; --surface-2:#FBFCFD;
@@ -179,6 +177,26 @@ td.ja.isconfirmed::after{content:"確定";font-size:10px;color:var(--reuse);marg
 .confcount{font-size:12.5px;color:var(--reuse);font-family:"IBM Plex Mono",monospace;font-weight:600;}
 .minibtn{background:var(--surface);border:1px solid var(--hairline-strong);color:var(--muted);border-radius:8px;padding:8px 12px;font:inherit;font-size:13px;cursor:pointer;}
 .minibtn:hover{border-color:var(--reuse);color:var(--ink);}
+/* 検索オプション・検索/置換バー・一致ハイライト */
+.findopts{display:inline-flex;align-items:center;gap:6px;}
+.fbtn{background:var(--surface);border:1px solid var(--hairline-strong);color:var(--muted);border-radius:7px;padding:6px 9px;font:inherit;font-size:12.5px;font-weight:700;line-height:1;cursor:pointer;}
+.fbtn:hover{border-color:var(--reuse);color:var(--ink);}
+.fbtn[aria-pressed="true"]{background:var(--accent);color:#fff;border-color:var(--accent);}
+.findcount{color:var(--muted);font-size:12px;white-space:nowrap;}
+.search input.bad{border-color:#d33!important;outline-color:#d33!important;}
+.findbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--ground);
+  padding:6px 0 8px;border-bottom:1px solid var(--hairline);margin:0 0 6px;}
+.findbar[hidden]{display:none;}
+.findbar .fblab{color:var(--muted);font-size:12.5px;font-weight:600;white-space:nowrap;}
+.findbar input{flex:1;min-width:180px;padding:7px 10px;border:1px solid var(--hairline-strong);border-radius:8px;background:var(--surface);color:var(--ink);font:inherit;font-size:13px;}
+.findbar input:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent);}
+.findstat{color:var(--muted);font-size:12px;white-space:nowrap;}
+mark.mark{background:#ffe58a;color:inherit;border-radius:2px;padding:0 1px;}
+mark.mark-cur{background:#ff9f45;color:#000;box-shadow:0 0 0 1px #d87400;border-radius:2px;padding:0 1px;}
+:root[data-theme="dark"] mark.mark{background:#6b5a1a;color:#fff;}
+:root[data-theme="dark"] mark.mark-cur{background:#b5720f;color:#fff;box-shadow:0 0 0 1px #e59326;}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) mark.mark{background:#6b5a1a;color:#fff;}
+  :root:not([data-theme="light"]) mark.mark-cur{background:#b5720f;color:#fff;box-shadow:0 0 0 1px #e59326;}}
 /* layout: full-width segment table on top; below it history pane (left) + term pane (right) side by side */
 /* view tabs (翻訳 / サマリー) */
 .vtabs{display:flex;gap:6px;margin:4px 0 14px;border-bottom:1px solid var(--hairline);}
@@ -362,6 +380,20 @@ body.kview-ref .vtabs,body.kview-ref .controls,body.kview-ref #segpane,body.kvie
 body.kview-ref #refbox{min-height:calc(100vh - 16px);align-content:flex-start;}
 /* TEPペイン: 各列のリサイズ（ヘッダー境界をドラッグ・ダブルクリックで既定に戻す） */
 #segpane thead th{position:sticky;top:var(--seghd-h,26px);z-index:2;background:var(--surface);padding:4px 10px;font-size:10.5px;}
+/* 翻訳履歴ペイン：過去英語=正、現在側の新規/変更語を取り消し線（MTセグメント用差分） */
+.hsrc .hadd{text-decoration:line-through;color:var(--faint);opacity:.85;}
+/* スペル・文法チェック(B)：ON時のみチェック用ボタン表示＋⚠バッジ */
+.spellbtn{display:none;}
+body.spellon .spellbtn{display:inline-flex;}
+.chkbadge{margin-left:4px;color:#c0392b;cursor:help;font-weight:700;}
+/* 英語リアルタイム文法（LanguageTool）結果パネル：画面下部・SPELL ON時のみ */
+#ltbar{position:fixed;left:0;right:0;bottom:0;z-index:50;background:var(--surface);border-top:2px solid var(--accent,#2b7a78);box-shadow:0 -4px 16px rgba(0,0,0,.14);padding:6px 12px;max-height:28vh;overflow:auto;font-size:12.5px;}
+#ltbar[hidden]{display:none;}
+#ltbar .lthd{font-weight:600;color:var(--muted);margin-bottom:4px;display:flex;align-items:center;gap:8px;}
+#ltbar .lthd .x{margin-left:auto;cursor:pointer;color:var(--faint);font-weight:700;}
+#ltbar .ltitem{padding:3px 0;border-bottom:1px solid var(--hairline);}
+#ltbar .ltsug{color:var(--reuse,#2e9e6b);font-family:"IBM Plex Mono",monospace;}
+#ltbar .ltnone{color:var(--faint);}
 #segpane thead th .colresizer{position:absolute;top:0;right:-3px;width:7px;height:100%;cursor:col-resize;user-select:none;z-index:3;}
 #segpane thead th .colresizer:hover{background:var(--accent);opacity:.35;}
 </style>
@@ -403,6 +435,12 @@ body.kview-ref #refbox{min-height:calc(100vh - 16px);align-content:flex-start;}
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
       <input id="q" type="search" placeholder="英文・訳文を検索…" aria-label="Search segments">
     </label>
+    <div class="findopts" role="group" aria-label="検索オプション">
+      <button type="button" class="fbtn" id="rxbtn" aria-pressed="false" title="正規表現で検索（例: \d+% ／ 設定|構成 ／ ます。$）。OFF は通常の部分一致">.*</button>
+      <button type="button" class="fbtn" id="csbtn" aria-pressed="false" title="大文字小文字を区別する">Aa</button>
+      <button type="button" class="minibtn" id="findtoggle" title="検索・置換バーを開閉（訳文のすべて検索・置換）">検索・置換 ▾</button>
+      <span class="findcount" id="findcount"></span>
+    </div>
     <div class="seg" id="catseg" role="group" aria-label="区分フィルター">
       <button data-cat="all" aria-pressed="true">すべて</button>
       <button data-cat="Reused" aria-pressed="false">Pre-Trans.</button>
@@ -416,13 +454,26 @@ body.kview-ref #refbox{min-height:calc(100vh - 16px);align-content:flex-start;}
     <label class="toggle" title="確定済みのセグメントのみ表示"><input type="checkbox" id="confirmedonly"> 確定済</label>
     <label class="toggle" title="原文と訳で数値/タグが食い違う「要確認」行のみ表示"><input type="checkbox" id="qaonly"> 要確認のみ<span id="qacount" class="qacount"></span></label>
     <label class="toggle" title="セグメントを確定したとき、同一原文（完全一致）の他セグメントへ同じ訳を自動で流し込む（確定は手動）"><input type="checkbox" id="autoprop"> 自動伝播</label>
+    <label class="toggle" title="スペル・文法チェック（ON）：訳文欄のブラウザ内蔵スペルチェック＋Claude点検結果(⚠)を表示。既定OFF。機密は外部へ送信しません（点検は手介在のClaudeパス）。内蔵スペルチェックの『高度/クラウド』や拡張はOFF推奨"><input type="checkbox" id="spellchk"> スペル・文法チェック</label>
     <button class="minibtn" id="confirmview" type="button" title="現在表示中（フィルター後）の、訳文が空でない行をまとめて確定">表示中を一括確定</button>
     <button class="minibtn" id="runmt" type="button" title="履歴ペインに表示されている MT を翻訳欄に反映します" hidden>MTを実行する</button>
     <span class="editcount" id="editcount"></span>
     <span class="confcount" id="confcount"></span>
     <button class="minibtn" id="savewip" type="button" title="編集・確定の途中内容を保存（サーバーモードはサーバーにも保存し、次回開いた時に自動復元）">途中保存</button><span class="savedat" id="savedat" style="font-size:12px;opacity:.7;margin-left:6px"></span>
+<button class="minibtn spellbtn" id="spellexport" type="button" title="原文EN＋現在訳JA をチェック用に書き出し（ローカル・外部送信なし／Claude で点検）">チェック用に書き出し</button><button class="minibtn spellbtn" id="spellapply" type="button" title="Claude の点検結果(⚠)を反映">結果を反映</button>
 <button class="expbtn" id="exportxliff" type="button" title="確定行を中心に XLIFF 1.2 を書き出し（TM書き戻しの入力）">XLIFF 書き出し</button>
     <div class="count" id="count"></div>
+  </div>
+
+  <div class="findbar" id="findbar" hidden>
+    <span class="fblab">置換（訳文のみ）:</span>
+    <input id="rep" type="text" placeholder="置換後の訳文（正規表現 ON のとき $1 等の後方参照が使えます）" aria-label="置換後の訳文">
+    <button type="button" class="minibtn" id="findprev" title="前の一致へ（訳文）">‹ 前へ</button>
+    <button type="button" class="minibtn" id="findnext" title="次の一致へ（訳文）">次へ ›</button>
+    <button type="button" class="minibtn" id="findall" title="訳文の一致をすべてハイライトして先頭へ">すべて検索</button>
+    <button type="button" class="minibtn" id="repone" title="現在の一致を置換して次へ（訳文のみ）">置換して次へ</button>
+    <button type="button" class="minibtn" id="repall" title="表示中セグメントの訳文をすべて置換（件数を確認してから実行）">すべて置換（表示中）</button>
+    <span class="findstat" id="findstat"></span>
   </div>
 
   <div class="worklayout">
@@ -458,6 +509,7 @@ body.kview-ref #refbox{min-height:calc(100vh - 16px);align-content:flex-start;}
   </div><!-- /refbox -->
   </div><!-- /worklayout -->
   </div><!-- /view-work -->
+  <div id="ltbar" hidden></div>
 </div>
 
 <script>
@@ -530,7 +582,9 @@ function insertChipAt(field,ph){const s=SEG[+field.getAttribute("data-i")];field
   else{field.appendChild(chip);}
   saveJaField(field);}
 
-const state={cat:"all",bands:new Set(),q:"",editMode:false,editedOnly:false,confirmedOnly:false,qaOnly:false};
+const state={cat:"all",bands:new Set(),q:"",rx:false,cs:false,editMode:false,editedOnly:false,confirmedOnly:false,qaOnly:false};
+try{if(localStorage.getItem("kotonoha-find-rx")==="1")state.rx=true;}catch(e){}
+try{if(localStorage.getItem("kotonoha-find-cs")==="1")state.cs=true;}catch(e){}
 const ART=((document.querySelector(".filepill")||{}).textContent||"export").replace("DEMO","").trim();
 const LSKEY="tmx-edits:"+ART;
 const LSKEY_C="tmx-confirms:"+ART;
@@ -588,6 +642,10 @@ function qaCount(){var n=0;for(var i=0;i<SEG.length;i++){if(qaFlag(i))n++;}retur
 // 既定ON。localStorage(kotonoha-autoprop) で保持（uistate シムでサーバー同期＝別ブラウザでも維持）。
 let AUTOPROP=true;
 try{if(localStorage.getItem("kotonoha-autoprop")==="0")AUTOPROP=false;}catch(e){}
+// スペル・文法チェック表示トグル（既定OFF＝機密の外部送信を避ける。localStorage で保持）。
+// ONで (A)訳文欄のブラウザ内蔵スペルチェック有効化＋(B)Claudeチェック結果(⚠)の表示。
+let SPELL=false;
+try{if(localStorage.getItem("kotonoha-spellcheck")==="1")SPELL=true;}catch(e){}
 function _propNotify(msg){
   try{ if(window.parent&&window.parent!==window&&typeof window.parent.toast==="function"){window.parent.toast(msg);return;} }catch(e){}
   var t=document.getElementById("savedat");if(t)t.textContent=msg;
@@ -653,18 +711,120 @@ function renderChips(){
     `<button class="chip" data-band="${b}" aria-pressed="false">${b}</button>`).join("");
 }
 
+/* ===== 検索（正規表現・大文字小文字）＋すべて検索＋置換（訳文のみ） =====
+   - 検索一致判定とフィルターは passFilter() に一本化（render / visibleIndices 共通）。
+   - ハイライト/件数/ナビ/置換は訳文（td.ja）の一致を対象。ハイライトはテキストノード走査で
+     チップ({n})・編集欄(.jaedit)を壊さない。置換は {n} を保護し、タグ集合が変わる場合はスキップ。 */
+let _findErr=false;
+function reEsc(s){return String(s).replace(/[.*+?^${}()|[\]\\]/g,"\\$&");}
+function currentRe(){
+  const inp=document.getElementById("q");
+  if(!state.q){_findErr=false;if(inp)inp.classList.remove("bad");return null;}
+  const flags=state.cs?"g":"gi";
+  try{const re=state.rx?new RegExp(state.q,flags):new RegExp(reEsc(state.q),flags);
+    _findErr=false;if(inp)inp.classList.remove("bad");return re;}
+  catch(e){_findErr=true;if(inp)inp.classList.add("bad");return null;}
+}
+function passFilter(s,idx,re){
+  if(state.cat!=="all"&&s.cat!==state.cat)return false;
+  if(state.bands.size&&!state.bands.has(s.b))return false;
+  if(state.editedOnly&&!(idx in edits))return false;
+  if(state.confirmedOnly&&!(idx in confirms))return false;
+  if(state.qaOnly&&!qaFlag(idx))return false;
+  if(state.q){ if(_findErr)return false;
+    if(re){re.lastIndex=0;if(!re.test(plain(s.en)+" "+s.tm+" "+plain(s.ja)))return false;} }
+  return true;
+}
+function fstat(t){const e=document.getElementById("findstat");if(e)e.textContent=t||"";}
+function countMatches(re){
+  if(!re||!state.q||_findErr)return {occ:0,seg:0};
+  let occ=0,seg=0;visibleIndices().forEach(function(i){
+    const rc=new RegExp(re.source,re.flags);const t=jaValue(i);let m,c=0;
+    while((m=rc.exec(t))){c++;if(m[0].length===0)rc.lastIndex++;}
+    if(c){occ+=c;seg++;}});
+  return {occ:occ,seg:seg};
+}
+function updateFindUI(re){
+  const fc=document.getElementById("findcount");if(!fc)return;
+  if(!state.q){fc.textContent="";return;}
+  if(_findErr){fc.textContent="正規表現が不正です";return;}
+  const c=countMatches(re);
+  fc.textContent=c.occ?(c.occ+" 件 / "+c.seg+" セグメント（訳文）"):"訳文に一致なし";
+}
+function hiliteTextNodes(el,re){
+  const walker=document.createTreeWalker(el,NodeFilter.SHOW_TEXT,{acceptNode:function(n){
+    if(!n.nodeValue)return NodeFilter.FILTER_REJECT;
+    let p=n.parentNode;while(p&&p!==el){if(p.classList&&(p.classList.contains("tag")||p.nodeName==="MARK"))return NodeFilter.FILTER_REJECT;p=p.parentNode;}
+    return NodeFilter.FILTER_ACCEPT;}});
+  const tns=[];let node;while(node=walker.nextNode())tns.push(node);
+  tns.forEach(function(tn){
+    const txt=tn.nodeValue;re.lastIndex=0;let m,last=0,found=false;const frag=document.createDocumentFragment();
+    while((m=re.exec(txt))){found=true;
+      if(m.index>last)frag.appendChild(document.createTextNode(txt.slice(last,m.index)));
+      const mk=document.createElement("mark");mk.className="mark";mk.textContent=m[0];frag.appendChild(mk);
+      last=m.index+m[0].length;if(m[0].length===0)re.lastIndex++;}
+    if(found){if(last<txt.length)frag.appendChild(document.createTextNode(txt.slice(last)));tn.parentNode.replaceChild(frag,tn);}});
+}
+function highlightVisible(re){
+  const rows=document.getElementById("rows");if(!rows||!re||!state.q||_findErr)return;
+  rows.querySelectorAll("td").forEach(function(td){
+    if(td.classList.contains("idx")||td.classList.contains("matchcell")||td.classList.contains("confcol"))return;
+    if(td.querySelector(".jaedit"))return;           // 編集欄はハイライトしない（編集干渉防止）
+    hiliteTextNodes(td,new RegExp(re.source,re.flags));});
+}
+let _matchPos=-1;
+function jaMarks(){return Array.prototype.slice.call(document.querySelectorAll("#rows td.ja mark.mark, #rows td.ja mark.mark-cur"));}
+function setCur(k){const ms=jaMarks();ms.forEach(function(m){m.className="mark";});
+  if(!ms.length){_matchPos=-1;fstat("訳文に一致なし");return;}
+  k=((k%ms.length)+ms.length)%ms.length;_matchPos=k;ms[k].className="mark-cur";
+  try{ms[k].scrollIntoView({block:"center",behavior:"smooth"});}catch(e){}
+  fstat((k+1)+" / "+ms.length+" 件（訳文）");}
+function findNext(){if(!jaMarks().length){fstat("訳文に一致なし");return;}setCur(_matchPos+1);}
+function findPrev(){if(!jaMarks().length){fstat("訳文に一致なし");return;}setCur(_matchPos-1);}
+function findAll(){if(!jaMarks().length){fstat("訳文に一致なし");return;}_matchPos=-1;setCur(0);}
+function repStr(){const v=(document.getElementById("rep")||{}).value||"";return state.rx?v:v.replace(/\$/g,"$$$$");}
+function tagsSig(s){return (String(s).match(/\{\d+\}/g)||[]).join("\u0001");}
+function replaceOne(){
+  const re=currentRe();if(!re||_findErr){alert("検索語（正規表現）が無効です。");return;}
+  const rep=repStr();const ids=visibleIndices();let target=-1;
+  const cm=document.querySelector("#rows td.ja mark.mark-cur")||document.querySelector("#rows td.ja mark.mark");
+  if(cm){const tr=cm.closest("tr");if(tr)target=+tr.getAttribute("data-i");}
+  if(target<0){for(let k=0;k<ids.length;k++){const rc=new RegExp(re.source,re.flags);if(rc.test(jaValue(ids[k]))){target=ids[k];break;}}}
+  if(target<0){fstat("訳文に一致なし");return;}
+  const t=jaValue(target);const next=t.replace(new RegExp(re.source,state.cs?"":"i"),rep);  // 先頭1箇所のみ
+  if(tagsSig(next)!==tagsSig(t)){fstat("タグに掛かるためスキップ");findNext();return;}
+  if(next!==t){ if(next===autoJa(target))delete edits[target];else edits[target]=next;
+    if(target in propagated)delete propagated[target];
+    if(target in confirms)delete confirms[target];
+    saveEdits();saveProp();saveConfirms();updateEditedCount();updateConfirmCount();render();}
+  findNext();
+}
+function replaceAllVisible(){
+  const re=currentRe();if(!re||_findErr){alert("検索語（正規表現）が無効です。");return;}
+  const rep=repStr();const ids=visibleIndices();
+  let totOcc=0,totSeg=0;
+  ids.forEach(function(i){const rc=new RegExp(re.source,re.flags);const t=jaValue(i);let m,c=0;while((m=rc.exec(t))){c++;if(m[0].length===0)rc.lastIndex++;}if(c){totOcc+=c;totSeg++;}});
+  if(!totOcc){fstat("訳文に一致なし");return;}
+  if(!window.confirm("表示中の "+totSeg+" セグメント・計 "+totOcc+" 箇所を置換します。よろしいですか？\n（確定済みは自動で解除され、再確定が必要になります）"))return;
+  let occ=0,seg=0,skip=0;
+  ids.forEach(function(i){const cur=jaValue(i);
+    const rc=new RegExp(re.source,re.flags);let m,c=0;while((m=rc.exec(cur))){c++;if(m[0].length===0)rc.lastIndex++;}
+    if(!c)return;
+    const next=cur.replace(new RegExp(re.source,re.flags),rep);
+    if(tagsSig(next)!==tagsSig(cur)){skip++;return;}
+    if(next===cur)return;
+    if(next===autoJa(i))delete edits[i];else edits[i]=next;
+    if(i in propagated)delete propagated[i];
+    if(i in confirms)delete confirms[i];
+    occ+=c;seg++;});
+  saveEdits();saveProp();saveConfirms();updateEditedCount();updateConfirmCount();render();
+  fstat("置換 "+occ+" 箇所 / "+seg+" セグメント"+(skip?("・スキップ "+skip+"（タグ保護）"):""));
+}
+
 function render(){
   const rows=document.getElementById("rows");
-  const q=state.q.trim().toLowerCase();
-  const list=SEG.filter((s,idx)=>{
-    if(state.cat!=="all"&&s.cat!==state.cat)return false;
-    if(state.bands.size&&!state.bands.has(s.b))return false;
-    if(state.editedOnly&&!(idx in edits))return false;
-    if(state.confirmedOnly&&!(idx in confirms))return false;
-    if(state.qaOnly&&!qaFlag(idx))return false;
-    if(q){const hay=(plain(s.en)+" "+s.tm+" "+plain(s.ja)).toLowerCase();if(!hay.includes(q))return false;}
-    return true;
-  });
+  const _re=currentRe();
+  const list=SEG.filter((s,idx)=>passFilter(s,idx,_re));
   document.getElementById("count").textContent=`${list.length} / ${SEG.length} セグメント`;
   document.getElementById("empty").hidden=list.length>0;
   (function(){var qc=document.getElementById("qacount");if(qc){var n=qaCount();qc.textContent=n?(" "+n):"";}})();
@@ -679,7 +839,7 @@ function render(){
         :((s.st==="mt"&&!RUNMT&&plain(s.en))?withChips(esc(plain(s.en)),s.tags)
           :'<span class="japlaceholder">（MT未反映）</span>'));
     const jaCell=state.editMode
-      ? `<td class="ja">${paletteHTML(s)}<div class="jaedit" contenteditable="true" data-i="${idx}">${withChips(esc(jaCur),s.tags)}</div></td>`
+      ? `<td class="ja">${paletteHTML(s)}<div class="jaedit" contenteditable="true" spellcheck="${SPELL?'true':'false'}" data-i="${idx}">${withChips(esc(jaCur),s.tags)}</div></td>`
       : `<td class="ja${edited?' isedited':''}${confirmed?' isconfirmed':''}">${jaView}</td>`;
     const sttag=s.st==="mt"?'<span class="sttag st-mt">MT</span>':'<span class="sttag st-tm">TM</span>';
     const statustag=(s.status==="notapproved")?'<span class="sttag st-unapp" title="未承認（信頼度低・XTM由来）">未承認</span>':'';
@@ -697,6 +857,7 @@ function render(){
   }).join("");
   if(typeof syncConfAll==="function")syncConfAll();
   if(typeof syncRunMtBtn==="function")syncRunMtBtn();
+  try{highlightVisible(_re);updateFindUI(_re);}catch(e){}
 }
 
 // events
@@ -714,6 +875,28 @@ document.getElementById("bandchips").addEventListener("click",e=>{
   render();
 });
 document.getElementById("q").addEventListener("input",e=>{state.q=e.target.value;render();});
+// 検索オプション（正規表現・大文字小文字）＋検索/置換バーの配線
+(function(){
+  function tog(btnId,key,prop){
+    var b=document.getElementById(btnId);if(!b)return;
+    b.setAttribute("aria-pressed",String(state[prop]));
+    b.addEventListener("click",function(){state[prop]=!state[prop];
+      b.setAttribute("aria-pressed",String(state[prop]));
+      try{localStorage.setItem(key,state[prop]?"1":"0");}catch(e){}
+      render();});
+  }
+  tog("rxbtn","kotonoha-find-rx","rx");
+  tog("csbtn","kotonoha-find-cs","cs");
+  var ft=document.getElementById("findtoggle");
+  if(ft)ft.addEventListener("click",function(){var bar=document.getElementById("findbar");if(!bar)return;
+    bar.hidden=!bar.hidden;if(!bar.hidden){var r=document.getElementById("rep");if(r)r.focus();}});
+  var map={findprev:findPrev,findnext:findNext,findall:findAll,repone:replaceOne,repall:replaceAllVisible};
+  Object.keys(map).forEach(function(id){var el=document.getElementById(id);if(el)el.addEventListener("click",map[id]);});
+  var rep=document.getElementById("rep");
+  if(rep)rep.addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();replaceOne();}});
+  var q=document.getElementById("q");
+  if(q)q.addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();if(e.shiftKey)findPrev();else findNext();}});
+})();
 document.getElementById("deltoggle").addEventListener("change",e=>{
   document.body.classList.toggle("hide-del",!e.target.checked);
 });
@@ -755,6 +938,89 @@ document.getElementById("rows").addEventListener("change",e=>{
   a.addEventListener("change",function(){AUTOPROP=a.checked;
     try{localStorage.setItem("kotonoha-autoprop",AUTOPROP?"1":"0");}catch(e){}});
 })();
+// スペル・文法チェック トグル（既定OFF・localStorage に保持）
+(function(){var s=document.getElementById("spellchk");if(!s)return;
+  s.checked=SPELL; document.body.classList.toggle("spellon",SPELL);
+  s.addEventListener("change",function(){SPELL=s.checked;
+    try{localStorage.setItem("kotonoha-spellcheck",SPELL?"1":"0");}catch(e){}
+    document.body.classList.toggle("spellon",SPELL);
+    document.querySelectorAll(".jaedit").forEach(function(el){el.setAttribute("spellcheck",SPELL?"true":"false");});
+    if(!SPELL){var _lb=document.getElementById("ltbar");if(_lb){_lb.hidden=true;_lb.innerHTML="";}}
+    try{paintChecks();}catch(e){}
+  });
+})();
+// 英語リアルタイム文法（LanguageTool・/api/lt プロキシ）: 編集欄デバウンス→下部パネルに指摘。LT出力は esc()。
+(function(){
+  var bar=document.getElementById("ltbar"); if(!bar)return;
+  var t=null;
+  function ltText(f){ var s; try{ s=(typeof serializeJa==="function")?serializeJa(f):(f.textContent||""); }catch(e){ s=f.textContent||""; }
+    return String(s).replace(/\{\d+\}/g," ").replace(/\s+/g," ").trim(); }
+  function hide(){ bar.hidden=true; bar.innerHTML=""; }
+  function run(f){
+    if(!SPELL||!f){ hide(); return; }
+    var i=f.getAttribute("data-i"); var text=ltText(f);
+    if(!text){ hide(); return; }
+    apiT("/api/lt",{method:"POST",body:JSON.stringify({text:text,language:"auto"})}).then(function(d){
+      if(!SPELL||document.activeElement!==f){ return; }
+      if(d&&d.ok===false){ hide(); return; }   // LT未起動等
+      var ms=(d&&d.matches)||[];
+      var h='<div class="lthd">文法チェック（セグメント '+esc(String((+i)+1))+'・'+(d&&d.language&&d.language.code?esc(d.language.code):'auto')+'）<span class="x" title="閉じる">×</span></div>';
+      if(!ms.length){ h+='<div class="ltnone">指摘はありません。</div>'; }
+      else{ h+=ms.slice(0,20).map(function(m){
+        var sug=((m.replacements||[]).slice(0,3).map(function(r){return r.value;}).join(" / "));
+        return '<div class="ltitem">'+esc(m.message||"")+(sug?(' <span class="ltsug">→ '+esc(sug)+'</span>'):'')+'</div>';
+      }).join(""); }
+      bar.innerHTML=h; bar.hidden=false;
+    }).catch(function(){ hide(); });
+  }
+  document.addEventListener("input",function(e){ var f=e.target.closest&&e.target.closest(".jaedit"); if(!f||!SPELL)return; clearTimeout(t); t=setTimeout(function(){run(f);},700); });
+  document.addEventListener("focusin",function(e){ var f=e.target.closest&&e.target.closest(".jaedit"); if(f&&SPELL)run(f); });
+  bar.addEventListener("click",function(e){ if(e.target.closest(".x"))hide(); });
+})();
+// Option2: 日本語=半自動 Claude 点検。訳文欄フォーカス外れ2秒で check-todo を自動更新（SPELL時・無音）。
+// → 手動「書き出し」不要。Claude が check-todo を点検→check-done.jsonl→「結果を反映」で⚠表示。
+(function(){
+  function artName(){return (typeof ART!=="undefined"&&ART)||(window.__KT&&window.__KT.doc)||"untitled";}
+  var at=null;
+  document.addEventListener("focusout",function(e){
+    if(!SPELL)return; var f=e.target.closest&&e.target.closest(".jaedit"); if(!f)return;
+    clearTimeout(at); at=setTimeout(function(){
+      var items=[]; for(var i=0;i<SEG.length;i++){ if(!SEG[i])continue; var ja=(jaValue(i)||""); if(!ja)continue; items.push({i:i,en:plain(SEG[i].en),ja:ja}); }
+      if(!items.length)return;
+      apiT("/api/check-todo",{method:"POST",body:JSON.stringify({art:artName(),items:items})}).then(function(){}).catch(function(){});
+    },2000);
+  });
+})();
+// スペル・文法チェック(B): 書き出し／結果反映／⚠表示。Claude点検結果は未信頼データ→title属性(プレーン)で表示＝XSS不可。
+var CHECKS={};
+function _chkTitle(arr){return (arr||[]).map(function(x){return (x.field==="en"?"EN":"JA")+": "+(x.msg||"")+(x.suggest?(" → "+x.suggest):"");}).join("\n");}
+function paintChecks(){
+  var rows=document.getElementById("rows"); if(!rows)return;
+  Array.prototype.forEach.call(rows.querySelectorAll("tr[data-i]"),function(tr){
+    var old=tr.querySelector(".chkbadge"); if(old)old.remove();
+    if(!SPELL)return;
+    var c=CHECKS[+tr.dataset.i]; if(!c||!c.length)return;
+    var cell=tr.querySelector("td.idx")||tr.firstElementChild; if(!cell)return;
+    var b=document.createElement("span"); b.className="chkbadge"; b.textContent="⚠"; b.title=_chkTitle(c);
+    cell.appendChild(b);
+  });
+}
+(function(){ if(typeof render==="function"){var _r=render; render=function(){var x=_r.apply(this,arguments); try{paintChecks();}catch(e){} return x;};} })();
+(function(){
+  function artName(){return (typeof ART!=="undefined"&&ART)||(window.__KT&&window.__KT.doc)||"untitled";}
+  var ex=document.getElementById("spellexport"), ap=document.getElementById("spellapply");
+  if(ex)ex.addEventListener("click",function(){
+    var items=[]; for(var i=0;i<SEG.length;i++){ if(!SEG[i])continue; items.push({i:i, en:plain(SEG[i].en), ja:(jaValue(i)||"")}); }
+    apiT("/api/check-todo",{method:"POST",body:JSON.stringify({art:artName(),items:items})})
+      .then(function(d){ alert(d&&d.ok?("チェック用に書き出しました（"+d.count+"件）:\n"+d.path+"\n\nClaudeで点検 → 同フォルダに <名前>.check-done.jsonl を作成 → 「結果を反映」。"):("書き出し失敗: "+((d&&d.error)||"不明"))); })
+      .catch(function(e){ alert("通信エラー: "+e); });
+  });
+  if(ap)ap.addEventListener("click",function(){
+    apiT("/api/check-done?art="+encodeURIComponent(artName()))
+      .then(function(d){ CHECKS={}; var n=0; ((d&&d.rows)||[]).forEach(function(r){ if(r&&typeof r.i==="number"){CHECKS[r.i]=r.issues||[]; if((r.issues||[]).length)n++;} }); paintChecks(); alert(n?(n+" 件のセグメントに指摘があります（⚠にカーソルで詳細）"):"指摘はありませんでした（または結果ファイル未作成）"); })
+      .catch(function(e){ alert("通信エラー: "+e); });
+  });
+})();
 // ===== 翻訳履歴ペイン（行クリックで、その原文の過去訳＋更新日時を表示） =====
 function fmtDate(d){
   if(!d)return "日時不明";
@@ -774,6 +1040,31 @@ function renderHistory(i){
   _histShown=5;
   paintHistory();
 }
+// 単語レベルLCS差分（old=過去, new=現在）。トークンは空白も保持。
+function wdiff(oldS,newS){
+  var a=(oldS||"").split(/(\s+)/), b=(newS||"").split(/(\s+)/);
+  var n=a.length, m=b.length, i, j;
+  var dp=[]; for(i=0;i<=n;i++){dp[i]=new Array(m+1); for(j=0;j<=m;j++)dp[i][j]=0;}
+  for(i=n-1;i>=0;i--)for(j=m-1;j>=0;j--){dp[i][j]=(a[i]===b[j])?dp[i+1][j+1]+1:Math.max(dp[i+1][j],dp[i][j+1]);}
+  var out=[]; i=0; j=0;
+  while(i<n&&j<m){
+    if(a[i]===b[j]){out.push(["eq",a[i]]);i++;j++;}
+    else if(dp[i+1][j]>=dp[i][j+1]){out.push(["del",a[i]]);i++;}   // 過去のみ（正としてそのまま表示）
+    else{out.push(["ins",b[j]]);j++;}                              // 現在のみ（新規＝取り消し線）
+  }
+  while(i<n){out.push(["del",a[i]]);i++;}
+  while(j<m){out.push(["ins",b[j]]);j++;}
+  return out;
+}
+// 過去英語(pastEn=正)と現在原文(curEn)の差分HTML。現在側の新規/変更語を取り消し線に。全断片を esc()。
+function diffEnHTML(pastEn,curEn){
+  if(!pastEn)return "";
+  if(!curEn||pastEn===curEn)return esc(pastEn);
+  return wdiff(pastEn,curEn).map(function(t){
+    var s=esc(t[1]);
+    return (t[0]==="ins")?('<del class="hadd">'+s+'</del>'):s;
+  }).join("");
+}
 function paintHistory(){
   const body=document.getElementById("histbody");
   if(!_histAll.length){body.innerHTML='<div class="histhint">この原文の過去訳はまだありません（TEP 確定後に書き戻すと蓄積されます）。</div>';return;}
@@ -785,8 +1076,9 @@ function paintHistory(){
     else if(r.pct!=null)label='<span class="pctlabel">'+r.pct+'%</span>';
     else label=fmtDate(r.date);
     const badge=(idx===firstDated)?'<span class="badge-latest">最新</span>':'';
-    const enTxt=(r.en!=null?r.en:_histSrcEn);  // 候補は一致したTM原文、版履歴はこの原文
-    const enLine=enTxt?('<div class="hsrc">'+esc(enTxt)+'</div>'):'';
+    const pastEn=(r.en!=null?r.en:_histSrcEn);  // 候補は一致したTM原文、版履歴はこの原文
+    const enHtml=diffEnHTML(pastEn,_histSrcEn);  // 過去=正、現在の新規/変更語に取り消し線
+    const enLine=enHtml?('<div class="hsrc">'+enHtml+'</div>'):'';
     return '<div class="histitem'+(idx===firstDated?' latest':'')+'"><div class="meta">'+label+badge+'</div>'+enLine+'<div class="tgt">'+esc(r.ja||"")+'</div></div>';
   }).join("")+'</div>';
   const remain=_histAll.length-_histShown;
@@ -875,15 +1167,8 @@ document.getElementById("rows").addEventListener("click",e=>{
 });
 // 現在フィルター表示中のセグメント index 一覧（確定系の共通対象）
 function visibleIndices(){
-  const q=state.q.trim().toLowerCase();const out=[];
-  SEG.forEach((s,idx)=>{
-    if(state.cat!=="all"&&s.cat!==state.cat)return;
-    if(state.bands.size&&!state.bands.has(s.b))return;
-    if(state.editedOnly&&!(idx in edits))return;
-    if(state.confirmedOnly&&!(idx in confirms))return;
-    if(q){const hay=(plain(s.en)+" "+s.tm+" "+plain(s.ja)).toLowerCase();if(!hay.includes(q))return;}
-    out.push(idx);
-  });
+  const _re=currentRe();const out=[];
+  SEG.forEach((s,idx)=>{if(passFilter(s,idx,_re))out.push(idx);});
   return out;
 }
 // bulk-confirm every currently visible row that has a target
