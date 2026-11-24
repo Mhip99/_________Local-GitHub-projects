@@ -24,3 +24,10 @@ Kotonoha-out/
 # 再生成前の一時バックアップ（生成物のコピー・不要）
 _archive-pre-regen-*/
 
+
+# 環境別パス設定（マシン固有・雛形は .sample をコミット）
+_kotonoha-paths.bat
+
+# ローカル索引キャッシュ（再生成可）
+_Index/
+

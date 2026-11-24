@@ -1,0 +1,5 @@
+rem このファイルを _kotonoha-paths.bat にコピーして環境別パスを設定（任意・Git管理外）。
+rem 索引キャッシュの保存先（未設定なら %~dp0_Index にローカル作成）
+rem set "CACHE=D:\path\to\Kotonoha\Index"
+rem LanguageTool / JRE の場所（未設定なら %LOCALAPPDATA%\Kotonoha-LT）
+rem set "LTDIR=%LOCALAPPDATA%\Kotonoha-LT"
